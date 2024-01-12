@@ -10,7 +10,7 @@ CDF_Lib_version:
 Data_level:
   description: >
     This attribute is used in file name creation and records the level of processsing done
-    on the dataset. For HERMES the following are valid values:
+    on the dataset. Valid values:
     - l0>Level 0
     - l1>Level 1
     - l2>Level 2
@@ -19,8 +19,8 @@ Data_level:
     - ql>Quicklook
   default: null
   derived: false
-  required: true # NOT Required in ISTP Guide (Derived)
-  validate: false
+  required: true 
+  validate: true
   overwrite: true
 Data_product_descriptor:
   description: > 
@@ -55,7 +55,7 @@ Descriptor:
   description: >
     This attribute identifies the name of the instrument or sensor that collected the data. Both
     a long name and a short name are given. For any data file, only a single value is allowed.
-    For HERMES, the following are valid values:
+    For example, from the HERMES mission, the following are valid values:
     - EEA>Electron Electrostatic Analyzer
     - MERIT>Miniaturized Electron pRoton Telescope
     - NEMISIS> Noise Eliminating Magnetometer In a Small Integrated System
@@ -95,7 +95,7 @@ SWxSOC_version:
 Instrument_type:
   description: > 
     This attribute is used to facilitate making choices of instrument type. More than one entry
-    is allowed. Acceptable values for HERMES include:
+    is allowed. Acceptable values include:
     - Magnetic Fields (space)
     - Particles (space)
     - Plasma and Solar Wind

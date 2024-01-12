@@ -98,9 +98,7 @@ def get_test_sw_data():
     input_attrs = SWXData.global_attribute_template("eea", "l1", "1.0.0")
 
     # Create SWXData Object
-    sw_data = SWXData(
-        timeseries=ts, support=support, spectra=spectra, meta=input_attrs
-    )
+    sw_data = SWXData(timeseries=ts, support=support, spectra=spectra, meta=input_attrs)
     sw_data.timeseries["Bx"].meta.update({"CATDESC": "Test"})
     return sw_data
 

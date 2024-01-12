@@ -376,9 +376,7 @@ def test_format():
 
         # Test Format Char
         v = cdf.new("var", data=["hi", "there"])
-        format = SWXSchema()._get_format(
-            "var", cdf["var"], const.CDF_CHAR.value
-        )
+        format = SWXSchema()._get_format("var", cdf["var"], const.CDF_CHAR.value)
         assert "A2" == format
 
 
@@ -402,9 +400,7 @@ def test_si_conversion():
         ),
     )
     assert (
-        SWXSchema()._get_units(
-            "measurement1", test_data.timeseries["measurement1"], 0
-        )
+        SWXSchema()._get_units("measurement1", test_data.timeseries["measurement1"], 0)
         == ""
     )
     assert (
@@ -420,9 +416,7 @@ def test_si_conversion():
         data=u.Quantity(value=random(size=(10)), unit=u.ct, dtype=np.uint16),
     )
     assert (
-        SWXSchema()._get_units(
-            "measurement2", test_data.timeseries["measurement2"], 0
-        )
+        SWXSchema()._get_units("measurement2", test_data.timeseries["measurement2"], 0)
         == "ct"
     )
     assert (
@@ -471,9 +465,7 @@ def test_reference_position():
 
 def test_time_base():
     """Function to test time base"""
-    assert (
-        SWXSchema()._get_time_base(const.CDF_TIME_TT2000.value) == "J2000"
-    )
+    assert SWXSchema()._get_time_base(const.CDF_TIME_TT2000.value) == "J2000"
 
     with pytest.raises(TypeError):
         SWXSchema()._get_time_base(const.CDF_EPOCH.value)

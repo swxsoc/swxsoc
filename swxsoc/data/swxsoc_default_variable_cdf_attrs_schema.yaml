@@ -1,5 +1,5 @@
 # Based on :  https://spdf.gsfc.nasa.gov/istp_guide/vattributes.html
-#             HERMES CDF Format Guide
+#             SWxSOC CDF Format Guide
 attribute_key:
   # ===== DATA VARIABLE ATTRIBUTES =====
   CATDESC:
@@ -14,8 +14,7 @@ attribute_key:
   DEPEND_0:
     description: >
       Explicitly ties a data variable to the time variable on which it depends. All variables
-      which change with time must have a DEPEND_0 attribute defined. See section 5.2.1
-      which specifies the HERMES usage of DEPEND_0.
+      which change with time must have a DEPEND_0 attribute defined.
     derived: true
     derivation_fn: _get_depend
     required: true
@@ -30,7 +29,6 @@ attribute_key:
       DEPEND_1, a two-dimensional variable must have a DEPEND_1 and a DEPEND_2
       attribute, etc. The value of the attribute must be a variable in the same CDF data set. It is
       strongly recommended that DEPEND_i variables hold values in physical units.
-      DEPEND_i variables also require their own attributes, as described in section 5.1.4.
     derived: false
     required: false
     overwrite: false
@@ -63,8 +61,7 @@ attribute_key:
   FILLVAL:
     description: >
       Identifies the fill value used where data values are known to be bad or missing.
-      FILLVAL is required for time-varying variables. Fill data are always non-valid data. The
-      ISTP standard fill values are listed in Table 5-4.
+      FILLVAL is required for time-varying variables. Fill data are always non-valid data. 
     derived: true
     derivation_fn: _get_fillval
     required: true
@@ -138,11 +135,7 @@ attribute_key:
     description: >
       A 6-20 character string that identifies the units of the variable (e.g. nT for magnetic
       field). Use a blank character, rather than "None" or "unitless", for variables that have no
-      units (e.g., a ratio or a direction cosine). An active list of HERMES standard UNITS and
-      their SI_CONVERSIONs is maintained on the mission web-pages at
-      https://lasp.colorado.edu/galaxy/display/HERMES/Units+of+Measure, accessible via the
-      HERMES Science Working Team pages. Those pages also lay out the rules for
-      formatting the UNITS string.
+      units (e.g., a ratio or a direction cosine).
     derived: true
     derivation_fn: _get_units
     required: true
@@ -203,7 +196,7 @@ attribute_key:
       greater than 999, representing the number of axes in the associated
       data array.
     derived: true
-    required: false   # NOT Required in HERMES Format Guide
+    required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
     alternate: null
@@ -214,7 +207,7 @@ attribute_key:
       point number representing the reference time position of the time stamps along the 
       0'th axis of the measurement.
     derived: true
-    required: false   # NOT Required in HERMES Format Guide
+    required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
     alternate: null
@@ -225,7 +218,7 @@ attribute_key:
       string giving the units of the time stamps along the 0'th axis of the measurement. 
       The TIMEUNIT should match the CUNITi along the time axis of the measurement
     derived: true
-    required: false   # NOT Required in HERMES Format Guide
+    required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
     alternate: null
@@ -237,7 +230,7 @@ attribute_key:
       the measurement. The TIMEDEL should match the CRDELi along the time axis of the 
       measurement.
     derived: true
-    required: false   # NOT Required in HERMES Format Guide
+    required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
     alternate: null
@@ -250,7 +243,7 @@ attribute_key:
       The name is used for comment/documentation purposes only and is not used as a part
       of the i'th axis coordinate transformations.
     derived: true
-    required: false   # NOT Required in HERMES Format Guide
+    required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
     alternate: null
@@ -262,7 +255,7 @@ attribute_key:
       The value field shall contain a character string, giving
       the name of the coordinate represented by axis i.
     derived: true
-    required: false   # NOT Required in HERMES Format Guide
+    required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
     alternate: null
@@ -274,7 +267,7 @@ attribute_key:
       The value shall be the units along axis i, compatible with CTYPEi to be used for
       scaling and coordinate transformations along the i'th axis. 
     derived: true
-    required: false   # NOT Required in HERMES Format Guide
+    required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
     alternate: null
@@ -291,7 +284,7 @@ attribute_key:
       data array.  Use comments to indicate the location of the index point
       relative to the pixel.
     derived: true
-    required: false   # NOT Required in HERMES Format Guide
+    required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
     alternate: null
@@ -304,7 +297,7 @@ attribute_key:
       giving the value of the coordinate specified by the CTYPEn keyword at
       the reference point CRPIXi.
     derived: true
-    required: false   # NOT Required in HERMES Format Guide
+    required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
     alternate: null
@@ -319,7 +312,7 @@ attribute_key:
       point CRPIXi, in units of the coordinate specified by  the CTYPEi 
       keyword.
     derived: true
-    required: false   # NOT Required in HERMES Format Guide
+    required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
     alternate: null

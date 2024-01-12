@@ -43,9 +43,7 @@ class SWXDeprecationWarning(FutureWarning, SWXWarning):
     """
 
 
-class SWXPendingDeprecationWarning(
-    PendingDeprecationWarning, SWXWarning
-):
+class SWXPendingDeprecationWarning(PendingDeprecationWarning, SWXWarning):
     """
     A warning class to indicate a soon-to-be deprecated feature.
     """

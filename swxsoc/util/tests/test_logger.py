@@ -112,9 +112,7 @@ def test_swxsoc_warnings_logging():
         SWXUserWarning, match="This warning should not be captured"
     ) as warn_list:
         with log.log_to_list() as log_list:
-            warnings.warn(
-                "This warning should not be captured", SWXUserWarning
-            )
+            warnings.warn("This warning should not be captured", SWXUserWarning)
     assert len(log_list) == 0
     assert len(warn_list) == 1
 

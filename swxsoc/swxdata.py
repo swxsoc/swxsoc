@@ -381,16 +381,8 @@ class SWXData:
         ).items():
             self._update_global_attribute(attr_name, attr_value)
 
-        # Time Measurement Attributes
-        for attr_name, attr_value in self.schema.derive_time_attributes(
-            self._timeseries
-        ).items():
-            self._update_timeseries_attribute(
-                var_name="time", attr_name=attr_name, attr_value=attr_value
-            )
-
-        # Other Measurement Attributes
-        for col in [col for col in self._timeseries.columns if col != "time"]:
+        # TimeSeries Measurement Attributes
+        for col in self._timeseries.columns:
             for attr_name, attr_value in self.schema.derive_measurement_attributes(
                 self._timeseries, col
             ).items():

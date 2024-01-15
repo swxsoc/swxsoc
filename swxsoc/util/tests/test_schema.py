@@ -434,7 +434,7 @@ def test_resolution():
     time = np.arange(1)
     time_col = Time(time, format="unix")
     ts["time"] = time_col
-    ts["time"].meta = OrderedDict({"CATDESC": "Epoch Time"})
+    ts["time"].meta = OrderedDict({"CATDESC": "Epoch Time", "VAR_TYPE": "support_data"})
 
     # Add Measurement
     quant = u.Quantity(value=random(size=(1)), unit="m", dtype=np.uint16)

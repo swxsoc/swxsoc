@@ -833,6 +833,11 @@ class SWXSchema:
                 f"Variable {var_name} has unrecognizable VAR_TYPE ({var_type}). Cannot Derive Metadata for Variable."
             )
 
+        # Derive Attributes Specific to `time`/Epoch Variable
+        if var_name == "time":
+            time_attributes = self._derive_time_attributes(var_data, guess_types[0])
+            measurement_attributes.update(time_attributes)
+
         # Derive Attributes Specific to `spectra` Data
         if hasattr(var_data, "wcs") and getattr(var_data, "wcs") is not None:
             spectra_attributes = self._derive_spectra_attributes(var_data)
@@ -840,7 +845,7 @@ class SWXSchema:
 
         return measurement_attributes
 
-    def derive_time_attributes(self, data) -> OrderedDict:
+    def _derive_time_attributes(self, var_data, guess_type) -> OrderedDict:
         """
         Function to derive metadata for the time measurement.
 
@@ -854,22 +859,13 @@ class SWXSchema:
         attributes : `OrderedDict`
             A dict containing `key: value` pairs of time metadata attributes.
         """
-
-        # Get the Variable Data
-        var_data = data["time"]
-        (guess_dims, guess_types, guess_elements) = self._types(var_data)
-
-        time_attributes = self.derive_measurement_attributes(
-            data, "time", guess_types=guess_types
-        )
+        time_attributes = OrderedDict()
         # Check the Attributes that can be derived
-        time_attributes["REFERENCE_POSITION"] = self._get_reference_position(
-            guess_types[0]
-        )
-        time_attributes["RESOLUTION"] = self._get_resolution(data)
-        time_attributes["TIME_BASE"] = self._get_time_base(guess_types[0])
-        time_attributes["TIME_SCALE"] = self._get_time_scale(guess_types[0])
-        time_attributes["UNITS"] = self._get_time_units(guess_types[0])
+        time_attributes["REFERENCE_POSITION"] = self._get_reference_position(guess_type)
+        time_attributes["RESOLUTION"] = self._get_resolution(var_data)
+        time_attributes["TIME_BASE"] = self._get_time_base(guess_type)
+        time_attributes["TIME_SCALE"] = self._get_time_scale(guess_type)
+        time_attributes["UNITS"] = self._get_time_units(guess_type)
         return time_attributes
 
     def derive_global_attributes(self, data) -> OrderedDict:
@@ -1123,15 +1119,13 @@ class SWXSchema:
             msg = f"Reference Position for Time type ({guess_type}) not found."
             raise TypeError(msg)
 
-    def _get_resolution(self, data):
-        # Get the Variable Data
-        times = data.time
-        if len(times) < 2:
+    def _get_resolution(self, var_data):
+        if len(var_data) < 2:
             raise ValueError(
-                f"Can not derive Time Resolution, need 2 samples, found {times}."
+                f"Can not derive Time Resolution, need 2 samples, found {var_data}."
             )
         # Calculate the Timedelta between two time samples
-        delta = times[1] - times[0]
+        delta = var_data[1] - var_data[0]
         # Get the number of second between samples.
         delta_seconds = delta.to_value("s")
         return f"{delta_seconds}s"

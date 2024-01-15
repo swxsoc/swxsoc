@@ -75,6 +75,7 @@ def get_test_sw_data():
         time_delta=3 * u.s,
         data={"Bx": Quantity([1, 2, 3, 4], "gauss", dtype=np.uint16)},
     )
+    ts["time"].meta = OrderedDict({"CATDESC": "Epoch Time", "VAR_TYPE": "support_data"})
 
     # Support Data / Non-Time Varying Data
     support = {"support_counts": NDData(data=[1])}

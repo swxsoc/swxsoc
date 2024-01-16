@@ -381,32 +381,18 @@ class SWXData:
         ).items():
             self._update_global_attribute(attr_name, attr_value)
 
-        # TimeSeries Measurement Attributes
-        for col in self._timeseries.columns:
-            for attr_name, attr_value in self.schema.derive_measurement_attributes(
-                self._timeseries, col
-            ).items():
-                self._update_timeseries_attribute(
-                    var_name=col, attr_name=attr_name, attr_value=attr_value
-                )
-
-        # Support/ Non-Record-Varying Data
-        for col in self._support:
-            for attr_name, attr_value in self.schema.derive_measurement_attributes(
-                self._support, col
-            ).items():
-                self._update_support_attribute(
-                    var_name=col, attr_name=attr_name, attr_value=attr_value
-                )
-
-        # Spectra/ High-Dimensional Data
-        for col in self._spectra:
-            for attr_name, attr_value in self.schema.derive_measurement_attributes(
-                self._spectra, col
-            ).items():
-                self._update_spectra_attribute(
-                    var_name=col, attr_name=attr_name, attr_value=attr_value
-                )
+        # Measurement Attributes
+        for data_structure in [self.timeseries, self.support, self.spectra]:
+            for col in data_structure.keys():
+                for attr_name, attr_value in self.schema.derive_measurement_attributes(
+                    data_structure, col
+                ).items():
+                    self._update_measurement_attribute(
+                        data_structure=data_structure,
+                        var_name=col,
+                        attr_name=attr_name,
+                        attr_value=attr_value,
+                    )
 
     def _update_global_attribute(self, attr_name, attr_value):
         # If the attribute is set, check if we want to overwrite it
@@ -429,65 +415,27 @@ class SWXData:
         else:
             self._timeseries.meta[attr_name] = attr_value
 
-    def _update_timeseries_attribute(self, var_name, attr_name, attr_value):
+    def _update_measurement_attribute(
+        self, data_structure, var_name, attr_name, attr_value
+    ):
         if (
-            attr_name in self.timeseries[var_name].meta
-            and self.timeseries[var_name].meta[attr_name] is not None
+            attr_name in data_structure[var_name].meta
+            and data_structure[var_name].meta[attr_name] is not None
             and attr_name in self.schema.variable_attribute_schema["attribute_key"]
         ):
             attr_schema = self.schema.variable_attribute_schema["attribute_key"][
                 attr_name
             ]
             if (
-                self.timeseries[var_name].meta[attr_name] != attr_value
+                data_structure[var_name].meta[attr_name] != attr_value
                 and attr_schema["overwrite"]
             ):
                 warn_user(
-                    f"Overriding TimeSeries {var_name} Attribute {attr_name} : {self.timeseries[var_name].meta[attr_name]} -> {attr_value}"
+                    f"Overriding Measurement {var_name} Attribute {attr_name} : {data_structure[var_name].meta[attr_name]} -> {attr_value}"
                 )
-                self.timeseries[var_name].meta[attr_name] = attr_value
+                data_structure[var_name].meta[attr_name] = attr_value
         else:
-            self.timeseries[var_name].meta[attr_name] = attr_value
-
-    def _update_support_attribute(self, var_name, attr_name, attr_value):
-        if (
-            attr_name in self._support[var_name].meta
-            and self._support[var_name].meta[attr_name] is not None
-            and attr_name in self.schema.variable_attribute_schema["attribute_key"]
-        ):
-            attr_schema = self.schema.variable_attribute_schema["attribute_key"][
-                attr_name
-            ]
-            if (
-                self._support[var_name].meta[attr_name] != attr_value
-                and attr_schema["overwrite"]
-            ):
-                warn_user(
-                    f"Overriding Support {var_name} Attribute {attr_name} : {self._support[var_name].meta[attr_name]} -> {attr_value}"
-                )
-                self._support[var_name].meta[attr_name] = attr_value
-        else:
-            self._support[var_name].meta[attr_name] = attr_value
-
-    def _update_spectra_attribute(self, var_name, attr_name, attr_value):
-        if (
-            attr_name in self._spectra[var_name].meta
-            and self._spectra[var_name].meta[attr_name] is not None
-            and attr_name in self.schema.variable_attribute_schema["attribute_key"]
-        ):
-            attr_schema = self.schema.variable_attribute_schema["attribute_key"][
-                attr_name
-            ]
-            if (
-                self._spectra[var_name].meta[attr_name] != attr_value
-                and attr_schema["overwrite"]
-            ):
-                warn_user(
-                    f"Overriding Spectra {var_name} Attribute {attr_name} : {self._spectra[var_name].meta[attr_name]} -> {attr_value}"
-                )
-                self._spectra[var_name].meta[attr_name] = attr_value
-        else:
-            self._spectra[var_name].meta[attr_name] = attr_value
+            data_structure[var_name].meta[attr_name] = attr_value
 
     def add_measurement(self, measure_name: str, data: u.Quantity, meta: dict = None):
         """

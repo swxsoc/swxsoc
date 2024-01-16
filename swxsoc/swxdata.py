@@ -323,14 +323,14 @@ class SWXData:
 
         # Check the Optional Instrument Name
         if instr_name:
-            if instr_name not in swxsoc.INST_NAMES:
+            if instr_name not in swxsoc.config["mission"]["inst_names"]:
                 raise ValueError(
-                    f"Instrument, {instr_name}, is not recognized. Must be one of {swxsoc.INST_NAMES}."
+                    f"Instrument, {instr_name}, is not recognized. Must be one of {swxsoc.config['mission']['inst_names']}."
                 )
             # Set the Property
             meta[
                 "Descriptor"
-            ] = f"{instr_name.upper()}>{swxsoc.INST_TO_FULLNAME[instr_name]}"
+            ] = f"{instr_name.upper()}>{swxsoc.config['mission']['inst_to_fullname'][instr_name]}"
 
         # Check the Optional Data Level
         if data_level:

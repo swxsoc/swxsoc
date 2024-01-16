@@ -1374,7 +1374,7 @@ class SWXSchema:
         attr_name = "Source_name"
         if (attr_name not in data.meta) or (not data.meta[attr_name]):
             # Get Module Default
-            sc_id = swxsoc.MISSION_NAME
+            sc_id = swxsoc.config["mission"]["mission_name"]
         else:
             sc_id = data.meta["Source_name"]
             # Formatting
@@ -1388,7 +1388,7 @@ class SWXSchema:
         attr_name = "Source_name"
         if (attr_name not in data.meta) or (not data.meta[attr_name]):
             # Get Module Default
-            sc_id = swxsoc.MISSION_NAME
+            sc_id = swxsoc.config["mission"]["mission_name"]
         else:
             sc_id = data.meta["Source_name"]
             # Formatting

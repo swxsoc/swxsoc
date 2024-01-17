@@ -455,36 +455,38 @@ def test_resolution():
 def test_reference_position():
     """Function to test time reference position"""
     assert (
-        SWXSchema()._get_reference_position(const.CDF_TIME_TT2000.value)
+        SWXSchema()._get_reference_position("time", [], const.CDF_TIME_TT2000.value)
         == "rotating Earth geoid"
     )
 
     with pytest.raises(TypeError):
-        SWXSchema()._get_reference_position(const.CDF_EPOCH.value)
+        SWXSchema()._get_reference_position("time", [], const.CDF_EPOCH.value)
 
 
 def test_time_base():
     """Function to test time base"""
-    assert SWXSchema()._get_time_base(const.CDF_TIME_TT2000.value) == "J2000"
+    assert (
+        SWXSchema()._get_time_base("time", [], const.CDF_TIME_TT2000.value) == "J2000"
+    )
 
     with pytest.raises(TypeError):
-        SWXSchema()._get_time_base(const.CDF_EPOCH.value)
+        SWXSchema()._get_time_base("time", [], const.CDF_EPOCH.value)
 
 
 def test_time_scale():
     """Function to test time scale"""
     assert (
-        SWXSchema()._get_time_scale(const.CDF_TIME_TT2000.value)
+        SWXSchema()._get_time_scale("time", [], const.CDF_TIME_TT2000.value)
         == "Terrestrial Time (TT)"
     )
 
     with pytest.raises(TypeError):
-        SWXSchema()._get_time_scale(const.CDF_EPOCH.value)
+        SWXSchema()._get_time_scale("time", [], const.CDF_EPOCH.value)
 
 
 def test_time_units():
     """Function to test time units"""
-    assert SWXSchema()._get_time_units(const.CDF_TIME_TT2000.value) == "ns"
+    assert SWXSchema()._get_units("time", [], const.CDF_TIME_TT2000.value) == "ns"
 
     with pytest.raises(TypeError):
-        SWXSchema()._get_time_units(const.CDF_EPOCH.value)
+        SWXSchema()._get_units("time", [], const.CDF_EPOCH.value)

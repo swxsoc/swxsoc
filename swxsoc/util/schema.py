@@ -457,7 +457,7 @@ class SWXSchema:
         # Add the Attribute Name as a Column
         info.add_column(col=attribute_names, name="Attribute", index=0)
         # Remove the Derivation Function Column, since this is not needed for the Docs
-        info.remove_column("derivation_fn")
+        info.remove_columns(["derivation_fn", "iterable"])
 
         # Limit the Info to the requested Attribute
         if attribute_name and attribute_name in info["Attribute"]:
@@ -777,6 +777,32 @@ class SWXSchema:
             raise ValueError("Unknown data type: {}".format(cdftype))
         return (inf.min, inf.max)
 
+    def derive_global_attributes(self, data) -> OrderedDict:
+        """
+        Function to derive global attributes for the given measurement data.
+
+        Parameters
+        ----------
+        data : `swxsoc.swxdata.SWXData`
+            An instance of `SWXData` to derive metadata from.
+
+        Returns
+        -------
+        attributes : `OrderedDict`
+            A dict containing `key: value` pairs of global metadata attributes.
+        """
+        global_attributes = OrderedDict()
+        # Loop through Global Attributes
+        derived_attributes = filter(
+            lambda attr_info: attr_info[1]["derived"],
+            self.global_attribute_schema.items(),
+        )
+        for attr_name, attr_schema in derived_attributes:
+            derivation_fn = getattr(self, attr_schema["derivation_fn"])
+            global_attributes[attr_name] = derivation_fn(data)
+
+        return global_attributes
+
     def derive_measurement_attributes(
         self, data, var_name: str, guess_types: Optional[list[int]] = None
     ) -> OrderedDict:
@@ -815,112 +841,85 @@ class SWXSchema:
         # Check the Attributes that can be derived
         var_type = self._get_var_type(var_name, var_data, guess_types[0])
 
+        # Identify / Select Attributes that can be Derived for the given measurement
+        derived_attributes = []
+        # Extend by attributes for the given variable type
         if var_type in ["data", "support_data", "metadata"]:
-            # Derive Attributes Specific to VAR_TYPE
-            derived_attributes = filter(
-                lambda attr_info: attr_info[0]
-                in self.variable_attribute_schema[var_type]
-                and attr_info[1]["derived"],
-                self.variable_attribute_schema["attribute_key"].items(),
+            var_atttibutes = list(
+                filter(
+                    lambda attr_info: attr_info[0]
+                    in self.variable_attribute_schema[var_type]
+                    and attr_info[1]["derived"],
+                    self.variable_attribute_schema["attribute_key"].items(),
+                )
             )
-            for attr_name, attr_schema in derived_attributes:
+            derived_attributes.extend(var_atttibutes)
+        # Extend by Time/Epoch Attributes
+        if var_name == "time":
+            time_attributes = list(
+                filter(
+                    lambda attr_info: attr_info[0]
+                    in self.variable_attribute_schema["epoch"]
+                    and attr_info[1]["derived"],
+                    self.variable_attribute_schema["attribute_key"].items(),
+                )
+            )
+            derived_attributes.extend(time_attributes)
+        # Extend by Spectral Attributes
+        if hasattr(var_data, "wcs") and getattr(var_data, "wcs") is not None:
+            spectra_attributes = list(
+                filter(
+                    lambda attr_info: attr_info[0]
+                    in self.variable_attribute_schema["spectra"]
+                    and attr_info[1]["derived"],
+                    self.variable_attribute_schema["attribute_key"].items(),
+                )
+            )
+            derived_attributes.extend(spectra_attributes)
+
+        # Derive Attributes Specific to VAR_TYPE
+        for attr_name, attr_schema in derived_attributes:
+            # If the attribute can take values for multiple dimensions of the var data
+            if "iterable" in attr_schema and attr_schema["iterable"]:
+                # Get the "root" attriubte name.
+                # Ex: CNAMEi -> CNAME , DEPEND_i -> DEPEND_
+                attr_root = attr_name.rstrip("i")
+                # Get the number of dimensions to iterate over for the attribute
+                num_dimensions = self._get_num_dimensions(
+                    var_name, var_data, guess_types[0]
+                )
+                # Loop through each dimension we want to derive for
+                for dimension_i in range(num_dimensions):
+                    # Attribute Name for the given dimension_i
+                    dimension_attr_name = (
+                        f"{attr_root}{dimension_i+1}"  # Dimension Indexed 1-4 vs 0-3
+                    )
+                    # Get the Derivation Function to be used for the given attribute
+                    derivation_fn = getattr(self, attr_schema["derivation_fn"])
+                    # Derive the Metadata Attribute using the configured function
+                    measurement_attributes[dimension_attr_name] = derivation_fn(
+                        var_name, var_data, guess_types[0], dimension_i
+                    )
+            # else the attribute can only take one value for the main dimension of var data
+            else:
+                # Get the Derivation Function to be used for the given attribute
                 derivation_fn = getattr(self, attr_schema["derivation_fn"])
+                # Derive the Metadata Attribute using the configured function
                 measurement_attributes[attr_name] = derivation_fn(
                     var_name, var_data, guess_types[0]
                 )
-        else:
-            warn_user(
-                f"Variable {var_name} has unrecognizable VAR_TYPE ({var_type}). Cannot Derive Metadata for Variable."
-            )
-
-        # Derive Attributes Specific to `time`/Epoch Variable
-        if var_name == "time":
-            time_attributes = self._derive_time_attributes(var_data, guess_types[0])
-            measurement_attributes.update(time_attributes)
-
-        # Derive Attributes Specific to `spectra` Data
-        if hasattr(var_data, "wcs") and getattr(var_data, "wcs") is not None:
-            spectra_attributes = self._derive_spectra_attributes(var_data)
-            measurement_attributes.update(spectra_attributes)
 
         return measurement_attributes
 
-    def _derive_time_attributes(self, var_data, guess_type) -> OrderedDict:
+    def _get_num_dimensions(self, var_name, var_data, guess_type):
         """
-        Function to derive metadata for the time measurement.
-
-        Parameters
-        ----------
-        data : `swxsoc.swxdata.SWXData`
-            An instance of `SWXData` to derive metadata from.
-
-        Returns
-        -------
-        attributes : `OrderedDict`
-            A dict containing `key: value` pairs of time metadata attributes.
+        Function to get the number of dimensions of a measurement.
+        Currently this is just implemented for NDCube measurement objects,
+        however we can extend this in the future if we want to accomodate
+        other multi-dimensional data structures.
         """
-        time_attributes = OrderedDict()
-        # Check the Attributes that can be derived
-        time_attributes["REFERENCE_POSITION"] = self._get_reference_position(guess_type)
-        time_attributes["RESOLUTION"] = self._get_resolution(var_data)
-        time_attributes["TIME_BASE"] = self._get_time_base(guess_type)
-        time_attributes["TIME_SCALE"] = self._get_time_scale(guess_type)
-        time_attributes["UNITS"] = self._get_time_units(guess_type)
-        return time_attributes
-
-    def derive_global_attributes(self, data) -> OrderedDict:
-        """
-        Function to derive global attributes for the given measurement data.
-
-        Parameters
-        ----------
-        data : `swxsoc.swxdata.SWXData`
-            An instance of `SWXData` to derive metadata from.
-
-        Returns
-        -------
-        attributes : `OrderedDict`
-            A dict containing `key: value` pairs of global metadata attributes.
-        """
-        global_attributes = OrderedDict()
-        # Loop through Global Attributes
-        derived_attributes = filter(
-            lambda attr_info: attr_info[1]["derived"],
-            self.global_attribute_schema.items(),
-        )
-        for attr_name, attr_schema in derived_attributes:
-            derivation_fn = getattr(self, attr_schema["derivation_fn"])
-            global_attributes[attr_name] = derivation_fn(data)
-
-        return global_attributes
-
-    def _derive_spectra_attributes(self, var_data):
-        """
-        Function to Derive WCS-Keyword Metadata Attributes for a given spectra variable
-        based on the variables `.wcs` member.
-        """
-        spectra_attributes = OrderedDict()
-
-        # WCSAXIS is a Single Attribute
-        spectra_attributes["WCSAXES"] = self._get_wcs_naxis(var_data)
-
-        # Get Sets/Collections of Attributes
-        for keyword, prop, _ in self.wcs_keyword_to_astropy_property:
-            for dimension_i in range(spectra_attributes["WCSAXES"]):
-                dimension_attr_name = (
-                    f"{keyword}{dimension_i+1}"  # KeynameName Indexed 1-4 vs 0-3
-                )
-                # Add the Property Value for the given Axis as a Metadata Attribute
-                spectra_attributes[dimension_attr_name] = self._get_wcs_dimension_attr(
-                    var_data=var_data, prop=prop, dimension=dimension_i
-                )
-
-        # Derive WCS Time Attributes
-        spectra_attributes["MJDREF"] = self._get_wcs_timeref(var_data)
-        spectra_attributes["TIMEUNIT"] = self._get_wcs_timeunit(var_data)
-        spectra_attributes["TIMEDEL"] = self._get_wcs_timedel(var_data)
-
-        return spectra_attributes
+        # Get the number of WCS Axes from the NDCube
+        return self._get_wcs_naxis(var_name, var_data, guess_type)
 
     # =============================================================================================
     #                             VARIABLE METADATA DERIVATIONS
@@ -1112,14 +1111,14 @@ class SWXSchema:
     def _get_lablaxis(self, var_name, var_data, guess_type):
         return f"{var_name} [{self._get_units(var_name, var_data, guess_type)}]"
 
-    def _get_reference_position(self, guess_type):
+    def _get_reference_position(self, var_name, var_data, guess_type):
         if guess_type == const.CDF_TIME_TT2000.value:
             return "rotating Earth geoid"
         else:
             msg = f"Reference Position for Time type ({guess_type}) not found."
             raise TypeError(msg)
 
-    def _get_resolution(self, var_data):
+    def _get_resolution(self, var_name, var_data, guess_type):
         if len(var_data) < 2:
             raise ValueError(
                 f"Can not derive Time Resolution, need 2 samples, found {var_data}."
@@ -1146,28 +1145,26 @@ class SWXSchema:
                 si_conversion = " > "
         return si_conversion
 
-    def _get_time_base(self, guess_type):
+    def _get_time_base(self, var_name, var_data, guess_type):
         if guess_type == const.CDF_TIME_TT2000.value:
             return "J2000"
         else:
             raise TypeError(f"Time Base for Time type ({guess_type}) not found.")
 
-    def _get_time_scale(self, guess_type):
+    def _get_time_scale(self, var_name, var_data, guess_type):
         if guess_type == const.CDF_TIME_TT2000.value:
             return "Terrestrial Time (TT)"
         else:
             raise TypeError(f"Time Scale for Time type ({guess_type}) not found.")
 
-    def _get_time_units(self, guess_type):
-        if guess_type == const.CDF_TIME_TT2000.value:
-            return "ns"
-        else:
-            raise TypeError(f"Time Units for Time type ({guess_type}) not found.")
-
     def _get_units(self, var_name, var_data, guess_type):
         unit = ""
         # Get the Unit from the TimeSeries Quantity if it exists
-        if hasattr(var_data, "unit") and var_data.unit is not None:
+        if var_name == "time" and guess_type == const.CDF_TIME_TT2000.value:
+            return "ns"
+        elif var_name == "time":
+            raise TypeError(f"Time Units for Time type ({guess_type}) not found.")
+        elif hasattr(var_data, "unit") and var_data.unit is not None:
             unit = var_data.unit.to_string()
         # Try to ge the UNITS from the metadata
         elif "UNITS" in var_data.meta and var_data.meta["UNITS"] is not None:
@@ -1196,7 +1193,7 @@ class SWXSchema:
     #                             SPECTRA METADATA DERIVATIONS
     # =============================================================================================
 
-    def _get_wcs_naxis(self, var_data):
+    def _get_wcs_naxis(self, var_name, var_data, guess_type):
         """
         Function to get the number of axes within a spectra WCS member
         """
@@ -1207,7 +1204,7 @@ class SWXSchema:
             attr_value = var_data.meta[attr_name]
         return int(attr_value)
 
-    def _get_wcs_timeref(self, var_data):
+    def _get_wcs_timeref(self, var_name, var_data, guess_type):
         """
         Function to get the reference time within a spectra WCS member
         """
@@ -1218,7 +1215,7 @@ class SWXSchema:
             attr_value = var_data.meta[attr_name]
         return attr_value
 
-    def _get_wcs_timeunit(self, var_data):
+    def _get_wcs_timeunit(self, var_name, var_data, guess_type):
         """
         Function to get the time units within a spectra WCS member
         """
@@ -1229,7 +1226,7 @@ class SWXSchema:
             attr_value = var_data.meta[attr_name]
         return attr_value
 
-    def _get_wcs_timedel(self, var_data):
+    def _get_wcs_timedel(self, var_name, var_data, guess_type):
         """
         Function to get the time delta (between points) within a spectra WCS member
         """
@@ -1240,16 +1237,61 @@ class SWXSchema:
             attr_value = var_data.meta[attr_name]
         return attr_value
 
-    def _get_wcs_dimension_attr(self, var_data, prop, dimension):
+    def _get_wcs_dimension_attr(self, var_data, keyword, dimension):
         """
         Function to get the spectra's WCS keywork property along the given axis
         """
+        (_, prop, default) = list(
+            filter(lambda x: x[0] == keyword, self.wcs_keyword_to_astropy_property)
+        )[0]
         # Get the Property for the given WCS Keyword for the given Axis
         property_value = getattr(var_data.wcs.wcs, prop)[dimension]
         # Convert to a String as needed
         if isinstance(property_value, u.UnitBase):
             property_value = property_value.to_string()
         return property_value
+
+    def _get_cnamei(self, var_name, var_data, guess_type, dimension_i):
+        keyword = "CNAME"
+        # Add the Property Value for the given Axis as a Metadata Attribute
+        return self._get_wcs_dimension_attr(
+            var_data=var_data, keyword=keyword, dimension=dimension_i
+        )
+
+    def _get_ctypei(self, var_name, var_data, guess_type, dimension_i):
+        keyword = "CTYPE"
+        # Add the Property Value for the given Axis as a Metadata Attribute
+        return self._get_wcs_dimension_attr(
+            var_data=var_data, keyword=keyword, dimension=dimension_i
+        )
+
+    def _get_cuniti(self, var_name, var_data, guess_type, dimension_i):
+        keyword = "CUNIT"
+        # Add the Property Value for the given Axis as a Metadata Attribute
+        return self._get_wcs_dimension_attr(
+            var_data=var_data, keyword=keyword, dimension=dimension_i
+        )
+
+    def _get_crpixi(self, var_name, var_data, guess_type, dimension_i):
+        keyword = "CRPIX"
+        # Add the Property Value for the given Axis as a Metadata Attribute
+        return self._get_wcs_dimension_attr(
+            var_data=var_data, keyword=keyword, dimension=dimension_i
+        )
+
+    def _get_crvali(self, var_name, var_data, guess_type, dimension_i):
+        keyword = "CRVAL"
+        # Add the Property Value for the given Axis as a Metadata Attribute
+        return self._get_wcs_dimension_attr(
+            var_data=var_data, keyword=keyword, dimension=dimension_i
+        )
+
+    def _get_cdelti(self, var_name, var_data, guess_type, dimension_i):
+        keyword = "CDELT"
+        # Add the Property Value for the given Axis as a Metadata Attribute
+        return self._get_wcs_dimension_attr(
+            var_data=var_data, keyword=keyword, dimension=dimension_i
+        )
 
     # =============================================================================================
     #                             GLOBAL METADATA DERIVATIONS

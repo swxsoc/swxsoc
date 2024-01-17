@@ -1,6 +1,95 @@
 # Based on :  https://spdf.gsfc.nasa.gov/istp_guide/vattributes.html
 #             SWxSOC CDF Format Guide
 attribute_key:
+  # ===== EPOCH-ONLY VARIABLE ATTRIBUTES =====
+  TIME_BASE:
+    description: > 
+      fixed (0AD, 1900, 1970 (POSIX), J2000 (used by CDF_TIME_TT2000),
+      4714 BC (Julian)) or flexible (provider-defined)
+    derived: true
+    derivation_fn: _get_time_base
+    required: false
+    overwrite: false
+    valid_values: null
+    alternate: null
+  RESOLUTION:
+    description: > 
+      Using ISO8601 relative time format, for example: "1s" = 1 second. 
+      Resolution provides the smallest change in time that is measured.
+    derived: true
+    derivation_fn: _get_resolution
+    required: false
+    overwrite: false
+    valid_values: null
+    alternate: null
+  TIME_SCALE:
+    description: >
+      TT (same as TDT, used by CDF_TIME_TT2000), TAI (same as IAT, TT-32.184s), 
+      UTC (includes leap seconds), TDB (same as SPICE ET), EME1950 [default: UTC]
+    derived: true
+    derivation_fn: _get_time_scale
+    required: false
+    overwrite: false
+    valid_values: null
+    alternate: null
+  REFERENCE_POSITION:
+    description: >
+      Topocenter (local), Geocenter , rotating Earth geoid (used by CDF_TIME_TT2000). 
+      Reference_Position is optional metadata to account for time variance with position in 
+      the gravity wells and with relative velocity. While we could use a combined 
+      TimeSystem attribute that defines mission-specific time scales where needed, such as 
+      UTC-at-STEREO-B, it's cleaner to keep them separate as Time_Scale=UTC and 
+      Reference_Position=STEREO-B.
+    derived: true
+    derivation_fn: _get_reference_position
+    required: false
+    overwrite: false
+    valid_values: null
+    alternate: null
+  LEAP_SECONDS_INCLUDED:
+    description: > 
+      comma-delimited list (within brackets) of leap seconds included in the form of a lists
+      of ISO8601 times when each leap second was added, appended with the size of the leap 
+      second in ISO8601 relative time (+/- time, most commonly: "+1s") [default: standard 
+      list of leap seconds up to time of data]. Leap_Seconds_Included is needed to account 
+      for time scales that don't have all 34 (in 2009) leap seconds and for the clocks in 
+      various countries that started using leap seconds at different times. The full list is 
+      required to handle the equally or more common case where a time scale starts at a 
+      pecific UTC but continues on without leap seconds in TAI mode; this is basically what 
+      missions that don't add leap seconds are doing.
+      $ cat tai-utc.dat | awk 'ORS="," { val = $7 - prev } {prev = $7} { print $1$2"01+" val "s" }'
+    derived: false
+    required: false   # NOT Required in ISTP Guide
+    overwrite: false
+    valid_values: null
+    alternate: null
+  ABSOLUTE_ERROR:
+    description: >
+      Absolute or systematic error, in same units as Units attribute.
+    derived: false
+    required: false   # NOT Required in ISTP Guide
+    overwrite: false
+    valid_values: null
+    alternate: null
+  RELATIVE_ERROR:
+    description: >
+      Relative or random error, in same units as Units attribute - to specify the accuracy 
+      of the time stamps relative to each other. This is usually much smaller than Absolute_Error.
+    derived: false
+    required: false   # NOT Required in ISTP Guide
+    overwrite: false
+    valid_values: null
+    alternate: null
+  BIN_LOCATION:
+    description: >
+      relative position of time stamp to the data measurement bin, with 0.0 at the beginning 
+      of time bin and 1.0 at the end. Default is 0.5 for the time at the center of the data 
+      measurement. Since clock readings are usually truncated, the real value may be closer to 0.0.
+    derived: false
+    required: false   # NOT Required in ISTP Guide
+    overwrite: false
+    valid_values: null
+    alternate: null
   # ===== DATA VARIABLE ATTRIBUTES =====
   CATDESC:
     description: >
@@ -188,6 +277,7 @@ attribute_key:
         metadata
         ignore_data
     alternate: null
+  # ===== SPECTRA-ONLY VARIABLE ATTRIBUTES =====
   WCSAXES:
     description: > 
       This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
@@ -196,6 +286,7 @@ attribute_key:
       greater than 999, representing the number of axes in the associated
       data array.
     derived: true
+    derivation_fn: _get_wcs_naxis
     required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
@@ -207,6 +298,7 @@ attribute_key:
       point number representing the reference time position of the time stamps along the 
       0'th axis of the measurement.
     derived: true
+    derivation_fn: _get_wcs_timeref
     required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
@@ -218,6 +310,7 @@ attribute_key:
       string giving the units of the time stamps along the 0'th axis of the measurement. 
       The TIMEUNIT should match the CUNITi along the time axis of the measurement
     derived: true
+    derivation_fn: _get_wcs_timeunit
     required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
@@ -230,6 +323,7 @@ attribute_key:
       the measurement. The TIMEDEL should match the CRDELi along the time axis of the 
       measurement.
     derived: true
+    derivation_fn: _get_wcs_timedel
     required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
@@ -243,6 +337,8 @@ attribute_key:
       The name is used for comment/documentation purposes only and is not used as a part
       of the i'th axis coordinate transformations.
     derived: true
+    derivation_fn: _get_cnamei
+    iterable: true
     required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
@@ -255,6 +351,8 @@ attribute_key:
       The value field shall contain a character string, giving
       the name of the coordinate represented by axis i.
     derived: true
+    derivation_fn: _get_ctypei
+    iterable: true
     required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
@@ -267,6 +365,8 @@ attribute_key:
       The value shall be the units along axis i, compatible with CTYPEi to be used for
       scaling and coordinate transformations along the i'th axis. 
     derived: true
+    derivation_fn: _get_cuniti
+    iterable: true
     required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
@@ -284,6 +384,8 @@ attribute_key:
       data array.  Use comments to indicate the location of the index point
       relative to the pixel.
     derived: true
+    derivation_fn: _get_crpixi
+    iterable: true
     required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
@@ -297,6 +399,8 @@ attribute_key:
       giving the value of the coordinate specified by the CTYPEn keyword at
       the reference point CRPIXi.
     derived: true
+    derivation_fn: _get_crvali
+    iterable: true
     required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
@@ -312,6 +416,8 @@ attribute_key:
       point CRPIXi, in units of the coordinate specified by  the CTYPEi 
       keyword.
     derived: true
+    derivation_fn: _get_cdelti
+    iterable: true
     required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
@@ -346,3 +452,19 @@ metadata:
   - FILLVAL
   - FORMAT
   - VAR_TYPE
+epoch:
+  - REFERENCE_POSITION
+  - RESOLUTION
+  - TIME_BASE
+  - TIME_SCALE
+spectra: 
+  - WCSAXES
+  - MJDREF
+  - TIMEUNIT
+  - TIMEDEL
+  - CNAMEi # Iterable
+  - CTYPEi # Iterable
+  - CUNITi # Iterable
+  - CRPIXi # Iterable
+  - CRVALi # Iterable
+  - CDELTi # Iterable

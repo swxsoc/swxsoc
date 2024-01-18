@@ -6,7 +6,7 @@ from spacepy.pycdf import CDF, CDFError
 from spacepy.pycdf.istp import FileChecks, VariableChecks
 from swxsoc.util.schema import SWXSchema
 
-__all__ = ["validate", "CDFValidator"]
+__all__ = ["validate", "SWXDataValidator", "CDFValidator"]
 
 
 def validate(filepath: str) -> list[str]:

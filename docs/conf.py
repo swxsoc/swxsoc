@@ -109,6 +109,7 @@ intersphinx_mapping = {
     "astropy": ("http://docs.astropy.org/en/stable/", None),
     "sunpy": ("https://docs.sunpy.org/en/stable/", None),
     "ndcube": ("https://docs.sunpy.org/projects/ndcube/en/stable/", None),
+    "hermes_core": ("https://hermes-core.readthedocs.io/en/latest/", None)
 }
 
 # -- Options for HTML output -------------------------------------------------

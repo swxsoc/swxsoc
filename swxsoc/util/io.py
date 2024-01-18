@@ -13,7 +13,7 @@ from ndcube import NDCube
 from swxsoc.util.exceptions import warn_user
 from swxsoc.util.schema import SWXSchema
 
-__all__ = ["CDFHandler"]
+__all__ = ["SWXIOHandler", "CDFHandler"]
 
 # ================================================================================================
 #                                   ABSTRACT HANDLER

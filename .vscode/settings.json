@@ -1,0 +1,8 @@
+{
+    "esbonio.server.enabled": true,
+    "python.formatting.blackPath": "/usr/local/bin/black",
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "python.formatting.provider": "none"
+}

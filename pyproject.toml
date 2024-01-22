@@ -1,0 +1,118 @@
+[build-system]
+requires = ["setuptools>=45",
+            "setuptools_scm[toml]>=6.2",
+            "wheel"]
+build-backend = 'setuptools.build_meta'
+
+[project]
+name = "swxsoc"
+description = "A Python package to support the SWxSOC instrument packages."
+readme = "README.rst"
+dynamic = ["version"]
+authors = [{name = "Steven Christe", email="steven.d.christe@nasa.gov"},
+           {name = "Damian Barrous Dumme", email="damianbarrous@gmail.com"},
+           {name = "Andrew Robbertz", email="a.robbertz@gmail.com"}]
+license = {file = "LICENSE.rst"}
+requires-python = ">=3.9"
+keywords = ["swxsoc", "nasa mission", "space weather"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache 2.0",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.9",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+  'astropy>=5.3.3',
+  'numpy>=1.18.0',
+  'sunpy>=5.0.1',
+  'spacepy>=0.4.1',
+  'ndcube>=2.2.0',
+  'pyyaml>=5.3.1',
+]
+
+[project.optional-dependencies]
+dev = [
+  'coverage>=5.0.3',
+  'pytest',
+  'pytest-astropy',
+  'pytest-cov',
+  'black',
+  'flake8',
+  'coverage[toml]'
+]
+
+docs = [
+  'sphinx',
+  'sphinx-automodapi',
+  'sphinx-copybutton'
+]
+
+test = [
+  'pytest',
+  'pytest-astropy',
+  'pytest-cov',
+  'coverage[toml]',
+]
+
+style = [
+  'black',
+  'flake8',
+  'rstcheck',
+]
+
+[tool.setuptools.package-data]
+swxsoc = ["data/*"]
+
+[tool.setuptools]
+packages = ["swxsoc"]
+
+[tool.setuptools_scm]
+write_to = "swxsoc/_version.py"
+
+[tool.pytest.ini_options]
+testpaths = [
+   "swxsoc/tests",
+   "swxsoc/util/tests",
+   "docs"
+]
+doctest_plus = "enabled"
+text_file_format = "rst"
+addopts = "--doctest-rst"
+
+[tool.coverage.run]
+omit = [
+  'swxsoc/__init*',
+  'swxsoc/conftest.py',
+  'swxsoc/*setup_package*',
+  'swxsoc/tests/*',
+  'swxsoc/*/tests/*',
+  'swxsoc/extern/*',
+  'swxsoc/version*',
+  '*/swxsoc/__init*',
+  '*/swxsoc/conftest.py',
+  '*/swxsoc/*setup_package*',
+  '*/swxsoc/tests/*',
+  '*/swxsoc/*/tests/*',
+  '*/swxsoc/extern/*',
+  '*/swxsoc/version*',
+]
+
+[tool.rstcheck]
+report_level = "WARNING"
+ignore_roles = [
+  "py:class",
+  "py:class",
+  "file",
+]
+ignore_directives = [
+    "plot",
+    "doctest",
+    "automodapi",
+    "csv-table",
+]
+ignore_messages = "not referenced"

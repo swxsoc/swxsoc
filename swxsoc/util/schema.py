@@ -368,9 +368,9 @@ class SWXSchema:
         """
         # Strip the Description of New Lines
         for attr_name in self.global_attribute_schema.keys():
-            self.global_attribute_schema[attr_name][
-                "description"
-            ] = self.global_attribute_schema[attr_name]["description"].strip()
+            self.global_attribute_schema[attr_name]["description"] = (
+                self.global_attribute_schema[attr_name]["description"].strip()
+            )
 
         # Get all the Attributes from the Schema
         attribute_names = list(self.global_attribute_schema.keys())
@@ -432,9 +432,9 @@ class SWXSchema:
 
         # Strip the Description of New Lines
         for attr_name in measurement_attribute_key.keys():
-            measurement_attribute_key[attr_name][
-                "description"
-            ] = measurement_attribute_key[attr_name]["description"].strip()
+            measurement_attribute_key[attr_name]["description"] = (
+                measurement_attribute_key[attr_name]["description"].strip()
+            )
 
         # Create New Column to describe which VAR_TYPE's require the given attribute
         for attr_name in measurement_attribute_key.keys():

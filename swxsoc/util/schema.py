@@ -25,6 +25,10 @@ __all__ = ["SWXSchema"]
 
 DEFAULT_GLOBAL_CDF_ATTRS_SCHEMA_FILE = "swxsoc_default_global_cdf_attrs_schema.yaml"
 DEFAULT_VARIABLE_CDF_ATTRS_SCHEMA_FILE = "swxsoc_default_variable_cdf_attrs_schema.yaml"
+DEFAULT_GLOBAL_FITS_ATTRS_SCHEMA_FILE = "swxsoc_default_global_fits_attrs_schema.yaml"
+DEFAULT_VARIABLE_FITS_ATTRS_SCHEMA_FILE = (
+    "swxsoc_default_variable_fits_attrs_schema.yaml"
+)
 
 
 class SWXSchema:
@@ -122,12 +126,12 @@ class SWXSchema:
         self,
         global_schema_layers: Optional[list[str]] = None,
         variable_schema_layers: Optional[list[str]] = None,
-        use_defaults: Optional[bool] = True,
+        defaults: str = "cdf",
     ):
         super().__init__()
 
         # Data Validation, Compliance, Derived Attributes
-        if not use_defaults and (
+        if defaults is None and (
             global_schema_layers is None
             or variable_schema_layers is None
             or len(global_schema_layers) == 0
@@ -139,8 +143,13 @@ class SWXSchema:
 
         # Construct the Global Attribute Schema
         _global_attr_schema = {}
-        if use_defaults:
-            _def_global_attr_schema = self._load_default_global_attr_schema()
+        if defaults == "cdf":
+            _def_global_attr_schema = self._load_default_cdf_global_attr_schema()
+            _global_attr_schema = self._merge(
+                base_layer=_global_attr_schema, new_layer=_def_global_attr_schema
+            )
+        if defaults == "fits":
+            _def_global_attr_schema = self._load_default_fits_global_attr_schema()
             _global_attr_schema = self._merge(
                 base_layer=_global_attr_schema, new_layer=_def_global_attr_schema
             )
@@ -157,8 +166,13 @@ class SWXSchema:
 
         # Data Validation and Compliance for Variable Data
         _variable_attr_schema = {}
-        if use_defaults:
-            _def_variable_attr_schema = self._load_default_variable_attr_schema()
+        if defaults == "cdf":
+            _def_variable_attr_schema = self._load_default_cdf_variable_attr_schema()
+            _variable_attr_schema = self._merge(
+                base_layer=_variable_attr_schema, new_layer=_def_variable_attr_schema
+            )
+        if defaults == "fits":
+            _def_variable_attr_schema = self._load_default_fits_variable_attr_schema()
             _variable_attr_schema = self._merge(
                 base_layer=_variable_attr_schema, new_layer=_def_variable_attr_schema
             )
@@ -247,7 +261,7 @@ class SWXSchema:
         """(`dict`) Default Global Attributes applied for all SWxSOC Data Files"""
         return self._default_global_attributes
 
-    def _load_default_global_attr_schema(self) -> dict:
+    def _load_default_cdf_global_attr_schema(self) -> dict:
         # The Default Schema file is contained in the `swxsoc/data` directory
         default_schema_path = str(
             Path(swxsoc.__file__).parent / "data" / DEFAULT_GLOBAL_CDF_ATTRS_SCHEMA_FILE
@@ -255,12 +269,32 @@ class SWXSchema:
         # Load the Schema
         return self._load_yaml_data(yaml_file_path=default_schema_path)
 
-    def _load_default_variable_attr_schema(self) -> dict:
+    def _load_default_cdf_variable_attr_schema(self) -> dict:
         # The Default Schema file is contained in the `swxsoc/data` directory
         default_schema_path = str(
             Path(swxsoc.__file__).parent
             / "data"
             / DEFAULT_VARIABLE_CDF_ATTRS_SCHEMA_FILE
+        )
+        # Load the Schema
+        return self._load_yaml_data(yaml_file_path=default_schema_path)
+
+    def _load_default_fits_global_attr_schema(self) -> dict:
+        # The Default Schema file is contained in the `swxsoc/data` directory
+        default_schema_path = str(
+            Path(swxsoc.__file__).parent
+            / "data"
+            / DEFAULT_GLOBAL_FITS_ATTRS_SCHEMA_FILE
+        )
+        # Load the Schema
+        return self._load_yaml_data(yaml_file_path=default_schema_path)
+
+    def _load_default_fits_variable_attr_schema(self) -> dict:
+        # The Default Schema file is contained in the `swxsoc/data` directory
+        default_schema_path = str(
+            Path(swxsoc.__file__).parent
+            / "data"
+            / DEFAULT_VARIABLE_FITS_ATTRS_SCHEMA_FILE
         )
         # Load the Schema
         return self._load_yaml_data(yaml_file_path=default_schema_path)
@@ -300,6 +334,9 @@ class SWXSchema:
         Function to generate a template of required global attributes
         that must be set for a valid CDF.
 
+        The templates are returned in a format of key-value pairs where the key is the attribute name and the value is a tuple of (attribute value, attribute comment).
+        The comment fields are not required for either CDF or FITS files, but can be optionally provided for compatibility with writing FITS metadata headers.
+
         Returns
         -------
         template : `OrderedDict`
@@ -313,13 +350,16 @@ class SWXSchema:
                 and not attr_schema["derived"]
                 and attr_name not in default_global_attributes
             ):
-                template[attr_name] = None
+                template[attr_name] = (None, None)
         return template
 
     def measurement_attribute_template(self) -> OrderedDict:
         """
         Function to generate a template of required measurement attributes
         that must be set for a valid CDF measurement variable.
+
+        The templates are returned in a format of key-value pairs where the key is the attribute name and the value is a tuple of (attribute value, attribute comment).
+        The comment fields are not required for either CDF or FITS files, but can be optionally provided for compatibility with writing FITS metadata headers.
 
         Returns
         -------
@@ -331,7 +371,7 @@ class SWXSchema:
             "attribute_key"
         ].items():
             if attr_schema["required"] and not attr_schema["derived"]:
-                template[attr_name] = None
+                template[attr_name] = (None, None)
         return template
 
     def global_attribute_info(self, attribute_name: Optional[str] = None) -> Table:
@@ -840,7 +880,7 @@ class SWXSchema:
                 (guess_dims, guess_types, guess_elements) = self._types(var_data.data)
 
         # Check the Attributes that can be derived
-        var_type = self._get_var_type(var_name, var_data, guess_types[0])
+        var_type, _ = self._get_var_type(var_name, var_data, guess_types[0])
 
         # Identify / Select Attributes that can be Derived for the given measurement
         derived_attributes = []
@@ -886,7 +926,7 @@ class SWXSchema:
                 # Ex: CNAMEi -> CNAME , DEPEND_i -> DEPEND_
                 attr_root = attr_name.rstrip("i")
                 # Get the number of dimensions to iterate over for the attribute
-                num_dimensions = self._get_num_dimensions(
+                num_dimensions, _ = self._get_num_dimensions(
                     var_name, var_data, guess_types[0]
                 )
                 # Loop through each dimension we want to derive for
@@ -927,25 +967,25 @@ class SWXSchema:
     # =============================================================================================
 
     def _get_depend(self, var_name, var_data, guess_type):
-        return "Epoch"
+        return "Epoch", ""
 
     def _get_display_type(self, var_name, var_data, guess_type):
-        return "time_series"
+        return "time_series", ""
 
     def _get_fieldnam(self, var_name, var_data, guess_type):
         if var_name != "time":
-            return deepcopy(var_name)
+            return deepcopy(var_name), ""
         else:
-            return "Epoch"
+            return "Epoch", ""
 
     def _get_fillval(self, var_name, var_data, guess_type):
         # Get the Variable Data
         if guess_type == const.CDF_TIME_TT2000.value:
-            return Time("9999-12-31T23:59:59.999999", format="isot")
+            return Time("9999-12-31T23:59:59.999999", format="isot"), ""
         else:
             # Get the FILLVAL for the gussed data type
             fillval = self._fillval_helper(cdf_type=guess_type)
-            return fillval
+            return fillval, ""
 
     def _fillval_helper(self, cdf_type):
         # Fill value, indexed by the CDF type (numeric)
@@ -995,7 +1035,7 @@ class SWXSchema:
             const.CDF_BYTE.value,
         ):
             if minn in var_data.meta:  # Just use validmin or scalemin
-                minval = var_data.meta[minn]
+                minval, _ = var_data.meta[minn]
             elif cdftype in (
                 const.CDF_UINT1.value,
                 const.CDF_UINT2.value,
@@ -1014,7 +1054,7 @@ class SWXSchema:
                 )
                 minval = -(2 ** (8 * size - 1))
             if maxx in var_data.meta:  # Just use max
-                maxval = var_data.meta[maxx]
+                maxval, _ = var_data.meta[maxx]
             elif cdftype == const.CDF_BYTE.value:
                 maxval = 2**7 - 1
             else:
@@ -1062,7 +1102,7 @@ class SWXSchema:
             const.CDF_DOUBLE.value,
         ):
             if "VALIDMIN" in var_data.meta and "VALIDMAX" in var_data.meta:
-                range = var_data.meta["VALIDMAX"] - var_data.meta["VALIDMIN"]
+                range = var_data.meta["VALIDMAX"][0] - var_data.meta["VALIDMIN"][0]
             # If not, just use nothing.
             else:
                 range = None
@@ -1070,12 +1110,12 @@ class SWXSchema:
             # (Use maxx-minn for this...effectively uses VALIDMIN/MAX for most
             # cases.)
             if range and (minn in var_data.meta and maxx in var_data.meta):
-                if len(str(int(var_data.meta[maxx]))) >= len(
-                    str(int(var_data.meta[minn]))
+                if len(str(int(var_data.meta[maxx][0]))) >= len(
+                    str(int(var_data.meta[minn][0]))
                 ):
-                    ln = str(int(var_data.meta[maxx]))
+                    ln = str(int(var_data.meta[maxx][0]))
                 else:
-                    ln = str(int(var_data.meta[minn]))
+                    ln = str(int(var_data.meta[minn][0]))
             if range and ln and range < 0:  # Cover all our bases:
                 range = None
             # Switch on Range
@@ -1107,14 +1147,15 @@ class SWXSchema:
                     self.cdftypenames.get(cdftype, "UNKNOWN")
                 )
             )
-        return fmt
+        return fmt, ""
 
     def _get_lablaxis(self, var_name, var_data, guess_type):
-        return f"{var_name} [{self._get_units(var_name, var_data, guess_type)}]"
+        var_unit, _ = self._get_units(var_name, var_data, guess_type)
+        return f"{var_name} [{var_unit}]", ""
 
     def _get_reference_position(self, var_name, var_data, guess_type):
         if guess_type == const.CDF_TIME_TT2000.value:
-            return "rotating Earth geoid"
+            return "rotating Earth geoid", ""
         else:
             msg = f"Reference Position for Time type ({guess_type}) not found."
             raise TypeError(msg)
@@ -1128,9 +1169,10 @@ class SWXSchema:
         delta = var_data[1] - var_data[0]
         # Get the number of second between samples.
         delta_seconds = delta.to_value("s")
-        return f"{delta_seconds}s"
+        return f"{delta_seconds}s", ""
 
     def _get_si_conversion(self, var_name, var_data, guess_type):
+        comment = ""
         if var_name == "time":
             conversion_rate = u.ns.to(u.s)
             si_conversion = f"{conversion_rate:e}>{u.s}"
@@ -1144,54 +1186,57 @@ class SWXSchema:
                     si_conversion = f"1.0>{var_data.unit}"
             else:
                 si_conversion = " > "
-        return si_conversion
+        return si_conversion, comment
 
     def _get_time_base(self, var_name, var_data, guess_type):
         if guess_type == const.CDF_TIME_TT2000.value:
-            return "J2000"
+            return "J2000", ""
         else:
             raise TypeError(f"Time Base for Time type ({guess_type}) not found.")
 
     def _get_time_scale(self, var_name, var_data, guess_type):
         if guess_type == const.CDF_TIME_TT2000.value:
-            return "Terrestrial Time (TT)"
+            return "Terrestrial Time (TT)", ""
         else:
             raise TypeError(f"Time Scale for Time type ({guess_type}) not found.")
 
     def _get_units(self, var_name, var_data, guess_type):
         unit = ""
+        comment = ""
         # Get the Unit from the TimeSeries Quantity if it exists
         if var_name == "time" and guess_type == const.CDF_TIME_TT2000.value:
-            return "ns"
+            unit = "ns"
+            comment = ""
         elif var_name == "time":
             raise TypeError(f"Time Units for Time type ({guess_type}) not found.")
         elif hasattr(var_data, "unit") and var_data.unit is not None:
             unit = var_data.unit.to_string()
+            comment = ""
         # Try to ge the UNITS from the metadata
         elif "UNITS" in var_data.meta and var_data.meta["UNITS"] is not None:
-            unit = var_data.meta["UNITS"]
-        return unit
+            unit, comment = var_data.meta["UNITS"]
+        return unit, comment
 
     def _get_validmin(self, var_name, var_data, guess_type):
         # Get the Min Value
         minval, _ = self._get_minmax(guess_type)
-        return minval
+        return minval, ""
 
     def _get_validmax(self, var_name, var_data, guess_type):
         # Get the Max Value
         _, maxval = self._get_minmax(guess_type)
-        return maxval
+        return maxval, ""
 
     def _get_var_type(self, var_name, var_data, guess_type):
         attr_name = "VAR_TYPE"
         if (attr_name not in var_data.meta) or (not var_data.meta[attr_name]):
-            var_type = "data"
+            var_type, comment = "data", ""
         else:
-            var_type = var_data.meta[attr_name]
-        return var_type
+            var_type, comment = var_data.meta[attr_name]
+        return var_type, comment
 
     # =============================================================================================
-    #                             SPECTRA METADATA DERIVATIONS
+    #                      , comment       SPECTRA METADATA DERIVATIONS
     # =============================================================================================
 
     def _get_wcs_naxis(self, var_name, var_data, guess_type):
@@ -1200,10 +1245,10 @@ class SWXSchema:
         """
         attr_name = "WCSAXES"
         if (attr_name not in var_data.meta) or (not var_data.meta[attr_name]):
-            attr_value = var_data.wcs.wcs.naxis
+            attr_value, comment = var_data.wcs.wcs.naxis, ""
         else:
-            attr_value = var_data.meta[attr_name]
-        return int(attr_value)
+            attr_value, comment = var_data.meta[attr_name]
+        return int(attr_value), comment
 
     def _get_wcs_timeref(self, var_name, var_data, guess_type):
         """
@@ -1211,10 +1256,10 @@ class SWXSchema:
         """
         attr_name = "MJDREF"
         if (attr_name not in var_data.meta) or (not var_data.meta[attr_name]):
-            attr_value = var_data.wcs.wcs.mjdref[0]
+            attr_value, comment = var_data.wcs.wcs.mjdref[0], ", comment"
         else:
-            attr_value = var_data.meta[attr_name]
-        return attr_value
+            attr_value, comment = var_data.meta[attr_name]
+        return attr_value, comment
 
     def _get_wcs_timeunit(self, var_name, var_data, guess_type):
         """
@@ -1222,10 +1267,10 @@ class SWXSchema:
         """
         attr_name = "TIMEUNIT"
         if (attr_name not in var_data.meta) or (not var_data.meta[attr_name]):
-            attr_value = var_data.wcs.wcs.timeunit
+            attr_value, comment = var_data.wcs.wcs.timeunit, ""
         else:
-            attr_value = var_data.meta[attr_name]
-        return attr_value
+            attr_value, comment = var_data.meta[attr_name]
+        return attr_value, comment
 
     def _get_wcs_timedel(self, var_name, var_data, guess_type):
         """
@@ -1233,10 +1278,10 @@ class SWXSchema:
         """
         attr_name = "TIMEDEL"
         if (attr_name not in var_data.meta) or (not var_data.meta[attr_name]):
-            attr_value = var_data.wcs.wcs.timedel
+            attr_value, comment = var_data.wcs.wcs.timedel, ""
         else:
-            attr_value = var_data.meta[attr_name]
-        return attr_value
+            attr_value, comment = var_data.meta[attr_name]
+        return attr_value, comment
 
     def _get_wcs_dimension_attr(self, var_data, keyword, dimension):
         """
@@ -1255,43 +1300,61 @@ class SWXSchema:
     def _get_cnamei(self, var_name, var_data, guess_type, dimension_i):
         keyword = "CNAME"
         # Add the Property Value for the given Axis as a Metadata Attribute
-        return self._get_wcs_dimension_attr(
-            var_data=var_data, keyword=keyword, dimension=dimension_i
+        return (
+            self._get_wcs_dimension_attr(
+                var_data=var_data, keyword=keyword, dimension=dimension_i
+            ),
+            "",
         )
 
     def _get_ctypei(self, var_name, var_data, guess_type, dimension_i):
         keyword = "CTYPE"
         # Add the Property Value for the given Axis as a Metadata Attribute
-        return self._get_wcs_dimension_attr(
-            var_data=var_data, keyword=keyword, dimension=dimension_i
+        return (
+            self._get_wcs_dimension_attr(
+                var_data=var_data, keyword=keyword, dimension=dimension_i
+            ),
+            "",
         )
 
     def _get_cuniti(self, var_name, var_data, guess_type, dimension_i):
         keyword = "CUNIT"
         # Add the Property Value for the given Axis as a Metadata Attribute
-        return self._get_wcs_dimension_attr(
-            var_data=var_data, keyword=keyword, dimension=dimension_i
+        return (
+            self._get_wcs_dimension_attr(
+                var_data=var_data, keyword=keyword, dimension=dimension_i
+            ),
+            "",
         )
 
     def _get_crpixi(self, var_name, var_data, guess_type, dimension_i):
         keyword = "CRPIX"
         # Add the Property Value for the given Axis as a Metadata Attribute
-        return self._get_wcs_dimension_attr(
-            var_data=var_data, keyword=keyword, dimension=dimension_i
+        return (
+            self._get_wcs_dimension_attr(
+                var_data=var_data, keyword=keyword, dimension=dimension_i
+            ),
+            "",
         )
 
     def _get_crvali(self, var_name, var_data, guess_type, dimension_i):
         keyword = "CRVAL"
         # Add the Property Value for the given Axis as a Metadata Attribute
-        return self._get_wcs_dimension_attr(
-            var_data=var_data, keyword=keyword, dimension=dimension_i
+        return (
+            self._get_wcs_dimension_attr(
+                var_data=var_data, keyword=keyword, dimension=dimension_i
+            ),
+            "",
         )
 
     def _get_cdelti(self, var_name, var_data, guess_type, dimension_i):
         keyword = "CDELT"
         # Add the Property Value for the given Axis as a Metadata Attribute
-        return self._get_wcs_dimension_attr(
-            var_data=var_data, keyword=keyword, dimension=dimension_i
+        return (
+            self._get_wcs_dimension_attr(
+                var_data=var_data, keyword=keyword, dimension=dimension_i
+            ),
+            "",
         )
 
     # =============================================================================================
@@ -1307,13 +1370,13 @@ class SWXSchema:
         loss of the originial source in case of renaming.
         """
         attr_name = "Logical_file_id"
-        if (attr_name not in data.meta) or (not data.meta[attr_name]):
+        if (attr_name not in data.meta) or (not data.meta[attr_name][0]):
             # Get Parts
-            instrument_id = self._get_instrument_id(data)
-            start_time = self._get_start_time(data)
-            data_level = self._get_data_level(data)
-            version = self._get_version(data)
-            mode = self._get_instrument_mode(data)
+            instrument_id, _ = self._get_instrument_id(data)
+            start_time, _ = self._get_start_time(data)
+            data_level, _ = self._get_data_level(data)
+            version, _ = self._get_version(data)
+            mode, _ = self._get_instrument_mode(data)
 
             # Build Derivation
             science_filename = util.create_science_filename(
@@ -1323,10 +1386,13 @@ class SWXSchema:
                 version=version,
                 mode=mode,
             )
-            science_filename = science_filename.rstrip(util.FILENAME_EXTENSION)
+            science_filename, comment = (
+                science_filename.rstrip(util.FILENAME_EXTENSION),
+                "",
+            )
         else:
-            science_filename = data.meta[attr_name]
-        return science_filename
+            science_filename, comment = data.meta[attr_name]
+        return science_filename, comment
 
     def _get_logical_source(self, data):
         """
@@ -1336,18 +1402,21 @@ class SWXSchema:
         and is used by CDA Web.
         """
         attr_name = "Logical_source"
-        if (attr_name not in data.meta) or (not data.meta[attr_name]):
+        if (attr_name not in data.meta) or (not data.meta[attr_name][0]):
             # Get Parts
-            spacecraft_id = self._get_spacecraft_id(data)
-            instrument_id = self._get_instrument_id(data)
-            data_type = self._get_data_type(data)
+            spacecraft_id, _ = self._get_spacecraft_id(data)
+            instrument_id, _ = self._get_instrument_id(data)
+            data_type, _ = self._get_data_type(data)
             data_type_short_name, _ = data_type.split(">")
 
             # Build Derivation
-            logical_source = f"{spacecraft_id}_{instrument_id}_{data_type_short_name}"
+            logical_source, comment = (
+                f"{spacecraft_id}_{instrument_id}_{data_type_short_name}",
+                "",
+            )
         else:
-            logical_source = data.meta[attr_name]
-        return logical_source
+            logical_source, comment = data.meta[attr_name]
+        return logical_source, comment
 
     def _get_logical_source_description(self, data):
         """
@@ -1357,18 +1426,19 @@ class SWXSchema:
         `Logical_source`  attribute.
         """
         attr_name = "Logical_source_description"
-        if (attr_name not in data.meta) or (not data.meta[attr_name]):
+        if (attr_name not in data.meta) or (not data.meta[attr_name][0]):
             # Get Parts
-            spacecraft_long_name = self._get_spacecraft_long_name(data)
-            instrument_long_name = self._get_instrument_long_name(data)
-            data_type = self._get_data_type(data)
+            spacecraft_long_name, _ = self._get_spacecraft_long_name(data)
+            instrument_long_name, _ = self._get_instrument_long_name(data)
+            data_type, _ = self._get_data_type(data)
             _, data_type_long_name = data_type.split(">")
-            logical_source_description = (
-                f"{spacecraft_long_name} {instrument_long_name} {data_type_long_name}"
+            logical_source_description, comment = (
+                f"{spacecraft_long_name} {instrument_long_name} {data_type_long_name}",
+                "",
             )
         else:
-            logical_source_description = data.meta[attr_name]
-        return logical_source_description
+            logical_source_description, comment = data.meta[attr_name]
+        return logical_source_description, comment
 
     def _get_data_type(self, data):
         """
@@ -1381,64 +1451,65 @@ class SWXSchema:
             - optional_data_product_descriptor
         """
         attr_name = "Data_type"
-        if (attr_name not in data.meta) or (not data.meta[attr_name]):
+        if (attr_name not in data.meta) or (not data.meta[attr_name][0]):
             short_parts = []
             long_parts = []
 
             # Get `mode`
-            mode_short_name = self._get_instrument_mode(data)
-            mode_long_name = self._get_instrument_mode(data)
+            mode_short_name, _ = self._get_instrument_mode(data)
+            mode_long_name, _ = self._get_instrument_mode(data)
             if bool(mode_short_name and mode_long_name):
                 short_parts.append(mode_short_name)
                 long_parts.append(mode_long_name)
 
             # Get `data level`
-            data_level_short_name = self._get_data_level(data)
-            data_level_long_name = self._get_data_level_long_name(data)
+            data_level_short_name, _ = self._get_data_level(data)
+            data_level_long_name, _ = self._get_data_level_long_name(data)
             if bool(data_level_short_name and data_level_long_name):
                 short_parts.append(data_level_short_name)
                 long_parts.append(data_level_long_name)
 
             # Get `data product descriptor`
-            odpd_short_name = self._get_data_product_descriptor(data)
-            odpd_long_name = self._get_data_product_descriptor(data)
+            odpd_short_name, _ = self._get_data_product_descriptor(data)
+            odpd_long_name, _ = self._get_data_product_descriptor(data)
             if bool(odpd_short_name and odpd_long_name):
                 short_parts.append(odpd_short_name)
                 long_parts.append(odpd_long_name)
 
             # Build Derivation
             data_type = "_".join(short_parts) + ">" + " ".join(long_parts)
+            comment = ""
         else:
-            data_type = data.meta[attr_name]
-        return data_type
+            data_type, comment = data.meta[attr_name]
+        return data_type, comment
 
     def _get_spacecraft_id(self, data):
         """Function to get Spacecraft ID from Source_name Global Attribute"""
         attr_name = "Source_name"
-        if (attr_name not in data.meta) or (not data.meta[attr_name]):
+        if (attr_name not in data.meta) or (not data.meta[attr_name][0]):
             # Get Module Default
-            sc_id = swxsoc.config["mission"]["mission_name"]
+            sc_id, comment = swxsoc.config["mission"]["mission_name"], ""
         else:
-            sc_id = data.meta["Source_name"]
+            sc_id, comment = data.meta["Source_name"]
             # Formatting
             if ">" in sc_id:
                 short_name, _ = sc_id.split(">")
                 sc_id = short_name.lower()  # Makse sure its all lowercase
-        return sc_id
+        return sc_id, comment
 
     def _get_spacecraft_long_name(self, data):
         """Function to get Spacecraft ID from Source_name Global Attribute"""
         attr_name = "Source_name"
-        if (attr_name not in data.meta) or (not data.meta[attr_name]):
+        if (attr_name not in data.meta) or (not data.meta[attr_name][0]):
             # Get Module Default
-            sc_id = swxsoc.config["mission"]["mission_name"]
+            sc_id, comment = swxsoc.config["mission"]["mission_name"], ""
         else:
-            sc_id = data.meta["Source_name"]
+            sc_id, comment = data.meta["Source_name"]
             # Formatting
             if ">" in sc_id:
                 _, long_name = sc_id.split(">")
                 sc_id = long_name
-        return sc_id
+        return sc_id, comment
 
     def _get_instrument_id(self, data):
         """
@@ -1448,15 +1519,15 @@ class SWXSchema:
         letter acronym.
         """
         attr_name = "Descriptor"
-        if (attr_name not in data.meta) or (not data.meta[attr_name]):
-            instr_id = None
+        if (attr_name not in data.meta) or (not data.meta[attr_name][0]):
+            raise ValueError("'Descriptor' global meta attribute is required.")
         else:
-            instr_id = data.meta["Descriptor"]
+            instr_id, comment = data.meta["Descriptor"]
             # Formatting
             if ">" in instr_id:
                 short_name, _ = instr_id.split(">")
                 instr_id = short_name.lower()  # Makse sure its all lowercase
-        return instr_id
+        return instr_id, comment
 
     def _get_instrument_long_name(self, data):
         """
@@ -1466,15 +1537,15 @@ class SWXSchema:
         letter acronym.
         """
         attr_name = "Descriptor"
-        if (attr_name not in data.meta) or (not data.meta[attr_name]):
-            instr_id = None
+        if (attr_name not in data.meta) or (not data.meta[attr_name][0]):
+            raise ValueError("'Descriptor' global meta attribute is required.")
         else:
-            instr_id = data.meta["Descriptor"]
+            instr_id, comment = data.meta["Descriptor"]
             # Formatting
             if ">" in instr_id:
                 _, long_name = instr_id.split(">")
                 instr_id = long_name
-        return instr_id
+        return instr_id, comment
 
     def _get_data_level(self, data):
         """
@@ -1483,15 +1554,15 @@ class SWXSchema:
         The level to which the data product has been processed.
         """
         attr_name = "Data_level"
-        if (attr_name not in data.meta) or (not data.meta[attr_name]):
-            data_level = None
+        if (attr_name not in data.meta) or (not data.meta[attr_name][0]):
+            raise ValueError("'Data_level' global meta attribute is required.")
         else:
-            data_level = data.meta["Data_level"]
+            data_level, comment = data.meta["Data_level"]
             # Formatting
             if ">" in data_level:
                 short_name, _ = data_level.split(">")
                 data_level = short_name.lower()  # Makse sure its all lowercase
-        return data_level
+        return data_level, comment
 
     def _get_data_level_long_name(self, data):
         """
@@ -1500,15 +1571,15 @@ class SWXSchema:
         The level to which the data product has been processed.
         """
         attr_name = "Data_level"
-        if (attr_name not in data.meta) or (not data.meta[attr_name]):
-            data_level = None
+        if (attr_name not in data.meta) or (not data.meta[attr_name][0]):
+            raise ValueError("'Data_level' global meta attribute is required.")
         else:
-            data_level = data.meta["Data_level"]
+            data_level, comment = data.meta["Data_level"]
             # Formatting
             if ">" in data_level:
                 _, long_name = data_level.split(">")
                 data_level = long_name
-        return data_level
+        return data_level, comment
 
     def _get_data_product_descriptor(self, data):
         """
@@ -1520,17 +1591,17 @@ class SWXSchema:
         hose components.
         """
         attr_name = "Data_product_descriptor"
-        if (attr_name not in data.meta) or (not data.meta[attr_name]):
-            odpd = ""
+        if (attr_name not in data.meta) or (not data.meta[attr_name][0]):
+            odpd, comment = "", ""
         else:
-            odpd = data.meta["Data_product_descriptor"]
-        return odpd
+            odpd, comment = data.meta["Data_product_descriptor"]
+        return odpd, comment
 
     def _get_generation_date(self, data):
         """
         Function to get the date that the CDF was generated.
         """
-        return Time.now().strftime("%Y-%m-%d")
+        return Time.now().strftime("%Y-%m-%d"), ""
 
     def _get_start_time(self, data):
         """
@@ -1538,51 +1609,53 @@ class SWXSchema:
         given in format `YYYYMMDDThhmmss`
         """
         # Get the Start Time from the TimeSeries
-        return data["time"][0].isot
+        return data["time"][0].isot, ""
 
     def _get_version(self, data):
         """
         Function to get the 3-part version number of the data product.
         """
         attr_name = "Data_version"
-        if (attr_name not in data.meta) or (not data.meta[attr_name]):
-            version = None
+        if (attr_name not in data.meta) or (not data.meta[attr_name][0]):
+            raise ValueError("'Data_version' global meta attribute is required.")
         else:
-            version_str = data.meta["Data_version"].lower()
+            version_str, comment = data.meta["Data_version"]
+            version_str = version_str.lower()
             if "v" in version_str:
                 _, version = version_str.split("v")
             else:
                 version = version_str
-        return version
+        return version, comment
 
     def _get_instrument_mode(self, data):
         """Function to get the mode attribute (TBS)"""
         attr_name = "Instrument_mode"
-        if (attr_name not in data.meta) or (not data.meta[attr_name]):
-            instr_mode = ""
+        if (attr_name not in data.meta) or (not data.meta[attr_name][0]):
+            instr_mode, comment = "", ""
         else:
-            instr_mode = data.meta["Instrument_mode"]
-        return instr_mode.lower()  # Makse sure its all lowercase
+            instr_mode, comment = data.meta["Instrument_mode"]
+        return instr_mode.lower(), comment  # Makse sure its all lowercase
 
     def _get_swxsoc_version(self, data):
         """Function to get the version of SWxSOC used to generate the data"""
         attr_name = "SWxSOC_version"
-        if (attr_name not in data.meta) or (not data.meta[attr_name]):
-            swxsoc_version = swxsoc.__version__
+        if (attr_name not in data.meta) or (not data.meta[attr_name][0]):
+            swxsoc_version, comment = swxsoc.__version__, ""
         else:
-            swxsoc_version = data.meta[attr_name]
-        return swxsoc_version
+            swxsoc_version, comment = data.meta[attr_name]
+        return swxsoc_version, comment
 
     def _get_cdf_lib_version(self, data):
         """Function to get the version of CDF library used to generate the data"""
         attr_name = "CDF_Lib_version"
-        if (attr_name not in data.meta) or (not data.meta[attr_name]):
+        if (attr_name not in data.meta) or (not data.meta[attr_name][0]):
             try:
                 import spacepy.pycdf as pycdf
 
                 cdf_lib_version = pycdf.lib.version
             except (ImportError, AttributeError) as e:
                 cdf_lib_version = "unknown version"
+            comment = ""
         else:
-            cdf_lib_version = data.meta[attr_name]
-        return cdf_lib_version
+            cdf_lib_version, comment = data.meta[attr_name]
+        return cdf_lib_version, comment

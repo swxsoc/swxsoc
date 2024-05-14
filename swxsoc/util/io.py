@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Tuple
 from collections import OrderedDict
 from datetime import datetime
+import numpy as np
 from astropy.timeseries import TimeSeries
 from astropy.time import Time
 from astropy.nddata import NDData
@@ -13,7 +14,7 @@ from ndcube import NDCube
 from swxsoc.util.exceptions import warn_user
 from swxsoc.util.schema import SWXSchema
 
-__all__ = ["SWXIOHandler", "CDFHandler"]
+__all__ = ["SWXIOHandler", "CDFHandler", "FITSHandler"]
 
 # ================================================================================================
 #                                   ABSTRACT HANDLER
@@ -26,7 +27,7 @@ class SWXIOHandler(ABC):
     """
 
     @abstractmethod
-    def load_data(self, file_path: str) -> Tuple[TimeSeries, dict]:
+    def load_data(self, file_path: str) -> Tuple[TimeSeries, dict, NDCollection]:
         """
         Load data from a file.
 
@@ -47,7 +48,7 @@ class SWXIOHandler(ABC):
         pass
 
     @abstractmethod
-    def save_data(self, data, file_path: str):
+    def save_data(self, data, file_path: str, overwrite: bool = False) -> str:
         """
         Save data to a file.
 
@@ -57,6 +58,13 @@ class SWXIOHandler(ABC):
             An instance of `SWXData` containing the data to be saved.
         file_path : `str`
             The fully specified file path to save into.
+        overwrite : `bool`
+            If set, overwrites existing file of the same name.
+
+        Returns
+        -------
+        path : `str`
+            A path to the saved file.
         """
         pass
 
@@ -79,7 +87,7 @@ class CDFHandler(SWXIOHandler):
         # CDF Schema
         self.schema = SWXSchema()
 
-    def load_data(self, file_path: str) -> Tuple[TimeSeries, dict]:
+    def load_data(self, file_path: str) -> Tuple[TimeSeries, dict, NDCollection]:
         """
         Load heliophysics data from a CDF file.
 
@@ -116,13 +124,13 @@ class CDFHandler(SWXIOHandler):
             for attr_name in input_file.attrs:
                 if len(input_file.attrs[attr_name]) == 0:
                     # gAttr is not set
-                    input_global_attrs[attr_name] = ""
+                    input_global_attrs[attr_name] = ("", "")
                 elif len(input_file.attrs[attr_name]) > 1:
                     # gAttr is a List
-                    input_global_attrs[attr_name] = input_file.attrs[attr_name][:]
+                    input_global_attrs[attr_name] = (input_file.attrs[attr_name][:], "")
                 else:
                     # gAttr is a single value
-                    input_global_attrs[attr_name] = input_file.attrs[attr_name][0]
+                    input_global_attrs[attr_name] = (input_file.attrs[attr_name][0], "")
             ts.meta.update(input_global_attrs)
 
             # First Variable we need to add is time/Epoch
@@ -161,9 +169,10 @@ class CDFHandler(SWXIOHandler):
                                     f"Cannot create NDCube for Spectra {var_name} with UNITS {var_attrs['UNITS']}. Creating Quantity with UNITS 'dimensionless_unscaled'."
                                 )
                                 # Swap Units
-                                var_attrs["UNITS_DESC"] = var_attrs["UNITS"]
+                                var_attrs["UNITS_DESC"] = (var_attrs["UNITS"], "")
                                 var_attrs["UNITS"] = (
-                                    u.dimensionless_unscaled.to_string()
+                                    u.dimensionless_unscaled.to_string(),
+                                    "",
                                 )
                                 self._load_spectra_variable(
                                     spectra, var_name, var_data, var_attrs, ts.time
@@ -179,9 +188,10 @@ class CDFHandler(SWXIOHandler):
                                     f"Cannot create Quantity for Variable {var_name} with UNITS {var_attrs['UNITS']}. Creating Quantity with UNITS 'dimensionless_unscaled'."
                                 )
                                 # Swap Units
-                                var_attrs["UNITS_DESC"] = var_attrs["UNITS"]
+                                var_attrs["UNITS_DESC"] = (var_attrs["UNITS"], "")
                                 var_attrs["UNITS"] = (
-                                    u.dimensionless_unscaled.to_string()
+                                    u.dimensionless_unscaled.to_string(),
+                                    "",
                                 )
                                 self._load_timeseries_variable(
                                     ts, var_name, var_data, var_attrs
@@ -203,7 +213,7 @@ class CDFHandler(SWXIOHandler):
         else:
             spectra = NDCollection(spectra)
 
-        # Return the given TimeSeries, NRV Data
+        # Return the given TimeSeries, NRV Data, NDCollection (spectra)
         return ts, support, spectra
 
     def _load_metadata_attributes(self, var_data):
@@ -211,15 +221,16 @@ class CDFHandler(SWXIOHandler):
         for attr_name in var_data.attrs:
             if isinstance(var_data.attrs[attr_name], datetime):
                 # Metadata Attribute is a Datetime - we want to convert to Astropy Time
-                var_attrs[attr_name] = Time(var_data.attrs[attr_name])
+                var_attrs[attr_name] = (Time(var_data.attrs[attr_name]), "")
             else:
                 # Metadata Attribute loaded without modifications
-                var_attrs[attr_name] = var_data.attrs[attr_name]
+                var_attrs[attr_name] = (var_data.attrs[attr_name], "")
         return var_attrs
 
     def _load_timeseries_variable(self, ts, var_name, var_data, var_attrs):
         # Create the Quantity object
-        var_data = u.Quantity(value=var_data, unit=var_attrs["UNITS"], copy=False)
+        var_units, _ = var_attrs["UNITS"]
+        var_data = u.Quantity(value=var_data, unit=var_units, copy=False)
         ts[var_name] = var_data
         # Create the Metadata
         ts[var_name].meta = OrderedDict()
@@ -252,7 +263,8 @@ class CDFHandler(SWXIOHandler):
                 f"{attribute_name}{dimension_i+1}"  # KeynameName Indexed 1-4 vs 0-3
             )
             if dimension_attr_name in var_attrs:
-                attr_values.append(var_attrs[dimension_attr_name])
+                dimension_attr_val, _ = var_attrs[dimension_attr_name]
+                attr_values.append(dimension_attr_val)
             else:
                 attr_values.append(default_attribute)
 
@@ -266,7 +278,8 @@ class CDFHandler(SWXIOHandler):
             # NOTE We have to cast this to an INT because spacepy does not let us directly set a
             # zAttr type when writing a variable attribute to a CDF. It tries to guess the type
             # of the attribute based on they type of the data.
-            naxis = int(var_attrs["WCSAXES"])
+            naxis, _ = var_attrs["WCSAXES"]
+            naxis = int(naxis)
         else:
             naxis = len(var_data.shape)
         wcs = WCS(naxis=naxis)
@@ -309,7 +322,7 @@ class CDFHandler(SWXIOHandler):
         # Add to Spectra
         spectra.append((var_name, var_cube))
 
-    def save_data(self, data, file_path: str):
+    def save_data(self, data, file_path: str, overwrite: bool = False):
         """
         Save heliophysics data to a CDF file.
 
@@ -319,6 +332,8 @@ class CDFHandler(SWXIOHandler):
             An instance of `SWXData` containing the data to be saved.
         file_path : `str`
             The path to save the CDF file.
+        overwrite : `bool`
+            If set, overwrites existing file of the same name.
 
         Returns
         -------
@@ -327,8 +342,16 @@ class CDFHandler(SWXIOHandler):
         """
         from spacepy.pycdf import CDF
 
+        # if overwrite is set, remove the file if it exists
+        if overwrite:
+            logical_file_id, _ = data.meta["Logical_file_id"]
+            cdf_file_path = Path(file_path) / (logical_file_id + ".cdf")
+            if cdf_file_path.exists():
+                cdf_file_path.unlink()
+
         # Initialize a new CDF
-        cdf_filename = f"{data.meta['Logical_file_id']}.cdf"
+        logical_file_id, _ = data.meta["Logical_file_id"]
+        cdf_filename = f"{logical_file_id}.cdf"
         output_cdf_filepath = str(Path(file_path) / cdf_filename)
         with CDF(output_cdf_filepath, masterpath="") as cdf_file:
             # Add Global Attriubtes to the CDF File
@@ -340,7 +363,17 @@ class CDFHandler(SWXIOHandler):
 
     def _convert_global_attributes_to_cdf(self, data, cdf_file):
         # Loop though Global Attributes in target_dict
-        for attr_name, attr_value in data.meta.items():
+        # Ignore the Comment Values in CDF Format
+        for attr_name, attr_contents in data.meta.items():
+            # Unpack the Contents into a (value, comment) tuple
+            if not isinstance(attr_contents, tuple) or len(attr_contents) != 2:
+                raise ValueError(
+                    f"Cannot Add gAttr: {attr_name}. Content was '{str(attr_contents)}'. Content must be a tuple of (value, comment)"
+                )
+            else:
+                # Ignore the Comment Values in CDF Format
+                (attr_value, attr_comment) = attr_contents
+
             # Make sure the Value is not None
             # We cannot add None Values to the CDF Global Attrs
             if attr_value is None:
@@ -389,7 +422,19 @@ class CDFHandler(SWXIOHandler):
             self._convert_variable_attributes_to_cdf(var_name, var_data, cdf_file)
 
     def _convert_variable_attributes_to_cdf(self, var_name, var_data, cdf_file):
-        for var_attr_name, var_attr_val in var_data.meta.items():
+        # Loop though Variable Attributes in target_dict
+        for var_attr_name, var_attr_contents in var_data.meta.items():
+            # Unpack the Contents into a (value, comment) tuple
+            if not isinstance(var_attr_contents, tuple) or len(var_attr_contents) != 2:
+                raise ValueError(
+                    f"Variable {var_name}: Cannot Add vAttr: {var_attr_name}. Content was '{str(var_attr_contents)}'. Content must be a tuple of (value, comment)"
+                )
+            else:
+                # Ignore the Comment Values in CDF Format
+                (var_attr_val, var_attr_comment) = var_attr_contents
+
+            # Make sure the Value is not None
+            # We cannot add None Values to the CDF Attrs
             if var_attr_val is None:
                 raise ValueError(
                     f"Variable {var_name}: Cannot Add vAttr: {var_attr_name}. Value was {str(var_attr_val)}"
@@ -400,3 +445,219 @@ class CDFHandler(SWXIOHandler):
             else:
                 # Add the Attribute to the CDF File
                 cdf_file[var_name].attrs[var_attr_name] = var_attr_val
+
+
+# ================================================================================================
+#                                   FITS HANDLER
+# ================================================================================================
+
+
+class FITSHandler(SWXIOHandler):
+    """
+    A concrete implementation of SWXIOHandler for handling heliophysics data in FITS format.
+
+    This class provides methods to load and save heliophysics data from/to a FITS file.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+        # CDF Schema
+        self.schema = SWXSchema()
+
+    def load_data(self, file_path: str) -> Tuple[TimeSeries, dict, NDCollection]:
+        """
+        Load heliophysics data from a FITS file.
+
+        Parameters
+        ----------
+        file_path : `str`
+            The path to the FITS file.
+
+        Returns
+        -------
+        data : `~astropy.time.TimeSeries`
+            An instance of `TimeSeries` containing the loaded data.
+        support : `dict[astropy.nddata.NDData]`
+            Non-record-varying data contained in the file
+        spectra : `ndcube.NDCollection`
+            Spectral or High-dimensional measurements in the loaded data.
+        """
+        from astropy.io import fits
+
+        if not Path(file_path).exists():
+            raise FileNotFoundError(f"CDF Could not be loaded from path: {file_path}")
+
+        # Load the FITS File
+        with fits.open(file_path) as hdul:
+
+            # Global Metadata of Cards (Comes from PrimaryHDU for each file, hdul[0])
+            global_meta = {}
+            # Create a new TimeSeries
+            ts = TimeSeries()
+            # Create a Data Structure for Non-record Varying Data
+            support = {}
+            # Intermediate Type
+            spectra = []
+
+            header_summary = hdul.info(output=False)
+            # Loop through eah Header Data Unit (HDU) in the FITS File
+            for (
+                _ix,
+                _name,
+                _version,
+                _type,
+                _n_cards,
+                _dimensions,
+                _format,
+                _,
+            ) in header_summary:
+                # Get the Header Data Unit at the given Index
+                hdu = hdul[_ix]
+
+                # Cannot use `match` case while we're supporting Python 3.9
+                if _type == "PrimaryHDU":
+
+                    # Get the Global Metadata from HDU
+                    header_meta = FITSHandler.header_to_dict(hdu.header)
+                    # Update the Global Metadata
+                    global_meta.update(header_meta)
+
+                    # Check for a Data Array in the HDU
+                    if len(hdu.shape) > 0:
+                        self._load_image_data(
+                            spectra, _name, _type, hdu.data, hdu.header
+                        )
+                    else:
+                        self._load_image_data(
+                            spectra, _name, _type, np.array([]), hdu.header
+                        )
+                elif _type == "ImageHDU":
+                    pass
+                elif _type == "TableHDU":
+                    pass
+                elif _type == "BinTableHDU":
+                    pass
+                elif _type == "GroupsHDU":
+                    pass
+                else:
+                    raise ValueError(f"Unknown HDU Type: {_type}")
+
+            # Update TimeSeries Global Metadata
+            ts.meta = global_meta.copy()
+
+            # Create a NDCollection
+            if len(spectra) > 0:
+                # Implement assertion that all spectra are aligned along time-varying dimension
+                aligned_axes = tuple(0 for _ in spectra)
+                spectra = NDCollection(spectra, aligned_axes=aligned_axes)
+            else:
+                spectra = NDCollection(spectra)
+
+            # Return the given TimeSeries, NRV Data, NDCollection (spectra)
+            return ts, support, spectra
+
+    @staticmethod
+    def header_to_dict(header):
+        """
+        Convert a FITS header to a dictionary.
+
+        Parameters
+        ----------
+        header : `astropy.io.fits.Header`
+            A FITS header object.
+
+        Returns
+        -------
+        header_dict : `dict`
+            A dictionary representation of the FITS header.
+        """
+        from astropy.io import fits
+
+        header_dict = {}
+        for attr_name in header:
+            # Check if it's a special Commentary Card Attribute (e.g. COMMENT, HISTORY)
+            if isinstance(header[attr_name], fits.header._HeaderCommentaryCards):
+                header_dict[attr_name] = (
+                    # We need to replace New Lines with Empty Strings
+                    # This is how astropy handles multiple entries in the commentary card
+                    str(header.get(attr_name)).replace("\n", ""),
+                    header.comments[attr_name],
+                )
+            else:
+                header_dict[attr_name] = (
+                    header.get(attr_name),
+                    header.comments[attr_name],
+                )
+        return header_dict
+
+    def _load_image_data(self, spectra, var_name, var_type, var_data, var_header):
+        # Create a WCS Object from the Image HDU Header
+        var_wcs = WCS(header=var_header)
+
+        # Try to Extract the UNITS from the HDU header
+        var_units = (
+            var_header["UNITS"]
+            if "UNITS" in var_header
+            else u.dimensionless_unscaled.to_string()
+        )
+
+        # Collect Metadata Info as a Dict
+        var_attrs = FITSHandler.header_to_dict(var_header)
+
+        # Create a Cube
+        var_cube = NDCube(data=var_data, wcs=var_wcs, meta=var_attrs, unit=var_units)
+        # Add to Spectra
+        spectra.append((var_name, var_cube))
+
+    def save_data(self, data, file_path: str, overwrite: bool = False):
+        """
+        Save heliophysics data to a FITS file.
+
+        Parameters
+        ----------
+        data : `swxsoc.swxdata.SWXData`
+            An instance of `SWXData` containing the data to be saved.
+        file_path : `str`
+            The path to save the FITS file.
+        overwrite : `bool`
+            If set, overwrites existing file of the same name.
+
+        Returns
+        -------
+        path : `str`
+            A path to the saved file.
+        """
+        from astropy.io import fits
+
+        # if overwrite is set, remove the file if it exists
+        if overwrite:
+            # logical_file_id, _ = data.meta["Logical_file_id"]
+            fits_file_path = Path(file_path)
+            if fits_file_path.exists():
+                fits_file_path.unlink()
+
+        # Initialize a new FITS File
+        # logical_file_id, _ = data.meta["Logical_file_id"]
+        # cdf_filename = f"{logical_file_id}.cdf"
+        output_fits_filepath = str(Path(file_path))
+
+        # Create a new HDU List
+        hdul = fits.HDUList()
+
+        # Create a Primary HDU
+        # Create a Header
+        header = fits.Header()
+        # Add Global Attributes to the FITS Header
+        for attr_name, (attr_value, attr_comment) in data["PRIMARY"].meta.items():
+            header[attr_name] = (attr_value, attr_comment)
+        # Compile to a Primary HDU
+        primary_hdu = fits.PrimaryHDU(data=data["PRIMARY"].data, header=header)
+
+        # Create a HDU List containing all HDUs
+        hdul.append(primary_hdu)
+
+        # Write The HDUL to a FITS File
+        hdul.writeto(output_fits_filepath)
+
+        return output_fits_filepath

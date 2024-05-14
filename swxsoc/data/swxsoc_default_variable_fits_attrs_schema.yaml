@@ -1,0 +1,26 @@
+# Based on :  https://spdf.gsfc.nasa.gov/istp_guide/vattributes.html
+#             SWxSOC CDF Format Guide
+attribute_key:
+    WCSAXES:
+    description: > 
+      This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
+      high-dimensional or spectral CDF data variables. 
+      The value field shall contain a non-negative integer no
+      greater than 999, representing the number of axes in the associated
+      data array.
+    derived: true
+    derivation_fn: _get_wcs_naxis
+    required: false
+    overwrite: false
+    valid_values: null
+    alternate: null
+data:
+  - 
+support_data:
+  - 
+metadata:
+  - 
+epoch:
+  - 
+spectra: 
+  - 

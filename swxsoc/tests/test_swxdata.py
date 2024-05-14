@@ -51,6 +51,11 @@ def get_test_timeseries():
     time = np.arange(10)
     time_col = Time(time, format="unix")
     ts["time"] = time_col
+    ts["time"].meta = OrderedDict(
+        {
+            "CATDESC": "Epoch Time",
+        }
+    )
 
     # Add Measurement
     quant = Quantity(value=random(size=(10)), unit="m", dtype=np.uint16)
@@ -78,7 +83,11 @@ def get_test_sw_data():
     ts["time"].meta = OrderedDict({"CATDESC": "Epoch Time", "VAR_TYPE": "support_data"})
 
     # Support Data / Non-Time Varying Data
-    support = {"support_counts": NDData(data=[1])}
+    support = {
+        "support_counts": NDData(
+            data=[1], meta={"CATDESC": "Test Metadata", "VAR_TYPE": "metadata"}
+        )
+    }
 
     # Spectra Data
     spectra = NDCollection(
@@ -100,7 +109,7 @@ def get_test_sw_data():
 
     # Create SWXData Object
     sw_data = SWXData(timeseries=ts, support=support, spectra=spectra, meta=input_attrs)
-    sw_data.timeseries["Bx"].meta.update({"CATDESC": "Test"})
+    sw_data.timeseries["Bx"].meta.update({"CATDESC": ("Test", "")})
     return sw_data
 
 
@@ -145,6 +154,7 @@ def test_sw_data_bad_ts():
     """
     ts = get_bad_timeseries()
     with pytest.raises(TypeError):
+        # One of the columns is not a Quantity
         _ = SWXData(timeseries=ts)
 
 
@@ -211,7 +221,7 @@ def test_none_attributes():
     test_data = get_test_sw_data()
 
     # Add a Variable Attribute with Value None
-    test_data.timeseries["time"].meta["none_attr"] = None
+    test_data.timeseries["time"].meta["none_attr"] = (None, None)
 
     with tempfile.TemporaryDirectory() as tmpdirname:
         with pytest.raises(ValueError):
@@ -354,9 +364,9 @@ def test_global_attribute_template():
     template = SWXData.global_attribute_template(
         instr_name="eea", data_level="ql", version="1.3.6"
     )
-    assert template["Descriptor"] == "EEA>Electron Electrostatic Analyzer"
-    assert template["Data_level"] == "QL>Quicklook"
-    assert template["Data_version"] == "1.3.6"
+    assert template["Descriptor"][0] == "EEA>Electron Electrostatic Analyzer"
+    assert template["Data_level"][0] == "QL>Quicklook"
+    assert template["Data_version"][0] == "1.3.6"
 
 
 def test_default_properties():
@@ -413,8 +423,9 @@ def test_sw_data_single_measurement():
 
     # Add Measurement
     test_data.add_measurement("test_var1", Quantity(value=random(size=(10)), unit="km"))
-    test_data.timeseries["test_var1"].meta.update(
-        {"test_attr1": "test_value1", "CATDESC": "Test data"}
+    test_var_attrs = {"test_attr1": "test_value1", "CATDESC": "Test data"}
+    SWXData.update_metadata_attributes(
+        test_data.timeseries["test_var1"].meta, test_var_attrs
     )
 
     # Convert the Wrapper to a CDF File
@@ -606,6 +617,8 @@ def test_sw_data_plot():
     q.meta = OrderedDict({"CATDESC": "Test Variable"})
     test_data.add_measurement(measure_name="test", data=q)
 
+    assert test_data.timeseries["test"].meta["LABLAXIS"] != None
+
     # Plot All Columns
     ax = test_data.plot(subplots=True)
     assert isinstance(ax, np.ndarray)
@@ -725,11 +738,9 @@ def test_sw_data_generate_valid_cdf():
     test_data = SWXData(ts, support=support, meta=input_attrs)
 
     # Add the Time column
-    test_data.timeseries["time"].meta.update(
-        {
-            "CATDESC": "TT2000 time tags",
-            "VAR_TYPE": "support_data",
-        }
+    SWXData.update_metadata_attributes(
+        test_data.timeseries["time"].meta,
+        {"CATDESC": "TT2000 time tags", "VAR_TYPE": "support_data"},
     )
 
     # Add 'data' VAR_TYPE Attributes
@@ -840,11 +851,9 @@ def test_sw_data_from_cdf():
     test_data = SWXData(ts, support=support, meta=input_attrs)
 
     # Add the Time column
-    test_data.timeseries["time"].meta.update(
-        {
-            "CATDESC": "TT2000 time tags",
-            "VAR_TYPE": "support_data",
-        }
+    SWXData.update_metadata_attributes(
+        test_data.timeseries["time"].meta,
+        {"CATDESC": "TT2000 time tags", "VAR_TYPE": "support_data"},
     )
 
     # Add 'data' VAR_TYPE Attributes
@@ -953,10 +962,10 @@ def test_sw_data_idempotency():
     # fmt: on
     # Generate a base SWXData object
     test_data = get_test_sw_data()
-    test_data.meta.update(input_attrs)
+    SWXData.update_metadata_attributes(test_data.meta, input_attrs)
 
     # Induce a Bad (Null) Global Attribute
-    test_data.meta["Test Null Attr"] = ""
+    SWXData.update_metadata_attributes(test_data.meta, {"Test Null Attr": ""})
 
     # Induce an Non-Record-Varying Variable
     test_data.add_support(
@@ -1051,6 +1060,12 @@ def test_bitlength_save_cdf(bitlength):
         time_delta=3 * u.s,
         data={"Bx": Quantity([1, 2, 3, 4], "gauss", dtype=bitlength)},
     )
+    ts["time"].meta = OrderedDict(
+        {
+            "CATDESC": "Epoch Time",
+        }
+    )
+
     # fmt: off
     input_attrs = {
         "DOI": "https://doi.org/<PREFIX>/<SUFFIX>",
@@ -1090,7 +1105,7 @@ def test_bitlength_save_cdf(bitlength):
     # fmt: on
 
     sw_data = SWXData(timeseries=ts, meta=input_attrs)
-    sw_data.timeseries["Bx"].meta.update({"CATDESC": "Test"})
+    sw_data.timeseries["Bx"].meta.update({"CATDESC": ("Test", "")})
     with tempfile.TemporaryDirectory() as tmpdirname:
         test_file_output_path = sw_data.save(output_path=tmpdirname)
 
@@ -1139,7 +1154,7 @@ def test_overwrite_save():
     }
     # fmt: on
     td = get_test_sw_data()
-    td.meta.update(input_attrs)
+    SWXData.update_metadata_attributes(td.meta, input_attrs)
     with tempfile.TemporaryDirectory() as tmpdirname:
         test_file_output_path = Path(td.save(output_path=tmpdirname))
         # Test the File Exists
@@ -1202,7 +1217,8 @@ def test_without_cdf_lib():
     # Initialize a CDF File Wrapper
     test_data = SWXData(ts, meta=input_attrs)
 
-    assert test_data.meta["CDF_Lib_version"] == "unknown version"
+    cdflib_version, _ = test_data.meta["CDF_Lib_version"]
+    assert cdflib_version == "unknown version"
 
     # Reset/ Re-Enable CDF Libraries
     pycdf.lib = pycdf.Library(pycdf._libpath, pycdf._library)

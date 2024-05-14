@@ -12,11 +12,12 @@ from astropy.time import Time
 from astropy.timeseries import TimeSeries
 from astropy.table import vstack
 from astropy.nddata import NDData
+from astropy.io import fits
 from astropy import units as u
 import ndcube
 from ndcube import NDCube, NDCollection
 import swxsoc
-from swxsoc.util.io import CDFHandler
+from swxsoc.util.io import CDFHandler, FITSHandler
 from swxsoc.util.schema import SWXSchema
 from swxsoc.util.exceptions import warn_user
 from swxsoc.util.util import VALID_DATA_LEVELS
@@ -101,6 +102,7 @@ class SWXData:
         ] = None,
         spectra: Optional[ndcube.NDCollection] = None,
         meta: Optional[dict] = None,
+        schema: Optional[SWXSchema] = None,
     ):
         # ================================================
         #               VALIDATE INPUTS
@@ -110,11 +112,6 @@ class SWXData:
         if not isinstance(timeseries, TimeSeries):
             raise TypeError(
                 "timeseries must be a `astropy.timeseries.TimeSeries` object."
-            )
-
-        if len(timeseries) == 0:
-            raise ValueError(
-                "timeseries cannot be empty, must include at least a 'time' column with valid times"
             )
 
         # Check individual Columns
@@ -129,23 +126,6 @@ class SWXData:
                 raise ValueError(
                     f"Column '{colname}' must be a one-dimensional measurement. Split additional dimensions into unique measurenents."
                 )
-
-        # Global Metadata Attributes are compiled from two places. You can pass in
-        # global metadata throug the `meta` parameter or through the `TimeSeries.meta`
-        # attribute.
-        _meta = {}
-        if meta is not None and isinstance(meta, dict):
-            _meta.update(meta)
-        if timeseries.meta is not None and isinstance(timeseries.meta, dict):
-            _meta.update(timeseries.meta)
-
-        # Check Global Metadata Requirements - Require Descriptor, Data_level, Data_Version
-        if "Descriptor" not in _meta or _meta["Descriptor"] is None:
-            raise ValueError("'Descriptor' global meta attribute is required.")
-        if "Data_level" not in _meta or _meta["Data_level"] is None:
-            raise ValueError("'Data_level' global meta attribute is required.")
-        if "Data_version" not in _meta or _meta["Data_version"] is None:
-            raise ValueError("'Data_version' global meta attribute is required.")
 
         # Check NRV Data
         if support is not None:
@@ -167,24 +147,50 @@ class SWXData:
         #         CREATE DATA STRUCTURES
         # ================================================
 
-        # Copy the TimeSeries
-        self._timeseries = TimeSeries(timeseries, copy=True)
+        # Copy the TimeSeries Data
+        if timeseries is not None and len(timeseries) > 0:
+            self._timeseries = TimeSeries(timeseries, copy=True)
+        else:
+            self._timeseries = TimeSeries()
 
-        # Add Input Metadata
+        # Global Metadata Attributes are compiled from two places. You can pass in
+        # global metadata through the `meta` parameter or through the `TimeSeries.meta`
+        # attribute.
+        _meta = OrderedDict()
         if meta is not None and isinstance(meta, dict):
-            self._timeseries.meta.update(meta)
+            SWXData.update_metadata_attributes(_meta, meta)
+        if hasattr(timeseries, "meta") and isinstance(timeseries.meta, dict):
+            SWXData.update_metadata_attributes(_meta, timeseries.meta)
+        self._timeseries.meta = _meta.copy()
 
         # Add any Metadata from the original TimeSeries
-        self._timeseries["time"].meta = OrderedDict()
-        if hasattr(timeseries["time"], "meta"):
-            self._timeseries["time"].meta.update(timeseries["time"].meta)
+        if "time" in self._timeseries.columns:
+            # Create a new Variable Metadata Dict
+            var_meta = OrderedDict()
+            # Update with Measurement Template
+            SWXData.update_metadata_attributes(
+                var_meta, SWXData.measurement_attribute_template()
+            )
+            # Update with original Metadata
+            if hasattr(timeseries["time"], "meta"):
+                SWXData.update_metadata_attributes(var_meta, timeseries["time"].meta)
+            # Set the Variable's Metadata with the compiled Dict
+            self._timeseries["time"].meta = var_meta.copy()
 
         # Add TimeSeries Measurement Metadata
         for col in self._timeseries.columns:
             if col != "time":
-                self._timeseries[col].meta = self.measurement_attribute_template()
+                # Create a new Variable Metadata Dict
+                var_meta = OrderedDict()
+                # Update with Measurement Template
+                SWXData.update_metadata_attributes(
+                    var_meta, SWXData.measurement_attribute_template()
+                )
+                # Update with original Metadata
                 if hasattr(timeseries[col], "meta"):
-                    self._timeseries[col].meta.update(timeseries[col].meta)
+                    SWXData.update_metadata_attributes(var_meta, timeseries[col].meta)
+                # Set the Variable's Metadata with the compiled Dict
+                self._timeseries[col].meta = var_meta.copy()
 
         # Copy the Non-Record Varying Data
         if support:
@@ -194,10 +200,17 @@ class SWXData:
 
         # Add Support Metadata
         for key in self._support:
+            # Create a new Variable Metadata Dict
+            var_meta = OrderedDict()
+            # Update with Measurement Template
+            SWXData.update_metadata_attributes(
+                var_meta, self.measurement_attribute_template()
+            )
+            # Update with original Metadata
             if hasattr(support[key], "meta"):
-                self._support[key].meta.update(support[key].meta)
-            else:
-                self._support[key].meta = self.measurement_attribute_template()
+                SWXData.update_metadata_attributes(var_meta, support[key].meta)
+            # Set the Variable's Metadata with the compiled Dict
+            self._support[key].meta = var_meta.copy()
 
         # Copy the High-Dimensional Spectra
         if spectra:
@@ -205,12 +218,29 @@ class SWXData:
         else:
             self._spectra = NDCollection([])
 
+        # Add Spectra Metadata
+        for key in self._spectra:
+            # Create a new Variable Metadata Dict
+            var_meta = OrderedDict()
+            # Update with Measurement Template
+            SWXData.update_metadata_attributes(
+                var_meta, self.measurement_attribute_template()
+            )
+            # Update with original Metadata
+            if hasattr(spectra[key], "meta"):
+                SWXData.update_metadata_attributes(var_meta, spectra[key].meta)
+            # Set the Variable's Metadata with the compiled Dict
+            self._spectra[key].meta = var_meta.copy()
+
         # ================================================
         #           DERIVE METADATA ATTRIBUTES
         # ================================================
 
         # Derive Metadata
-        self.schema = SWXSchema()
+        if schema is not None:
+            self.schema = schema
+        else:
+            self.schema = SWXSchema()
         self._derive_metadata()
 
     @property
@@ -269,6 +299,29 @@ class SWXData:
         """
         return (self._timeseries.time.min(), self._timeseries.time.max())
 
+    def __getitem__(self, var_name):
+        """
+        Get the data for a specific variable.
+
+        Parameters
+        ----------
+        var_name : `str`
+            The name of the variable to retrieve.
+
+        Returns
+        -------
+        `astropy.units.Quantity`, `astropy.nddata.NDData`, `ndcube.NDCube`
+            The data for the variable.
+        """
+        if var_name in self.timeseries.columns:
+            return self.timeseries[var_name]
+        if var_name in self.support:
+            return self.support[var_name]
+        if var_name in self.spectra:
+            return self.spectra[var_name]
+        else:
+            raise KeyError(f"Variable {var_name} not found in HermesData object.")
+
     def __repr__(self):
         """
         Returns a representation of the `SWXData` class.
@@ -282,8 +335,7 @@ class SWXData:
         str_repr = f"SWXData() Object:\n"
         # Global Attributes/Metedata
         str_repr += f"Global Attrs:\n"
-        for attr_name, attr_value in self._timeseries.meta.items():
-            str_repr += f"\t{attr_name}: {attr_value}\n"
+        str_repr += self.timeseries.meta.__repr__() + "\n"
         # TimeSeries Data
         str_repr += f"TimeSeries Data:\n"
         for var_name in self._timeseries.colnames:
@@ -329,7 +381,8 @@ class SWXData:
                 )
             # Set the Property
             meta["Descriptor"] = (
-                f"{instr_name.upper()}>{swxsoc.config['mission']['inst_to_fullname'][instr_name]}"
+                f"{instr_name.upper()}>{swxsoc.config['mission']['inst_to_fullname'][instr_name]}",
+                "",
             )
 
         # Check the Optional Data Level
@@ -340,9 +393,9 @@ class SWXData:
                 )
             # Set the Property
             if data_level != "ql":
-                meta["Data_level"] = f"{data_level.upper()}>Level {data_level[1]}"
+                meta["Data_level"] = (f"{data_level.upper()}>Level {data_level[1]}", "")
             else:
-                meta["Data_level"] = f"{data_level.upper()}>Quicklook"
+                meta["Data_level"] = (f"{data_level.upper()}>Quicklook", "")
 
         # Check the Optional Data Version
         if version:
@@ -351,7 +404,7 @@ class SWXData:
                 raise ValueError(
                     f"Version, {version}, is not formatted correctly. Should be X.Y.Z"
                 )
-            meta["Data_version"] = version
+            meta["Data_version"] = (version, "")
         return meta
 
     @staticmethod
@@ -393,6 +446,23 @@ class SWXData:
                         attr_name=attr_name,
                         attr_value=attr_value,
                     )
+
+    @staticmethod
+    def update_metadata_attributes(current_meta, new_meta):
+        """
+        Function to update a current_meta dict in-place to add new metadata attributes and comments from the new_meta argument
+
+        Args:
+            current_meta (dict): current metadata dictionary of (key, (attribute, comment)) pairs
+            new_meta (dict): Dictionary of (key, value) pairs to update.
+        """
+        for key, value in new_meta.items():
+            # Value is already a (value, comment) tuple
+            if isinstance(value, tuple) and len(value) == 2:
+                current_meta[key] = value
+            # Create a new (value, comment) tuple
+            else:
+                current_meta[key] = (value, "")
 
     def _update_global_attribute(self, attr_name, attr_value):
         # If the attribute is set, check if we want to overwrite it
@@ -466,13 +536,24 @@ class SWXData:
                 f"Column '{measure_name}' must be a one-dimensional measurement. Split additional dimensions into unique measurenents."
             )
 
-        self._timeseries[measure_name] = data
+        # Add the measurement data to the TimeSeries
+        self._timeseries[measure_name] = data.copy()
+
+        # Create a new Variable Metadata Dict
+        var_meta = OrderedDict()
+        # Update with Measurement Template
+        SWXData.update_metadata_attributes(
+            var_meta, self.measurement_attribute_template()
+        )
+        # Update with original Metadata
         # Add any Metadata from the original Quantity
-        self._timeseries[measure_name].meta = self.measurement_attribute_template()
         if hasattr(data, "meta"):
-            self._timeseries[measure_name].meta.update(data.meta)
+            SWXData.update_metadata_attributes(var_meta, data.meta)
+        # Add any Metadata passed explicitly
         if meta:
-            self._timeseries[measure_name].meta.update(meta)
+            SWXData.update_metadata_attributes(var_meta, meta)
+        # Set the Variable's Metadata with the compiled Dict
+        self._timeseries[measure_name].meta = var_meta.copy()
 
         # Derive Metadata Attributes for the Measurement
         self._derive_metadata()
@@ -503,15 +584,24 @@ class SWXData:
         if not (isinstance(data, u.Quantity) or isinstance(data, NDData)):
             raise TypeError(f"Measurement {name} must be type `astropy.nddata.NDData`.")
 
+        # Add the measurement data to the support structure
         self._support[name] = data
+
+        # Create a new Variable Metadata Dict
+        var_meta = OrderedDict()
+        # Update with Measurement Template
+        SWXData.update_metadata_attributes(
+            var_meta, self.measurement_attribute_template()
+        )
+        # Update with original Metadata
         # Add any Metadata from the original Quantity or NDData
         if hasattr(data, "meta"):
-            self._support[name].meta.update(data.meta)
-        else:
-            self._support[name].meta = self.measurement_attribute_template()
-        # Add any Metadata Passed not in the NDData
+            SWXData.update_metadata_attributes(var_meta, data.meta)
+        # Add any Metadata passed explicitly
         if meta:
-            self._support[name].meta.update(meta)
+            SWXData.update_metadata_attributes(var_meta, meta)
+        # Set the Variable's Metadata with the compiled Dict
+        self._support[name].meta = var_meta.copy()
 
         # Derive Metadata Attributes for the Measurement
         self._derive_metadata()
@@ -553,9 +643,21 @@ class SWXData:
             else:
                 self._spectra.update([(name, data)], self._spectra.aligned_axes)
 
-        # Add any Metadata Passed not in the NDCube
+        # Create a new Variable Metadata Dict
+        var_meta = OrderedDict()
+        # Update with Measurement Template
+        SWXData.update_metadata_attributes(
+            var_meta, self.measurement_attribute_template()
+        )
+        # Update with original Metadata
+        # Add any Metadata from the original NDCube
+        if hasattr(data, "meta"):
+            SWXData.update_metadata_attributes(var_meta, data.meta)
+        # Add any Metadata passed explicitly
         if meta:
-            self._spectra[name].meta.update(meta)
+            SWXData.update_metadata_attributes(var_meta, meta)
+        # Set the Variable's Metadata with the compiled Dict
+        self._spectra[name].meta = var_meta.copy()
 
         # Derive Metadata Attributes for the Measurement
         self._derive_metadata()
@@ -722,7 +824,27 @@ class SWXData:
         # Re-Derive Metadata
         self._derive_metadata()
 
-    def save(self, output_path: str = None, overwrite: bool = False):
+    @staticmethod
+    def _get_handler(file_extension):
+        """
+        Function to get the correct I/O Handler for the given File Type Extension.
+        """
+        if file_extension == ".cdf":
+            handler = CDFHandler()
+            schema = SWXSchema(defaults="cdf")
+        elif file_extension == ".fits" or file_extension == ".gz":
+            handler = FITSHandler()
+            schema = SWXSchema(defaults="fits")
+        else:
+            raise ValueError(f"Unsupported file type: {file_extension}")
+        return handler, schema
+
+    def save(
+        self,
+        output_path: str = None,
+        overwrite: bool = False,
+        file_extension: str = ".cdf",
+    ):
         """
         Save the data to a CDF file.
 
@@ -733,19 +855,25 @@ class SWXData:
             If not provided, saves to the current directory.
         overwrite : `bool`
             If set, overwrites existing file of the same name.
+        file_extension : `str`, optional
+            The File Format to use for saving the data file.
+            This is used to create the correct I/O handler for saving the data.
+            Must be one of `[".cdf", ".fits"]`
+            Defaults to ".cdf" for saving CDF Files.
+
         Returns
         -------
         path : `str`
             A path to the saved file.
         """
-        handler = CDFHandler()
+        # Create the appropriate handler object based on file type
+        handler, _ = SWXData._get_handler(file_extension)
+
+        # If output path is not provided, save to the current directory
         if not output_path:
             output_path = str(Path.cwd())
-        if overwrite:
-            cdf_file_path = Path(output_path) / (self.meta["Logical_file_id"] + ".cdf")
-            if cdf_file_path.exists():
-                cdf_file_path.unlink()
-        return handler.save_data(data=self, file_path=output_path)
+
+        return handler.save_data(data=self, file_path=output_path, overwrite=overwrite)
 
     @classmethod
     def load(cls, file_path: str):
@@ -771,11 +899,10 @@ class SWXData:
         file_extension = Path(file_path).suffix
 
         # Create the appropriate handler object based on file type
-        if file_extension == ".cdf":
-            handler = CDFHandler()
-        else:
-            raise ValueError(f"Unsupported file type: {file_extension}")
+        handler, schema = SWXData._get_handler(file_extension)
 
         # Load data using the handler and return a SWXData object
         timeseries, support, spectra = handler.load_data(file_path)
-        return cls(timeseries=timeseries, support=support, spectra=spectra)
+        return cls(
+            timeseries=timeseries, support=support, spectra=spectra, schema=schema
+        )

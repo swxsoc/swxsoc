@@ -28,7 +28,7 @@ CACHE_DIR = "/tmp/.cache"
 if not os.getenv("LAMBDA_ENVIRONMENT"):
     # This is to avoid creating a new config dir for each new dev version.
     # We use AppDirs to locate and create the config directory.
-    dirs = AppDirs("hermes_core", "hermes_core")
+    dirs = AppDirs("swxsoc", "swxsoc")
     # Default one set by AppDirs
     CONFIG_DIR = dirs.user_config_dir
     CACHE_DIR = dirs.user_cache_dir

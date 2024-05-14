@@ -1,0 +1,550 @@
+AUTHOR:
+  data_type: str
+  default: null
+  derived: false
+  description: Who designed the observation
+  human_readable: Author
+  overwrite: false
+  required: true
+  validate: false
+BLANK:
+  data_type: str
+  default: null
+  derived: false
+  description: Value marking undefined pixels before the application of BSCALE, BZERO
+  human_readable: Missing data indicator
+  overwrite: false
+  required: true
+  validate: false
+BTYPE:
+  data_type: str
+  default: null
+  derived: false
+  description: Description of what the data array represents
+  human_readable: Data label
+  overwrite: false
+  required: true
+  validate: false
+BUNIT:
+  data_type: str
+  default: null
+  derived: false
+  description: Units of data array
+  human_readable: Units
+  overwrite: false
+  required: true
+  validate: false
+CADAVG:
+  data_type: quantity
+  default: null
+  derived: false
+  description: '[s] Average (actual) measurement cadence (frame to frame spacing)'
+  human_readable: Average actual measurement cadence
+  overwrite: false
+  required: true
+  validate: false
+CADENCE:
+  data_type: quantity
+  default: null
+  derived: false
+  description: '[s] Planned/commanded cadence (frame to frame spacing)'
+  human_readable: Planned measurement cadence
+  overwrite: false
+  required: true
+  validate: false
+CADMAX:
+  data_type: quantity
+  default: null
+  derived: false
+  description: '[s] Maximum frame-to-frame spacing'
+  human_readable: Maximum measurement cadence
+  overwrite: false
+  required: true
+  validate: false
+CADMIN:
+  data_type: quantity
+  default: null
+  derived: false
+  description: '[s] Minimum frame-to-frame spacing'
+  human_readable: Minimum measurement cadence
+  overwrite: false
+  required: true
+  validate: false
+CAMPAIGN:
+  data_type: str
+  default: null
+  derived: false
+  description: Coordinated campaign name(s)
+  human_readable: Observation campaign
+  overwrite: false
+  required: false
+  validate: false
+CREATOR:
+  data_type: str
+  default: null
+  derived: false
+  description: Name of software pipeline that produced the FITS file
+  human_readable: File Creator
+  overwrite: false
+  required: true
+  validate: false
+DATATAGS:
+  data_type: str
+  default: null
+  derived: false
+  description: Additional information
+  human_readable: Data Tags
+  overwrite: false
+  required: false
+  validate: false
+DATE:
+  data_type: date
+  default: null
+  derived: false
+  description: FITS file creation date in UTC
+  human_readable: File Creation Date
+  overwrite: false
+  required: true
+  validate: false
+DATE-AVG:
+  data_type: date
+  default: null
+  derived: false
+  description: Average time of the data aquisition
+  human_readable: Aquisition average time
+  overwrite: false
+  required: false
+  validate: false
+DATE-BEG:
+  data_type: date
+  default: null
+  derived: false
+  description: Start time of the data aquisition
+  human_readable: Aquisition start time
+  overwrite: false
+  required: true
+  validate: false
+DATE-END:
+  data_type: date
+  default: null
+  derived: false
+  description: End time of the data aquisition
+  human_readable: Aquisition end time
+  overwrite: false
+  required: false
+  validate: false
+DETECTOR:
+  data_type: str
+  default: null
+  derived: false
+  description: Name of detector
+  human_readable: detector
+  overwrite: false
+  required: true
+  validate: false
+DSUN_OBS:
+  data_type: quantity
+  default: null
+  derived: false
+  description: Distance to Sun
+  human_readable: Distance to Sun
+  overwrite: false
+  required: true
+  validate: false
+EXTNAME:
+  data_type: str
+  default: null
+  derived: false
+  description: Extension name
+  human_readable: Extension name
+  overwrite: false
+  required: true
+  validate: false
+FILENAME:
+  data_type: str
+  default: null
+  derived: false
+  description: FITS filename
+  human_readable: Filename
+  overwrite: false
+  required: true
+  validate: false
+GEOX_OBS:
+  data_type: quantity
+  default: null
+  derived: false
+  description: '[m] Observer''s non-fixed geographic X coordinate'
+  human_readable: Observer X Position
+  overwrite: false
+  required: false
+  validate: false
+GEOY_OBS:
+  data_type: quantity
+  default: null
+  derived: false
+  description: '[m] Observer''s non-fixed geographic Y coordinate'
+  human_readable: Observer Y Position
+  overwrite: false
+  required: false
+  validate: false
+GEOZ_OBS:
+  data_type: quantity
+  default: null
+  derived: false
+  description: '[m] Observer''s non-fixed geographic Z coordinate'
+  human_readable: Observer Z Position
+  overwrite: false
+  required: false
+  validate: false
+HASH_SW:
+  data_type: str
+  default: null
+  derived: false
+  description: Commit hash of software applied
+  human_readable: Software Hash
+  overwrite: false
+  required: true
+  validate: false
+INFO_URL:
+  data_type: url
+  default: null
+  derived: false
+  description: Human-readable web page describing the data set
+  human_readable: Info url
+  overwrite: false
+  required: true
+  validate: false
+INSTRUME:
+  data_type: str
+  default: null
+  derived: false
+  description: Instrument name
+  human_readable: Instrument
+  overwrite: false
+  required: true
+  validate: false
+LEVEL:
+  data_type: float
+  default: null
+  derived: false
+  description: Data level of fits file
+  human_readable: Data level
+  overwrite: false
+  required: true
+  validate: false
+MISSION:
+  data_type: str
+  default: null
+  derived: false
+  description: Mission name
+  human_readable: Mission
+  overwrite: false
+  required: true
+  validate: false
+NSUMEXP:
+  data_type: int
+  default: null
+  derived: false
+  description: The total number of exposures
+  human_readable: Number of exposures
+  overwrite: false
+  required: false
+  validate: false
+OBSERVER:
+  data_type: str
+  default: null
+  derived: false
+  description: Who acquired the data
+  human_readable: Observer
+  overwrite: false
+  required: false
+  validate: false
+OBSRVTRY:
+  data_type: str
+  default: null
+  derived: false
+  description: Satellite name
+  human_readable: Observatory
+  overwrite: false
+  required: true
+  validate: false
+OBS_DESC:
+  data_type: str
+  default: null
+  derived: false
+  description: Description of observation
+  human_readable: Observation description
+  overwrite: false
+  required: false
+  validate: false
+OBS_HDU:
+  data_type: str
+  default: null
+  derived: false
+  description: Description of observation
+  human_readable: Observation description
+  overwrite: false
+  required: true
+  validate: false
+OBS_LOG:
+  data_type: url
+  default: null
+  derived: false
+  description: URL of observation
+  human_readable: Observation description
+  overwrite: false
+  required: false
+  validate: false
+OBS_MODE:
+  data_type: str
+  default: null
+  derived: false
+  description: Name of predefined settings used during observation
+  human_readable: Observation mode
+  overwrite: false
+  required: false
+  validate: false
+ORIGIN:
+  data_type: str
+  default: null
+  derived: false
+  description: Location where FITS file has been created
+  human_readable: File originator
+  overwrite: false
+  required: true
+  validate: false
+PLANNER:
+  data_type: str
+  default: null
+  derived: false
+  description: Observation planner
+  human_readable: Planner
+  overwrite: false
+  required: false
+  validate: false
+PROJECT:
+  data_type: str
+  default: null
+  derived: false
+  description: Project name
+  human_readable: Project
+  overwrite: false
+  required: true
+  validate: false
+PRSTEP1:
+  data_type: str
+  default: null
+  derived: false
+  description: First processing step
+  human_readable: Processing step
+  overwrite: false
+  required: true
+  validate: false
+RELEASE:
+  data_type: date
+  default: null
+  derived: false
+  description: Public release date of data
+  human_readable: Release date
+  overwrite: false
+  required: true
+  validate: false
+RELEASEC:
+  data_type: email
+  default: null
+  derived: false
+  description: Email address of data release administrator
+  human_readable: Release administrator
+  overwrite: false
+  required: true
+  validate: false
+RESOLVPW:
+  data_type: float
+  default: null
+  derived: false
+  description: Resolving power for spectrometric data
+  human_readable: Resolving power
+  overwrite: false
+  required: false
+  validate: false
+RESPAPPL:
+  data_type: str
+  default: null
+  derived: false
+  description: Response function applied
+  human_readable: Applid response function
+  overwrite: false
+  required: false
+  validate: false
+SETTINGS:
+  data_type: str
+  default: null
+  derived: false
+  description: Additional instrument/acquisition settings
+  human_readable: Settings
+  overwrite: false
+  required: false
+  validate: false
+SLIT_WID:
+  data_type: quantity
+  default: null
+  derived: false
+  description: '[arcsec] Slit width'
+  human_readable: Slit width
+  overwrite: false
+  required: false
+  validate: false
+SOLARNET:
+  allowed_values:
+  - 1.0
+  - 0.5
+  - 0
+  data_type: float
+  default: null
+  derived: false
+  description: Fully SOLARNET-compliant=1.0, partially=0.5
+  human_readable: Solarnet compatibility
+  overwrite: false
+  required: true
+  validate: false
+TELCONFG:
+  data_type: str
+  default: null
+  derived: false
+  description: Telescope configuration
+  human_readable: Telescope configuration
+  overwrite: false
+  required: false
+  validate: false
+TELESCOP:
+  data_type: str
+  default: null
+  derived: false
+  description: Telescope/Sensor name
+  human_readable: Telescope
+  overwrite: false
+  required: true
+  validate: false
+TEXPOSURE:
+  data_type: float
+  default: null
+  derived: false
+  description: The integration time for a single exposure
+  human_readable: Single exposure time
+  overwrite: false
+  required: false
+  validate: false
+TIMESYS:
+  allowed_values:
+  - UTC
+  data_type: str
+  default: null
+  derived: false
+  description: Time scale of the time-related keywords.
+  human_readable: Time system
+  overwrite: false
+  required: true
+  validate: false
+VERSION:
+  data_type: str
+  default: null
+  derived: false
+  description: FITS file processing generation/versio
+  human_readable: Processor version
+  overwrite: false
+  required: true
+  validate: false
+VERS_CAL:
+  data_type: str
+  default: null
+  derived: false
+  description: Version of calibration pack applied
+  human_readable: Calibration version
+  overwrite: false
+  required: true
+  validate: false
+VERS_SW:
+  data_type: str
+  default: null
+  derived: false
+  description: Version of software applied
+  human_readable: Software version
+  overwrite: false
+  required: true
+  validate: false
+WAVEBAND:
+  data_type: str
+  default: null
+  derived: false
+  description: Human-readable description of the waveband
+  human_readable: Waveband description
+  overwrite: false
+  required: false
+  validate: false
+WAVECOV:
+  data_type: str
+  default: null
+  derived: false
+  description: The total wavelength coverage if multiple filters (<WAVEMIN1>-<WAVEMAX1>,
+    etc.)
+  human_readable: Wavelength coverage
+  overwrite: false
+  required: false
+  validate: false
+WAVELTH:
+  data_type: float
+  default: null
+  derived: false
+  description: The characteristic wavelength of the observation
+  human_readable: Characteristic wavelength
+  overwrite: false
+  required: false
+  validate: false
+WAVEMAX:
+  data_type: quantity
+  default: null
+  derived: false
+  description: '[Angstrom] Maximum wavelength covered by filter'
+  human_readable: Maximum wavelength
+  overwrite: false
+  required: true
+  validate: false
+WAVEMIN:
+  data_type: quantity
+  default: null
+  derived: false
+  description: '[Angstrom] Minimum wavelength covered by filter'
+  human_readable: Minimum wavelength
+  overwrite: false
+  required: true
+  validate: false
+WAVEREF:
+  allowed_values:
+  - air
+  - vacuum
+  data_type: str
+  default: null
+  derived: false
+  description: Wavelength related kwds in vacuum
+  human_readable: Wavelength reference
+  overwrite: false
+  required: true
+  validate: false
+WAVEUNIT:
+  data_type: str
+  default: null
+  derived: false
+  description: 'Wavelength related kwds have unit: 10^(WAVEUNIT) m'
+  human_readable: Wavelength unit
+  overwrite: false
+  required: true
+  validate: false
+XPOSURE:
+  data_type: quantity
+  default: null
+  derived: false
+  description: '[s] Total effective exposure time'
+  human_readable: Exposure time
+  overwrite: false
+  required: true
+  validate: false

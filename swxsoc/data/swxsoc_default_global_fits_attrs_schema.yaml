@@ -1,3 +1,39 @@
+ANA_NCMP:
+  data_type: int
+  default: null
+  derived: false
+  description: Number of components in the analysis used for parameterized "Type P" data
+  human_readable: Number of components
+  overwrite: false
+  required: false # Required for Type P data
+  validate: false
+AO_LOCK:
+  data_type: int # 0 or 1, floating averages may also be specified as appropriate
+  default: null
+  derived: false
+  description: should be used to indicate the status of any adaptive optics. When specified for individual exposures, the value should be either 0 or 1, but as mentioned above, averages may also be specified as appropriate.
+  human_readable: Adaptive Optics Status
+  overwrite: false
+  required: true # (should)
+  validate: false
+AO_NMODE:
+  data_type: int
+  default: null
+  derived: false
+  description: should be used to indicate the number of adaptive optics modes corrected. As mentioned above, averages may also be specified as appropriate. The type of the modes (e.g., Zernike, Karhunen-Loeve, etc.) should be given in the keyword comment.
+  human_readable: Number of AO modes
+  overwrite: false
+  required: true # (should)
+  validate: false
+ATMOS_R0:
+  data_type: float
+  default: null
+  derived: false
+  description: atmospheric coherence length r0. If available, the value of r0 should be stored in the keyword ATMOS_R0. Since there are multiple ways of measuring this value, its only use should be to reflect the quality of the observing conditions whenever the measurements are performed in the same (or similar enough) way.
+  human_readable: Atmospheric coherence length
+  overwrite: false
+  required: true # (should)
+  validate: false
 AUTHOR:
   data_type: str
   default: null
@@ -8,13 +44,35 @@ AUTHOR:
   required: true
   validate: false
 BLANK:
+  data_type: int
+  default: null
+  derived: false
+  description: Value marking undefined pixels before the application of BSCALE, BZERO. Missing or blank pixels in floating-point-valued HDUs should be set to NaN, but missing or blank pixels in integer-valued HDUs must be given the value of BLANK
+  human_readable: Value of missing pixels (floating HDU)
+  overwrite: false
+  required: true
+  validate: false
+  human_readable: Value of missing pixels (integer HDU)
+  overwrite: false
+  required: true
+  validate: false
+BNAME:
   data_type: str
   default: null
   derived: false
-  description: Value marking undefined pixels before the application of BSCALE, BZERO
-  human_readable: Missing data indicator
+  description: may be used to provide a human readable explanation of the data contents. This keyword is not mentioned in any FITS standard document, but it is a natural analogy to the CNAMEi keywords used to provide additional description of the WCS coordinate.
+  human_readable: Data description
   overwrite: false
   required: true
+  validate: false
+BNDCTR:
+  data_type: float
+  default: null
+  derived: false
+  description: For radio observations, BNDCTR may be used instead of WAVELNTH to specify a corresponding frequency in Hz.
+  human_readable: Band center
+  overwrite: false
+  required: false
   validate: false
 BTYPE:
   data_type: str
@@ -22,6 +80,15 @@ BTYPE:
   derived: false
   description: Description of what the data array represents
   human_readable: Data label
+  overwrite: false
+  required: true
+  validate: false
+BSCALE:
+  data_type: float
+  default: null
+  derived: false
+  description: The value of the pixel in the FITS file is given by BZERO + BSCALE * pixel value
+  human_readable: Linear scaling factor
   overwrite: false
   required: true
   validate: false
@@ -34,8 +101,17 @@ BUNIT:
   overwrite: false
   required: true
   validate: false
+BZERO:
+  data_type: float
+  default: 0.0
+  derived: false
+  description: The value of the pixel in the FITS file is given by BZERO + BSCALE * pixel value
+  human_readable: Scale Base
+  overwrite: false
+  required: true
+  validate: false
 CADAVG:
-  data_type: quantity
+  data_type: float
   default: null
   derived: false
   description: '[s] Average (actual) measurement cadence (frame to frame spacing)'
@@ -44,7 +120,7 @@ CADAVG:
   required: true
   validate: false
 CADENCE:
-  data_type: quantity
+  data_type: float
   default: null
   derived: false
   description: '[s] Planned/commanded cadence (frame to frame spacing)'
@@ -53,7 +129,7 @@ CADENCE:
   required: true
   validate: false
 CADMAX:
-  data_type: quantity
+  data_type: float
   default: null
   derived: false
   description: '[s] Maximum frame-to-frame spacing'
@@ -62,7 +138,7 @@ CADMAX:
   required: true
   validate: false
 CADMIN:
-  data_type: quantity
+  data_type: float
   default: null
   derived: false
   description: '[s] Minimum frame-to-frame spacing'
@@ -70,14 +146,245 @@ CADMIN:
   overwrite: false
   required: true
   validate: false
+CADVAR:
+  data_type: float
+  default: null
+  derived: false
+  description: '[s] Variability of the frame-to-frame spacing'
+  human_readable: Measurement cadence variability
+  overwrite: false
+  required: true
+  validate: false
+CAMERA: 
+  data_type: str
+  default: null
+  derived: false
+  description: Camera name (CAM-xxxx is recommended for other camera keywords).
+  human_readable: Name of the camera
+  overwrite: false
+  required: true
+  validate: false
 CAMPAIGN:
   data_type: str
   default: null
   derived: false
-  description: Coordinated campaign name(s)
+  description:  Coordinated campaign name/number, including instance number, when applicable
   human_readable: Observation campaign
   overwrite: false
+  required: true
+  validate: false
+CAR_ROT:
+  data_type: float
+  default: null
+  derived: false
+  description: Carrington rotation number for the reference pixel pointed to by CRPIXj values
+  human_readable: Carrington rotation
+  overwrite: false
   required: false
+  validate: false
+CCURRENT:
+  data_type: str
+  default: null
+  derived: false
+  description: When an Obs-HDU (partially) overlaps in time and space with one or more HDUs stored in other files, CCURRENT (concurrent) may be set to a comma-separated list of its own file name plus the names of all files containing concurrent Obs-HDUs. CCURRENT serves as a pointer to other concurrent (and probably relevant) observations, but it also serves a purpose in grouping search results
+  human_readable: Concurrent files
+  overwrite: false
+  required: true
+  validate: false
+CDELTia:
+  data_type: float
+  default: null
+  derived: false
+  description: The increment in the coordinate value along axis i in units of the coordinate value
+  human_readable: Coordinate scale increment
+  overwrite: false
+  required: true
+  validate: false
+CDi_ja:
+  data_type: float
+  default: null
+  derived: false
+  description: Linear-transformation matrix element in the ith row and jth column of the CD matrix
+  human_readable: Linear-transformation matrix element
+  overwrite: false
+  required: true
+  validate: false
+CHECKSUM:
+  data_type: str
+  default: null
+  derived: false
+  description: Checksum of the data array
+  human_readable: Checksum
+  overwrite: false
+  required: true
+  validate: false
+CMPDESn:
+  data_type: str
+  default: null
+  derived: false
+  description: Description of component n
+  human_readable: Component description
+  overwrite: false
+  required: false # Optional for Type P data
+  validate: false
+CMPINCn:
+  data_type: int
+  default: 1
+  derived: false
+  description: Indicates whether component n is included (CMPINCn=1) or excluded (CMPINCn=0) in the fit. This allows specification of components that would normally be included but for some reason (e.g., poor S/N ratio) has been left out for this particular data set. If CMPINCn is zero, additive components have a value of zero independent of the parameter values, and multiplicative components have a value of 1. Default value is 1, i.e., the component is included in the fit. The parameters in the data cube should be set to the initial values that would have been used if the component was included. If this is not feasible, the parameters should be set such that the component value would be zero if it had in fact been included.
+  human_readable: Component inclusion
+  overwrite: false
+  required: false # Optional for Type P data
+  validate: false
+CMPMULn:
+  data_type: int
+  default: 0
+  derived: false
+  description: Indicates whether component n is multiplicative (CMPMULn=1), in which case it is to be applied to the result of all previous components n-1, n-2, etc. This can be used for e.g., extinction functions. Default value is 0.
+  human_readable: Component type
+  overwrite: false
+  required: false # Optional for Type P data
+  validate: false
+CMPNAMn:
+  data_type: str
+  default: null
+  derived: false
+  description: Name of component n, typically used to identify/label the emission line fitted
+  human_readable: Component name
+  overwrite: false
+  required: false # Optional for Type P data
+  validate: false
+CMPSTRn:
+  data_type: str
+  default: null
+  derived: false
+  description: Used by SSW's cfit routines for the string to be included in composite function names. E.g., the function string for a Gaussian is 'g', and 'p1' for a first-order polynomial. An automatically generated composite function of the two would be called 'cf_g_p1_'.
+  human_readable: Component string
+  overwrite: false
+  required: false # Optional for Type P data
+  validate: false
+CMPTYPn:
+  data_type: str
+  default: null
+  derived: false
+  description: > 
+    Component type, e.g.,
+    - 'Polynomial', a polynomial of order CMP_NPn - 1.
+    - 'Gaussian', a Gaussian
+    - 'SSW comp_bgauss', a broadened Gaussian, see SSW routine comp_bgauss
+    - 'SSW comp_voigt', a Voigt profile, see SSW routine comp_voigt
+    - … etc. If you need additional component types, contact prits-group@astro.uio.no.
+  human_readable: Component type
+  overwrite: false
+  required: false # Required for Type P data
+  validate: false
+CMP_NPn:
+  data_type: int
+  default: null
+  derived: false
+  description: Number of parameters for component n
+  human_readable: Number of parameters
+  overwrite: false
+  required: false # Required for Type P data
+  validate: false
+CNAMEia:
+  data_type: str
+  default: null
+  derived: false
+  description: Name of the coordinate axis i
+  human_readable: Coordinate axis name
+  overwrite: false
+  required: true
+  validate: false
+COMMENT:
+  data_type: str
+  default: null
+  derived: false
+  description: May be used to include the relevant parts of the OBS_LOG, and any other relevant comments about the HDU that may be useful for the interpretation of the data.
+  human_readable: Comment
+  overwrite: false
+  required: false
+  validate: false
+COMPQUAL:
+  data_type: float
+  default: null
+  derived: false
+  description: set to a number between 0.0 and 1.0, where 1.0 indicates lossless compression (if any) and 0.0 indicates “all information is lost”. In practice, however, the actual value is not crucial, as long as a higher value corresponds to a higher data quality. If there is a choice between different compression algorithms for this instrument, the name of the algorithm should be given in COMP_ALG - starting with either 'Lossy' or 'Lossless', then typically a concatenation of all instrument-specific compression-related keywords, separated with slashes.
+  human_readable: Quality of data after lossy compression
+  overwrite: false
+  required: false
+  validate: false
+COMP_ALG:
+  data_type: str
+  default: null
+  derived: false
+  description: Name of the compression algorithm used
+  human_readable: Name of lossy compression algorithm
+  overwrite: false
+  required: false
+  validate: false
+CONSTEXT:
+  data_type: int # ?
+  default: null
+  derived: false
+  description: constant mask ([x,y,t,p]) – if the constant mask value (x,y,t,p)=1, parameter p has been kept constant/frozen at the stored value during the fitting process for point (x,y,t). When the constant mask extension is not present, it is assumed that all parameters have been fitted freely (between the specified min and max values) at all times unless PCONSna=1.
+  human_readable: Constant mask
+  overwrite: false
+  required: false
+  validate: false
+CONTINUE:
+  data_type: str
+  default: null
+  derived: false
+  description: May be used to continue a keyword value that is too long to fit in a single 80-character record
+  human_readable: Continue
+  overwrite: false
+  required: false
+  validate: false
+CPDISia:
+  data_type: str
+  default: null
+  derived: false
+  description: Prior distortion function type. Distortion correction for axis i.
+  human_readable: Distortion correction
+  overwrite: false
+  required: true
+  validate: false
+CPERRia:
+  data_type: float
+  default: null
+  derived: false
+  description: Maximum value of prior distortion correction for axis i
+  human_readable: Maximum value of prior distortion correction for axis i
+  overwrite: false
+  required: true
+  validate: false
+CQDISia:
+  data_type: str
+  default: null
+  derived: false
+  description: Posterior distortion function type. Distortion correction for axis i.
+  human_readable: Distortion correction
+  overwrite: false
+  required: true
+  validate: false
+CQERRia:
+  data_type: float
+  default: null
+  derived: false
+  description: Maximum value of posterior distortion correction for axis i
+  human_readable: Maximum value of posterior distortion correction for axis i
+  overwrite: false
+  required: true
+  validate: false
+CRDERia:
+  data_type: float
+  default: 0.0
+  derived: false
+  description:  Random error in Coordinate i, which must be non-negative.
+  human_readable: Random error
+  overwrite: false
+  required: true
   validate: false
 CREATOR:
   data_type: str
@@ -88,14 +395,212 @@ CREATOR:
   overwrite: false
   required: true
   validate: false
+CROTia:
+  data_type: float
+  default: 0.0
+  derived: false
+  description: The amount of rotation from the standard coordinate system to a different coordinate system. Further use of this of this keyword is deprecated, in favor of the newer formalisms that use the CDi_j or PCi_j keywords to define the rotation.
+  human_readable: Coordinate rotation
+  overwrite: false
+  required: true
+  validate: false
+CRPIXja:
+  data_type: float
+  default: 0.0
+  derived: false
+  description: Location of the reference point in the image for Axis j corresponding to rj. Note that the reference point may lie outside the image and that the first pixel in the image has pixel coordinates (1.0, 1.0, . . .)
+  human_readable: Reference pixel
+  overwrite: false
+  required: true
+  validate: false
+CRVALia:
+  data_type: float
+  default: 0.0
+  derived: false
+  description: Worldcoordinate value at the reference point of Axis i.
+  human_readable: Reference value
+  overwrite: false
+  required: true
+  validate: false
+CSYERia:
+  data_type: float
+  default: 0.0
+  derived: false
+  description: Systematic error in Coordinate i, which must be non-negative.
+  human_readable: Systematic error
+  overwrite: false
+  required: true
+  validate: false
+CTYPEia:
+  data_type: str
+  default: null
+  derived: false
+  description: Type of coordinate i
+  human_readable: Coordinate type
+  overwrite: false
+  required: true
+  validate: false
+CUNITia:
+  data_type: str
+  default: null
+  derived: false
+  description: Physical units of CRVAL and CDELT for Axis i. Note that units should always be specified. Units for celestial coordinate systems defined in this Standard must be degrees.
+  human_readable: Coordinate units
+  overwrite: false
+  required: true
+  validate: false
+CWDISia: # NOTE: Not well defined in SOLARNET Recommendations
+  data_type: str
+  default: null
+  derived: false
+  description: Weighted distortion function type. Distortion correction for axis i.
+  human_readable: Distortion correction
+  overwrite: false
+  required: true
+  validate: false
+CWERRia: # NOTE: Not well defined in SOLARNET Recommendations
+  data_type: float
+  default: null
+  derived: false
+  description: Maximum value of weighted distortion correction for axis i
+  human_readable: Maximum value of weighted distortion correction for axis i
+  overwrite: false
+  required: true
+  validate: false
+DATAEXT:
+  data_type: str
+  default: null
+  derived: false
+  description: the original data/Obs-HDU ([x,y,lambda,t])
+  human_readable: Data extension
+  overwrite: false
+  required: false
+  validate: false
+DATAKURT:
+  data_type: float
+  default: null
+  derived: false
+  description: Kurtosis of the data array
+  human_readable: Kurtosis
+  overwrite: false
+  required: false
+  validate: false
+DATAMAD:
+  data_type: float
+  default: null
+  derived: false
+  description: Median absolute deviation of the data array
+  human_readable: Median absolute deviation
+  overwrite: false
+  required: false
+  validate: false
+DATAMAX:
+  data_type: float
+  default: null
+  derived: false
+  description: Maximum value of the data array
+  human_readable: Maximum of data
+  overwrite: false
+  required: false
+  validate: false
+DATAMEAN:
+  data_type: float
+  default: null
+  derived: false
+  description: Mean of the data array
+  human_readable: Mean of data
+  overwrite: false
+  required: false
+  validate: false
+DATAMEDN:
+  data_type: float
+  default: null
+  derived: false
+  description: Median of the data array
+  human_readable: Median of data
+  overwrite: false
+  required: false
+  validate: false
+DATAMIN:
+  data_type: float
+  default: null
+  derived: false
+  description: Minimum value of the data array
+  human_readable: Minimum of data
+  overwrite: false
+  required: false
+  validate: false
+DATANMAD:
+  data_type: float
+  default: null
+  derived: false
+  description: Normalized median absolute deviation of the data array
+  human_readable: Normalized median absolute deviation
+  overwrite: false
+  required: false
+  validate: false
+DATANPnn:
+  data_type: float
+  default: null
+  derived: false
+  description: Normalized Percentiles from DATAPnn, of the nn percentile (where nn is e.g., 01, 02, 05, 10, 25, 50, 75, 90, 95, 98, and 99).
+  human_readable: Normalized Percentiles
+  overwrite: false
+  required: false
+  validate: false
+DATANRMS:
+  data_type: float
+  default: null
+  derived: false
+  description: Normalized root mean square of the data array
+  human_readable: Normalized root mean square
+  overwrite: false
+  required: false
+  validate: false
+DATAPnn:
+  data_type: float
+  default: null
+  derived: false
+  description: Percentiles of the data array, of the nn percentile (where nn is e.g., 01, 02, 05, 10, 25, 50, 75, 90, 95, 98, and 99).
+  human_readable: Percentiles
+  overwrite: false
+  required: false
+  validate: false
+DATARMS:
+  data_type: float
+  default: null
+  derived: false
+  description: Root mean square of the data array
+  human_readable: Root mean square
+  overwrite: false
+  required: false
+  validate: false
+DATASKEW:
+  data_type: float
+  default: null
+  derived: false
+  description: Skewness of the data array
+  human_readable: Skewness
+  overwrite: false
+  required: false
+  validate: false
+DATASUM:
+  data_type: float
+  default: null
+  derived: false
+  description: Sum of the data array, for checksum purposes
+  human_readable: Sum of data
+  overwrite: false
+  required: true
+  validate: false
 DATATAGS:
   data_type: str
   default: null
   derived: false
-  description: Additional information
+  description: Used for any additional search terms that do not fit in any of the other keywords.
   human_readable: Data Tags
   overwrite: false
-  required: false
+  required: true
   validate: false
 DATE:
   data_type: date
@@ -110,7 +615,7 @@ DATE-AVG:
   data_type: date
   default: null
   derived: false
-  description: Average time of the data aquisition
+  description: used to give the average date of the observation. However, there is no unambiguous definition of the average when applied to observations with varying cadence or varying exposure times
   human_readable: Aquisition average time
   overwrite: false
   required: false
@@ -119,7 +624,7 @@ DATE-BEG:
   data_type: date
   default: null
   derived: false
-  description: Start time of the data aquisition
+  description:  referring to the start time of the data acquisition in the time system specified by the TIMESYS keyword, which has the default of 'UTC'.
   human_readable: Aquisition start time
   overwrite: false
   required: true
@@ -133,6 +638,15 @@ DATE-END:
   overwrite: false
   required: false
   validate: false
+DATEREF:
+  data_type: date
+  default: null
+  derived: false
+  description:  Time coord. zero point (time reference, mandatory) set to the zero point of the WCS time coordinate. I.e., for pixels that have the CTYPEi='UTC' coordinate equal to zero, the time is the value given in DATEREF. In most cases the values of DATEREF and DATE-BEG will be identical, but note that according to the FITS standard, DATE-BEG is not a default value for DATEREF, thus DATEREF may not be omitted. 
+  human_readable: Reference date
+  overwrite: false
+  required: true
+  validate: false
 DETECTOR:
   data_type: str
   default: null
@@ -142,12 +656,57 @@ DETECTOR:
   overwrite: false
   required: true
   validate: false
-DSUN_OBS:
-  data_type: quantity
+DPja: # NOTE: Equivalent to CPDISia?
+  data_type: str
   default: null
   derived: false
-  description: Distance to Sun
+  description: Primary Distorion parameter for axis j
+  human_readable: Primary distortion parameter
+  overwrite: false
+  required: true
+  validate: false
+DQia: # NOTE: Equivalent to CQDISia?
+  data_type: str
+  default: null
+  derived: false
+  description: Posterioir distortion parameter for axis i
+  human_readable: Posterior distortion parameter
+  overwrite: false
+  required: true
+  validate: false
+DSUN_AU:
+  data_type: float
+  default: null
+  derived: false
+  description: Distance to Sun (in Astronomical Units)
   human_readable: Distance to Sun
+  overwrite: false
+  required: false # Optional for deep space missions (section 3.2)
+  validate: false
+DSUN_OBS:
+  data_type: float
+  default: null
+  derived: false
+  description: Distance to Sun (in meters)
+  human_readable: Distance to Sun
+  overwrite: false
+  required: true
+  validate: false
+DWia: # NOTE Equivalent to CDDISia?
+  data_type: str
+  default: null
+  derived: false
+  description: Weighted distortion function type. Distortion correction for axis i. The DWia records describe the association of coordinates between the distortion array and the data cube whose coordinates are to be corrected. 
+  human_readable: Distortion correction
+  overwrite: false
+  required: true
+  validate: false
+ELEV_ANG:
+  data_type: float
+  default: null
+  derived: false
+  description: This keyword should be used to quote the telescope's elevation angle at the time of data acquisition, in degrees.
+  human_readable: Elevation angle
   overwrite: false
   required: true
   validate: false
@@ -155,7 +714,7 @@ EXTNAME:
   data_type: str
   default: null
   derived: false
-  description: Extension name
+  description: All HDUs - including the primary HDU - in SOLARNET FITS files must contain the string-valued keyword EXTNAME, and each EXTNAME value must be unique within the file. EXTNAME must not contain the characters comma or semicolon except as prescribed for the variable-keyword mechanism, the pixel list mechanism and the meta-observation mechanism. In addition, EXTNAME must not start with a space, but any trailing spaces are ignored. Finally, the CONTINUE Long String Keyword Convention must not be used with EXTNAME, since this is a reserved keyword defined in the FITS standard.
   human_readable: Extension name
   overwrite: false
   required: true
@@ -169,32 +728,68 @@ FILENAME:
   overwrite: false
   required: true
   validate: false
+FILEVERP:
+  data_type: str
+  default: null
+  derived: false
+  description: File Version Pattern. The keyword FILEVERP (file version pattern) should be specified to highlight a version identifier included in the file name. E.g., a file named solo_SPICE_sit-V01-2395.fits and the subsequent version solo_SPICE_sit-V02-2395.fits should both have FILEVERP='solo_SPICE_sit-V*-2395.fits', where the asterisk identifies where the file version occurs in the file name. Using an asterisk means that the file version should be interpreted lexically, whereas a percentage sign should be used when the version number is not a fixed number of decimals. E.g., with file names file_V2.fits and file_V12.fits, using FILEVERP='file_V%.fits' would ensure that the second file recognized as having a higher version number (thus superseding the first file).
+  human_readable: File Version Pattern
+  overwrite: false
+  required: true
+  validate: false
+FILTER:
+  data_type: str
+  default: null
+  derived: false
+  description: Name(s) of the filter(s) used during the observation.
+  human_readable: Filters
+  overwrite: false
+  required: true
+  validate: false
+FT_LOCK:
+  data_type: float
+  default: null
+  derived: false
+  description: The keyword FT_LOCK is used to indicate the status of any feature tracking FT_LOCK=0 (no feature tracking lock) or FT_LOCK=1 (feature tracking lock) for individual exposures, with appropriate averages as mentioned above.
+  human_readable: Feature tracking status
+  overwrite: false
+  required: true
+  validate: false
 GEOX_OBS:
-  data_type: quantity
+  data_type: float
   default: null
   derived: false
   description: '[m] Observer''s non-fixed geographic X coordinate'
   human_readable: Observer X Position
   overwrite: false
-  required: false
+  required: true # Only required for earth-orbiting obervatories
   validate: false
 GEOY_OBS:
-  data_type: quantity
+  data_type: float
   default: null
   derived: false
   description: '[m] Observer''s non-fixed geographic Y coordinate'
   human_readable: Observer Y Position
   overwrite: false
-  required: false
+  required: true # Only required for earth-orbiting obervatories
   validate: false
 GEOZ_OBS:
-  data_type: quantity
+  data_type: float
   default: null
   derived: false
   description: '[m] Observer''s non-fixed geographic Z coordinate'
   human_readable: Observer Z Position
   overwrite: false
-  required: false
+  required: true # Only required for earth-orbiting obervatories
+  validate: false
+GRATING:
+  data_type: str
+  default: null
+  derived: false
+  description: Name of the grating used during the observation
+  human_readable: Grating
+  overwrite: false
+  required: true
   validate: false
 HASH_SW:
   data_type: str
@@ -205,11 +800,38 @@ HASH_SW:
   overwrite: false
   required: true
   validate: false
-INFO_URL:
-  data_type: url
+HGLN_OBS:
+  data_type: float
   default: null
   derived: false
-  description: Human-readable web page describing the data set
+  description: Observer''s heliographic longitude
+  human_readable: Observer Heliographic Longitude
+  overwrite: false
+  required: true
+  validate: false
+HGLT_OBS:
+  data_type: float
+  default: null
+  derived: false
+  description: Observer''s heliographic latitude
+  human_readable: Observer Heliographic Latitude
+  overwrite: false
+  required: true
+  validate: false
+INCLEXT:
+  data_type: str
+  default: null
+  derived: false
+  description: component inclusion mask ([x,y,t,n]) - if (x,y,t,n)=0, component n has not been included for point (x,y,t). When not present, it is assumed that all components have been included at all times.
+  human_readable: Component inclusion mask
+  overwrite: false
+  required: false
+  validate: false
+INFO_URL:
+  data_type: str
+  default: null
+  derived: false
+  description:  should point to a human-readable web page describing “everything” about the data set - what it is, how to use it, links to e.g., user guides, instrument/site/telescope descriptions, descriptions of caveats, information about data rights, preferred acknowledgements, whom to contact if you have questions, and repositories of observing/engineering logs.
   human_readable: Info url
   overwrite: false
   required: true
@@ -232,6 +854,33 @@ LEVEL:
   overwrite: false
   required: true
   validate: false
+METADIM:
+  data_type: str
+  default: null
+  derived: false
+  description: Dimension that has been splot for constituent HDUs.  E.g., when splitting an array [x,y,t] into time chunks, METADIM=3. Note than an accompanying auxiliary HDU with e.g., dimensions [t,z] would set METADIM=1. Auxiliary HDUs whose data array dimensions does not contain the split dimension (e.g., flatfields) do not need to contain the METADIM keyword. It is allowed to have METADIM > NAXIS to account for lost trailing singular dimensions. E.g., if constituent HDUs have dimensions [x,y,lambda] and METADIM=5, the resulting stitched HDU will have five dimensions e.g., [x,y,lambda,1,t]. 
+  human_readable: Metadata dimension splits
+  overwrite: false
+  required: false
+  validate: false
+METADIMn:
+  data_type: int
+  default: null
+  derived: false
+  description: Indicate which dimensions have been split. . It is then possible to construct Meta-HDUs resulting from aggregating Constituent HDUs along one or more dimensions. I.e., if an original HDU with dimensions [1000, 2000, 3000] has been split into 100 files/HDUs with dimensions [100,2000,300], the Constituent HDUs would have METADIM1=1 and METADIM2=3.
+  human_readable: Metadata dimension splits
+  overwrite: false
+  required: false
+  validate: false
+METAFILS:
+  data_type: str
+  default: null
+  derived: false
+  description: List of filenames of constituent HDUs. The filenames should be separated by commas, and the list should be ordered in the same way as the HDUs are ordered in the Meta-HDU.
+  human_readable: Metadata filenames
+  overwrite: false
+  required: false
+  validate: false
 MISSION:
   data_type: str
   default: null
@@ -241,12 +890,129 @@ MISSION:
   overwrite: false
   required: true
   validate: false
+MOSAICID:
+  data_type: str
+  default: null
+  derived: false
+  description: For mosaic observations, the keyword MOSAICID can be used to tie individual observations together.
+  human_readable: Mosaic ID
+  overwrite: false
+  required: false
+  validate: false
+NAPRXPIX:
+  data_type: float
+  default: null
+  derived: false
+  description: the number of pixels with approximated values (used by e.g., SolO/SPICE)
+  human_readable: Number of approximated pixels
+  overwrite: false
+  required: false
+  validate: false
+NAXIS:
+  data_type: int
+  default: null
+  derived: false
+  description: Number of data axes
+  human_readable: Number of axes
+  overwrite: false
+  required: true
+  validate: false
+NASIXn:
+  data_type: int
+  default: null
+  derived: false
+  description: The NAXISn keywords must be present for all values n = 1,... , NAXIS, in increasing order of n, and for no other values of n. The value field of this indexed keyword shall contain a non-negative integer representing the number of elements along Axis n of a data array. A value of zero for any of the NAXISn signifies that no data follow the header in the HDU (however, the random-groups structure described in Sect. 6 has NAXIS1 = 0, but will have data following the header if the other NAXISn keywords are non-zero). If NAXIS is equal to 0, there shall not be any NAXISn keywords.
+  human_readable: Number of elements along axis
+  overwrite: false
+  required: true
+  validate: false
+NBIN:
+  data_type: float
+  default: null
+  derived: false
+  description: In order to provide a simple way to determine the combined binning factor (for archive searches), the keyword NBIN should be set to the product of all specified NBINj keywords.
+  human_readable: Combined binning factor (Product of all NBINj)
+  overwrite: false
+  required: false # Required for binned data
+  validate: false
+NBINj:
+  data_type: int
+  default: null
+  derived: false
+  description: Binning should be specified by the keywords NBINj, where j is the dimension number (analogous to the NAXISj keywords). E.g., for an observational data cube with dimensions (x,y,lambda,t) where 2x2 binning has been performed in the y and lambda directions (as is sometimes done with slit spectrometers), NBIN2 and NBIN3 should be set to 2. The default value for NBINj is 1, so NBIN1 and NBIN4 may be left unspecified.
+  human_readable: Number of pixels binned together
+  overwrite: false 
+  required: false # Required for binned data
+  validate: false
+NDATAPIX:
+  data_type: int
+  default: null
+  derived: false
+  description: the number of usable pixels NTOTPIX - NLOSTPIX - NSATPIX - NSPIKPIX
+  human_readable: Number of usable pixels
+  overwrite: false
+  required: false
+  validate: false
+NLOSTPIX:
+  data_type: int
+  default: null
+  derived: false
+  description: the number of lost pixels due to telemetry/acquisition glitches
+  human_readable: Number of lost pixels
+  overwrite: false
+  required: false
+  validate: false
+NMASKPIX:
+  data_type: int
+  default: null
+  derived: false
+  description: the number of dust-affected/hot/cold/padded pixels etc.
+  human_readable: Number of masked pixels
+  overwrite: false
+  required: false
+  validate: false
+NSATPIX:
+  data_type: int
+  default: null
+  derived: false
+  description: the number of saturated pixels
+  human_readable: Number of saturated pixels
+  overwrite: false
+  required: false
+  validate: false
+NSPIKPIX:
+  data_type: int
+  default: null
+  derived: false
+  description: the number of identified spike pixels 
+  human_readable: Number of spike pixels
+  overwrite: false
+  required: false
+  validate: false
 NSUMEXP:
   data_type: int
   default: null
   derived: false
-  description: The total number of exposures
+  description:  the number of summed exposures 
   human_readable: Number of exposures
+  overwrite: false
+  required: false
+  validate: false
+NTOTPIX:
+  data_type: int
+  default: null
+  derived: false
+  description: the number of potentially usable pixels. the number of data cube pixels minus NMASKPIX
+  human_readable: Total number of pixels
+  overwrite: false
+  required: false
+  validate: false
+NXDIM:
+  data_type: int
+  default: null
+  derived: false
+  description: the number of dimensions absorbed by the fitting process
+  human_readable: number of absorbed dimensions
   overwrite: false
   required: false
   validate: false
@@ -257,14 +1023,50 @@ OBSERVER:
   description: Who acquired the data
   human_readable: Observer
   overwrite: false
-  required: false
+  required: true
+  validate: false
+OBSGEO-X:
+  data_type: float
+  default: null
+  derived: false
+  description: "[m] Observer's fixed geographic X coordinate"
+  human_readable: Observer X Position
+  overwrite: false
+  required: true # Only required for ground-based observatories
+  validate: false
+OBSGEO-Y:
+  data_type: float
+  default: null
+  derived: false
+  description: "[m] Observer's fixed geographic Y coordinate"
+  human_readable: Observer Y Position
+  overwrite: false
+  required: true # Only required for ground-based observatories
+  validate: false
+OBSGEO-Z:
+  data_type: float
+  default: null
+  derived: false
+  description: "[m] Observer's fixed geographic Z coordinate"
+  human_readable: Observer Z Position
+  overwrite: false
+  required: true # Only required for ground-based observatories
   validate: false
 OBSRVTRY:
   data_type: str
   default: null
   derived: false
-  description: Satellite name
+  description:  Name of the observatory
   human_readable: Observatory
+  overwrite: false
+  required: true
+  validate: false
+OBSTITLE:
+  data_type: str
+  default: null
+  derived: false
+  description: Title of observation. A more generic/higher-level description, e.g., “Flare sit-and-stare”, “High cadence large raster”), which often corresponds to OBS_MODE, though not necessarily as a oneto-one relationship. Used by IRIS and SPICE, corresponds to Hinode OBS_DEC. Should be identical to OBS_DESC or OBS_MODE when no more suitable value is available.
+  human_readable: Observation title
   overwrite: false
   required: true
   validate: false
@@ -272,46 +1074,154 @@ OBS_DESC:
   data_type: str
   default: null
   derived: false
-  description: Description of observation
-  human_readable: Observation description
-  overwrite: false
-  required: false
-  validate: false
-OBS_HDU:
-  data_type: str
-  default: null
-  derived: false
-  description: Description of observation
+  description: Description of observation. A string describing the observation, e.g., “Sit and stare on AR10333”. Should be identical to OBSTITLE when no more suitable value is available.
   human_readable: Observation description
   overwrite: false
   required: true
   validate: false
-OBS_LOG:
-  data_type: url
+OBS_HDU:
+  data_type: int
   default: null
   derived: false
-  description: URL of observation
-  human_readable: Observation description
+  description: Whether the HDU is an observational HDU (1) or not (0). 
+  human_readable: Contains observational data
   overwrite: false
-  required: false
+  required: true
+  validate: false
+OBS_LOG:
+  data_type: str
+  default: null
+  derived: false
+  description: Location of the log file that is relevant to this observation, if available, given as a URL.
+  human_readable: URL of observation log
+  overwrite: false
+  required: true
   validate: false
 OBS_MODE:
   data_type: str
   default: null
   derived: false
-  description: Name of predefined settings used during observation
+  description: Name of predefined settings used during observation. A string (from a limited/discrete list) uniquely identifying the mode of operation.
   human_readable: Observation mode
   overwrite: false
-  required: false
+  required: true
+  validate: false
+OBS_VR:
+  data_type: float
+  default: null
+  derived: false
+  description: "[km/s] Observer's outward velocity w.r.t. Sun"
+  human_readable: Observer velocity
+  overwrite: false
+  required: true # Required for spectrographs and filter instruments
   validate: false
 ORIGIN:
   data_type: str
   default: null
   derived: false
-  description: Location where FITS file has been created
+  description:  set to a character string identifying the organization or institution responsible for creating the FITS file. 
   human_readable: File originator
   overwrite: false
   required: true
+  validate: false
+PCONSna:
+  data_type: int
+  default: null
+  derived: false
+  description: Optional functional keyword for parameters in parameterized components. Set to 1 if pa has been kept constant during fitting.
+  human_readable: Parameter constant
+  overwrite: false
+  required: false
+  validate: false
+PCT_APRX:
+  data_type: float
+  default: null
+  derived: false
+  description: the percentage of pixels with approximated values (used by e.g., SolO/SPICE) (NAPRXPIX/NTOTPIX*100)
+  human_readable: Percentage of approximated pixels
+  overwrite: false
+  required: false
+  validate: false
+PCT_DATA:
+  data_type: float
+  default: null
+  derived: false
+  description: the percentage of usable pixels (NDATAPIX/NTOTPIX*100)
+  human_readable: Percentage of usable pixels
+  overwrite: false
+  required: false
+  validate: false
+PCT_LOST:
+  data_type: float
+  default: null
+  derived: false
+  description: the percentage of lost pixels due to telemetry/acquisition glitches (NLOSTPIX/NTOTPIX*100)
+  human_readable: Percentage of lost pixels
+  overwrite: false
+  required: false
+  validate: false
+PCT_MASK:
+  data_type: float
+  default: null
+  derived: false
+  description: the percentage of dust-affected/hot/cold/padded pixels etc. (NMASKPIX/NTOTPIX*100)
+  human_readable: Percentage of masked pixels
+  overwrite: false
+  required: false
+  validate: false
+PCT_SATP:
+  data_type: float
+  default: null
+  derived: false
+  description: the percentage of saturated pixels (NSATPIX/NTOTPIX*100)
+  human_readable: Percentage of saturated pixels
+  overwrite: false
+  required: false
+  validate: false
+PCT_SPIK:
+  data_type: float
+  default: null
+  derived: false
+  description: the percentage of identified spike pixels (NSPIKPIX/NTOTPIX*100)
+  human_readable: Percentage of spike pixels
+  overwrite: false
+  required: false
+  validate: false
+PCi_ja:
+  data_type: float
+  default: null
+  derived: false
+  description: a linear transformation matrix between data cube dimension j and coordinate axis i, which can be used to specify rotations, shear, transpositions and reflections.
+  human_readable: linear transformation matrix element
+  overwrite: false
+  required: true
+  validate: false
+PDESCna:
+  data_type: str
+  default: null
+  derived: false
+  description: Optional functional keyword for parameters in parameterized components. Parameter desciption
+  human_readable: Parameter Desscription
+  overwrite: false
+  required: false
+  validate: false
+PGEXTNAM:
+  data_type: str
+  default: null
+  derived: false
+  description: the name of the extension in the progenitor file that contains the original data
+  human_readable: Progenitor extension name
+  overwrite: false
+  required: false
+  validate: false
+PGFILENA:
+  data_type: str
+  default: null
+  derived: false
+  description: the name of the progenitor file
+  human_readable: Progenitor file name
+  overwrite: false
+  required: false
   validate: false
 PLANNER:
   data_type: str
@@ -322,41 +1232,275 @@ PLANNER:
   overwrite: false
   required: false
   validate: false
+PINITna:
+  data_type: float
+  default: null
+  derived: false
+  description: Optional functional keyword for parameters in parameterized components. Initial value of parameter
+  human_readable: Initial value
+  overwrite: false
+  required: false
+  validate: false
+PIXLISTS:
+  data_type: str
+  default: null
+  derived: false
+  description: PIXLISTS must declare the EXTNAME of the extension containing the pixel list, followed by a semicolon, then a comma-separated list of any pixel attribute names. When multiple pixel lists are used, this is signalled by adding a comma, the EXTNAME of the next pixel list extension followed by a semicolon, etc. Note that even when a pixel list does not contain any attributes, a comma is needed before the EXTNAME of any subsequent pixel list.
+  human_readable: Pixel lists
+  overwrite: false
+  required: false
+  validate: false
+PIXTYPE:
+  data_type: str
+  default: null
+  derived: false
+  description: Pixel Type
+  human_readable: Pixel Type
+  overwrite: false
+  required: false
+  validate: false
+PLANNER:
+  data_type: str
+  default: null
+  derived: false
+  description: Observation planner
+  human_readable: Planner
+  overwrite: false
+  required: true
+  validate: false
+PMAXna:
+  data_type: float
+  default: null
+  derived: false
+  description: Optional functional keyword for parameters in parameterized components. Maximum value of parameter
+  human_readable: Maximum value
+  overwrite: false
+  required: false
+  validate: false
+PMINna:
+  data_type: float
+  default: null
+  derived: false
+  description: Optional functional keyword for parameters in parameterized components. Minimum value of parameter
+  human_readable: Minimum value
+  overwrite: false
+  required: false
+  validate: false
+PNAMEna:
+  data_type: str
+  default: null
+  derived: false
+  description: Optional functional keyword for parameters in parameterized components. Parameter name
+  human_readable: Parameter name
+  overwrite: false
+  required: false
+  validate: false
+POINT_ID:
+  data_type: str
+  default: null
+  derived: false
+  description: Pointing ID serves to separate otherwise identical observations into groups in a logical way. 
+  human_readable: Pointing ID
+  overwrite: false
+  required: false
+  validate: false
+POLCANGL:
+  data_type: float
+  default: null
+  derived: false
+  description: If the polarimetric reference frame is not aligned with any set of WCS coordinate names, a rotation of the reference frame given in POLCCONV can be specified in POLCANGL. The rotation, specified in degrees, should be applied to the POLCCONV-specified system around its third axis. The rotation is counter-clockwise as seen from a point with a positive third-axis coordinate value, taking the sign from POLCCONV into account. I.e., specifying a positive angle with POLCCONV='(…, …, +HPRZ) ' specifies a counter-clockwise rotation as seen from Earth, whereas zwith POLCCONV='(…, …, -HPRZ) ' would specify a clockwise rotation as seen from Earth.
+  human_readable: Polarimetric angle
+  overwrite: false
+  required: false
+  validate: false
+POLCCONV:
+  data_type: str
+  default: null
+  derived: false
+  description: The axes must be explicitly specified by the keyword POLCCONV in the form '(+/-x, +/-y, +/-z)' where x, y, and z are valid WCS coordinate names. E.g., POLCCONV='(+HPLT,-HPLN,+HPRZ)' means that the reference system's x axis is parallel to the HPLT axis (Solar North), and y is antiparallel to the HPLN axis, with z pointing towards the observer.
+  human_readable: Polarimetric conversion
+  overwrite: false
+  required: false
+  validate: false
+PRBRAna:
+  data_type: str
+  default: null
+  derived: false
+  description: Optional pipeline processing keyword. Branch name of code use in processing step n
+  human_readable: Branch name
+  overwrite: false
+  required: false
+  validate: false
+PRENVn:
+  data_type: str
+  default: null
+  derived: false
+  description: specify the operating environment of the pipeline such as the hardware (CPU type) and the operating system type/version, compiler/interpreter versions, compiler options, etc.6 The default value of a PRENVn keyword is the value of PRENVn in the previous processing step, so for a pipeline that has been run from beginning to end in a single environment, only PRENV1 will have to be specified.
+  human_readable: Processing environment
+  overwrite: false
+  required: false
+  validate: false
+PRHSHna:
+  data_type: str
+  default: null
+  derived: false
+  description: Optional pipeline processing keyword. Convenience keyword to easily find the exact git commit for a library that has been used. Note that it does not replace PRVERna, because PRHSHna is not a number that increases with the maturity of the libraries (but such a number can be constructed, see above)
+  human_readable: Processing code hash
+  overwrite: false
+  required: false
+  validate: false
+PRLIBna:
+  data_type: str
+  default: null
+  derived: false
+  description: Optional pipeline processing keyword. Library name used in processing step n
+  human_readable: Library name
+  overwrite: false
+  required: false
+  validate: false
+PRLOGna:
+  data_type: str
+  default: null
+  derived: false
+  description: Optional pipeline processing keyword. used to include a processing log in case messages/warnings from the processing may be of importance.
+  human_readable: Processing Log
+  overwrite: false
+  required: false
+  validate: false
+PRMODEna:
+  data_type: str
+  default: null
+  derived: false
+  description: Optional pipeline processing keyword. Meant for pipelines that may be run with different trade-offs between e.g., signal to noise ratio versus spatial resolution or contrast. This should already be apparent from the other keywords, but PRMODEn provides a much simpler way of identifying data processed in a particular way (e.g., “BALANCED” or “HIGH CONTRAST”). Note that a single observation may be registered multiple times in an SVO with different values of PRMODEn - but then a PRMODEnspecific identifier in the file name is necessary in order to ensure uniqueness.
+  human_readable: Processing mode
+  overwrite: false
+  required: false
+  validate: false
 PROJECT:
   data_type: str
   default: null
   derived: false
-  description: Project name
+  description: Name(s) of the project(s) affiliated with the data
   human_readable: Project
   overwrite: false
   required: true
   validate: false
-PRSTEP1:
+PRPARAn:
   data_type: str
   default: null
   derived: false
-  description: First processing step
+  description: Optional pipeline processing keyword. The PRPARAn keyword can be used in different ways 1. As a plain comma-separated listing of parameters and their values, signalled by the first character matching the regular expression '[A-Za-z_$]' 2. As a JSON string, signalled by the first character being an opening curly bracket 3. As an XML specification, signalled by the first character being a '<' 4. As the EXTNAME of an ASCII table, signalled by the first character being a '['
+  human_readable: Processing parameters
+  overwrite: false
+  required: false
+  validate: false
+PRPROCn:
+  data_type: str
+  default: null
+  derived: false
+  description: Optional pipeline processing keyword. Name of Processing Procedure used in processing step n
+  human_readable: Processing Procedure used for Step n
+  overwrite: false
+  required: false
+  validate: false
+PRPVERn:
+  data_type: str
+  default: null
+  derived: false
+  description: Optional pipeline processing keyword. Version of processing pipeline used in processing step n
+  human_readable: Processing code version for Step n
+  overwrite: false
+  required: false
+  validate: false
+PRSTEPn:
+  data_type: str
+  default: null
+  derived: false
+  description: should specify the nature of the processing steps, if any, that has been applied to the data. Each PRSTEPn may contain a comma separated list if multiple processing steps are inseparable. The number n specifies the step number and should reflect the order in which the steps have been performed
   human_readable: Processing step
   overwrite: false
-  required: true
+  required: false
+  validate: false
+PRVERna:
+  data_type: str
+  default: null
+  derived: false
+  description: Optional pipeline processing keyword. Version of code used in processing step n for library a
+  human_readable: Processing code version for library a in step n
+  overwrite: false
+  required: false
+  validate: false
+PTRAna:
+  data_type: float
+  default: 1.0
+  derived: false
+  description: Optional functional keyword for parameters in parameterized components.  Linear transformation coefficient A. 
+  human_readable: Linear transformation coefficient A
+  overwrite: false
+  required: false
+  validate: false
+PTRBna:
+  data_type: float
+  default: 0.0
+  derived: false
+  description: Optional functional keyword for parameters in parameterized components.  Linear transformation constant B. 
+  human_readable: Linear transformation constant B
+  overwrite: false
+  required: false
+  validate: false
+PUNITna:
+  data_type: str
+  default: null
+  derived: false
+  description: Optional functional keyword for parameters in parameterized components. The units for parameter a of component n, specified according to the FITS Standard Section 4.3, e.g., 'nm' or 'km/s'.
+  human_readable: Parameter unit
+  overwrite: false
+  required: false
   validate: false
 RELEASE:
   data_type: date
   default: null
   derived: false
-  description: Public release date of data
+  description: Public release date of data. Proprietary data should be marked by setting the keyword RELEASE to the date at which the data can be freely distributed.
   human_readable: Release date
   overwrite: false
   required: true
   validate: false
 RELEASEC:
-  data_type: email
+  data_type: str
   default: null
   derived: false
-  description: Email address of data release administrator
+  description: Email address of data release administrator.  The keyword RELEASEC may be used to give contact information for one or more people (name/email addresses, comma separated) administering the release details.
   human_readable: Release administrator
   overwrite: false
   required: true
+  validate: false
+REQUESTR:
+  data_type: str
+  default: null
+  derived: false
+  description: Who requested this particular observation.
+  human_readable: Requester
+  overwrite: false
+  required: false
+  validate: false
+RESEXT:
+  data_type: str
+  default: null
+  derived: false
+  description: Optional functional keyword for parameters in parameterized components. the HDU containing the analysis results ([x,y,t,p]).
+  human_readable: Result extension
+  overwrite: false
+  required: false
+  validate: false
+RESIDEXT:
+  data_type: str
+  default: null
+  derived: false
+  description: Optional functional keyword for parameters in parameterized components. Residuals from the fitting process ([x,y,lambda,t]) which may in some cases be an important factor in the verification e .g., to discover emission lines that have not been considered during the fitting
+  human_readable: Residual extension
+  overwrite: false
+  required: false
   validate: false
 RESOLVPW:
   data_type: float
@@ -365,7 +1509,7 @@ RESOLVPW:
   description: Resolving power for spectrometric data
   human_readable: Resolving power
   overwrite: false
-  required: false
+  required: false # Required for spectrometric data
   validate: false
 RESPAPPL:
   data_type: str
@@ -373,6 +1517,60 @@ RESPAPPL:
   derived: false
   description: Response function applied
   human_readable: Applid response function
+  overwrite: false
+  required: false
+  validate: false
+RESPONSE:
+  data_type: str
+  default: null
+  derived: false
+  description: Response function used
+  human_readable: Response function
+  overwrite: false
+  required: false
+  validate: false
+ROT_COMP:
+  data_type: int
+  default: null
+  derived: false
+  description: set to 1 if automated solar rotation compensation was in effect during the observation, and to 0 if not. 
+  human_readable: Rotation compensation
+  overwrite: false
+  required: true
+  validate: false
+ROT_FORM:
+  data_type: str
+  default: null
+  derived: false
+  description: The formula specified is meant to be human-readable, not machine readable, thus e.g., ' A sin(….)', using parameter names that are common within your community. An explanation in the comments may be useful. The units should be degrees per day. More important, though is that the coordinate variation is reflected in the WCS description of the data, using cross terms between the time coordinate and spatial coordinates in the PCi_j matrix or by tabulating the coordinates.
+  human_readable: Rotation formula
+  overwrite: false
+  required: false
+  validate: false
+ROT_MODL:
+  data_type: str
+  default: null
+  derived: false
+  description: The keyword ROT_MODL should be set to specify the rotation model used for rotation compensation4. It can refer to specific, predefined models such as ALLEN (Allen, Astrophys. Quantities, 1979), HOWARD (Howard et al.), SIDEREAL, SYNODIC, CARRINGTON, SNODGRASS or aaa.a - arcseconds per hour (units [arcsec/h]). See also the SolarSoft routine diff_rot.pro. If other models have been used, please contact prits-group@astro.uio.no, or set ROT_MODL to FORMULA, and specify the formula in the keyword ROT_FORM.
+  human_readable: Rotation model
+  overwrite: false
+  required: false # required if ROT_COMP=1
+  validate: false
+RSUN_ARC: 
+  data_type: float
+  default: null
+  derived: false
+  description: '[arcsec] apparent photospheric solar radius in arc seconds'
+  human_readable: Solar angular radius
+  overwrite: false
+  required: true
+  validate: false
+RSUN_REF:
+  data_type: float
+  default: null
+  derived: false
+  description: '[m] Reference solar radius in meters. For observations (instruments) where the plate scale/pointing is derived from measurements of the apparent solar radius versus the physical size, the keywords RSUN_REF should be used to report the reference value for the physical radius used in the calculations (see Thompson 2010, Section 8).'
+  human_readable: Solar radius
   overwrite: false
   required: false
   validate: false
@@ -386,19 +1584,15 @@ SETTINGS:
   required: false
   validate: false
 SLIT_WID:
-  data_type: quantity
+  data_type: float
   default: null
   derived: false
   description: '[arcsec] Slit width'
   human_readable: Slit width
   overwrite: false
-  required: false
+  required: false # Required for spectrometric data
   validate: false
 SOLARNET:
-  allowed_values:
-  - 1.0
-  - 0.5
-  - 0
   data_type: float
   default: null
   derived: false
@@ -407,6 +1601,102 @@ SOLARNET:
   overwrite: false
   required: true
   validate: false
+  allowed_values:
+  - 1.0
+  - 0.5
+  - 0
+SOLAR_B0:
+  data_type: float
+  default: null
+  derived: false
+  description: '[deg] Heliographic latitude of the observer. Note that the Solar B angle is identical to HGLT_OBS, and although it is a duplication of information, it may be reported also in SOLAR_B0 for convenience.'
+  human_readable: Observer latitude
+  overwrite: false
+  required: false
+  validate: false
+SOLAR_EP:
+  data_type: float
+  default: null
+  derived: false
+  description: apparent angle from observer location between celestial north and ecliptic north
+  human_readable: Ecliptic angle
+  overwrite: false
+  required: false
+  validate: false
+SOLAR_P0:
+  data_type: float
+  default: null
+  derived: false
+  description: apparent angle from observer location between celestial north and solar north
+  human_readable: Solar angle
+  overwrite: false
+  required: false
+  validate: false
+SOLNETEX:
+  data_type: str
+  default: null
+  derived: false
+  description: List of keywords that are used in conflict with SOLARNET-defined meanings. This mechanism may sometimes be necessary to ensure backwards compatibility with existing utilities. Keywords listed in SOLNETEX will be ignored by SOLARNET-aware utilities. The SOLNETEX mechanism must not be applied to FITS standard keywords.
+  human_readable: SOLARNET exceptions
+  overwrite: false
+  required: false # Required for any non-compliant keywords
+  validate: false
+SPECSYS:
+  data_type: str
+  default: null
+  derived: false
+  description: Spectral reference frame
+  human_readable: Spectral reference frame
+  overwrite: false
+  required: false # required for spectrometric data
+  validate: false
+  allowed_values:
+  - TOPOCENT  # Topocentric
+  - GEOCENTR  # Geocentric
+  - BARYCENT  # Barycentric
+  - HELIOCEN  # Heliocentric
+  - LSRK      # Local standard of rest (kinematic)
+  - LSRD      # Local standard of rest (dynamic)
+  - GALACTOC  # Galactocentric
+  - LOCALGRP  # Local Group
+  - CMBDIPOL  # Cosmic-microwave-background dipole
+  - SOURCE    # Source rest frame
+SVO_GRP:
+  data_type: str
+  default: null
+  derived: false
+  description: SVO_GRP may be used to achieve the opposite, to tie observations together even if they have different POINT_IDs and/or have other differing characteristics. Heuristically, a shared value for SVO_GRP signals that “if you are interested in this observation, you are probably interested in all of these observations (with the same SVO_GRP value)”. 
+  human_readable: SVO Group
+  overwrite: false
+  required: false
+  validate: false
+TCTYPn:
+  data_type: str
+  default: null
+  derived: false
+  description: Binary table columns storing pixel indices must have TCTYPn equal to 'PIXEL' and TTYPEn equal to 'DIMENSIONk', where k is the dimension number in the referring HDU's data cube. The column storing pixel types must have TTYPEn equal to 'PIXTYPE'. Any attribute columns must have TTYPEn equal to the name of the attached attribute contained in that column.
+  human_readable: Table column type
+  overwrite: false
+  required: false
+  validate: false
+TDESCn:
+  data_type: str
+  default: null
+  derived: false
+  description: TDESCn may be used to give a description of the contents of the binary table column.
+  human_readable: Table column description
+  overwrite: false
+  required: false
+  validate: false
+TDIMn:
+  data_type: str
+  default: null
+  derived: false
+  description: TDIMn may be used to give the dimensions of the binary table column.
+  human_readable: Table column dimensions
+  overwrite: false
+  required: false
+  validate: false
 TELCONFG:
   data_type: str
   default: null
@@ -414,7 +1704,7 @@ TELCONFG:
   description: Telescope configuration
   human_readable: Telescope configuration
   overwrite: false
-  required: false
+  required: true
   validate: false
 TELESCOP:
   data_type: str
@@ -434,6 +1724,15 @@ TEXPOSURE:
   overwrite: false
   required: false
   validate: false
+TFORMn:
+  data_type: str
+  default: null
+  derived: false
+  description: TFORMn may be used to give the format of the binary table column.
+  human_readable: Table column format
+  overwrite: false
+  required: false # required for binary tables
+  validate: false
 TIMESYS:
   allowed_values:
   - UTC
@@ -445,15 +1744,87 @@ TIMESYS:
   overwrite: false
   required: true
   validate: false
+TKEYSn:
+  data_type: str
+  default: null
+  derived: false
+  description: The naming conventions for column-specific keywords (starting with T and allowing for 3-digit column numbers) leaves only 4 letters to carry meaning, which easily leads to the creation of very awkward column-specific keyword names. To alleviate this problem for keywords that must have different values for different columns, the column-specific keyword TKEYSn is introduced, listing pairs of keyword names and values inside a string. The CONTINUE Long String Keyword Convention may of course be used to improve readability and add comments.
+  human_readable: Table keywords
+  overwrite: false
+  required: false
+  validate: false
+TPCn_na:
+  data_type: str
+  default: null
+  derived: false
+  description: Optional keyword for pixel list mechanism for flagging pixels. 
+  human_readable: Pixel list flag
+  overwrite: false
+  required: false
+  validate: false
+TPXLSn:
+  data_type: str
+  default: null
+  derived: false
+  description: Optional keyword for pixel list mechanism for flagging pixels. TPXLSn replaces PIXLISTS
+  human_readable: Pixel lists
+  overwrite: false
+  required: false
+  validate: false
+TTYPEn:
+  data_type: str
+  default: null
+  derived: false
+  description: TTYPEn may be used to give the name of the binary table column.
+  human_readable: Table column name
+  overwrite: false
+  required: false
+  validate: false
+TVARKn:
+  data_type: str
+  default: null
+  derived: false
+  description: Optional keyword for pixel list mechanism for flagging pixels. TVARKn replaces VAR_KEYS
+  human_readable: Var keys
+  overwrite: false
+  required: false
+  validate: false
+TZEROn:
+  data_type: float
+  default: null
+  derived: false
+  description: This indexed keyword shall be used, along with the TSCALn keyword, to linearly scale the values in the table Field n to transform them into the physical values that they represent using Eq. 7. The value field shall contain a floating-point number representing the physical value corresponding to an array value of zero. The default value for this keyword is 0.0. This keyword must not be used for A-format fields. TZEROn replaces BZERO. 
+  human_readable: Zero point
+  overwrite: false
+  required: false
+  validate: false
+VAR_KEYS:
+  data_type: str
+  default: null
+  derived: false
+  description: VAR_KEYS must declare the EXTNAME of the extension containing the variance keys, followed by a semicolon, then a comma-separated list of any variance key names. When multiple variance keys are used, this is signalled by adding a comma, the EXTNAME of the next variance key extension followed by a semicolon, etc. Note that even when a variance key does not contain any attributes, a comma is needed before the EXTNAME of any subsequent variance key.
+  human_readable: Variance keys
+  overwrite: false
+  required: false
+  validate: false
+VELOSYS:
+  data_type: float
+  default: null
+  derived: false
+  description: '[floating point; default:: none]. Relative radial velocity between the observer and the selected standard of rest in the direction of the celestial reference coordinate. Units must be m/s. The CUNITia keyword is not used for this purpose since the WCS Version a might not be expressed in velocity units.'
+  human_readable: Velocity system
+  overwrite: false
+  required: false
+  validate: false
 VERSION:
   data_type: str
   default: null
   derived: false
-  description: FITS file processing generation/versio
-  human_readable: Processor version
+  description: FITS file processing generation/version. VERSION should be set to the processing version of the file, an integer that should be increased whenever a reprocessing is performed in order to improve the data set (e.g., with a better flatfield, better detection of cosmic rays, more complete telemetry, etc). The version numbers in files published through an SVO may increase by more than one for each new published “generation”, allowing the use of intermediate values for internal/experimental use.
+  human_readable: Processed version
   overwrite: false
   required: true
-  validate: false
+  validate: false  
 VERS_CAL:
   data_type: str
   default: null
@@ -491,7 +1862,7 @@ WAVECOV:
   overwrite: false
   required: false
   validate: false
-WAVELTH:
+WAVELNTH:
   data_type: float
   default: null
   derived: false
@@ -501,35 +1872,35 @@ WAVELTH:
   required: false
   validate: false
 WAVEMAX:
-  data_type: quantity
+  data_type: float
   default: null
   derived: false
   description: '[Angstrom] Maximum wavelength covered by filter'
   human_readable: Maximum wavelength
   overwrite: false
-  required: true
+  required: false # required for spectrometric data
   validate: false
 WAVEMIN:
-  data_type: quantity
+  data_type: float
   default: null
   derived: false
   description: '[Angstrom] Minimum wavelength covered by filter'
   human_readable: Minimum wavelength
   overwrite: false
-  required: true
+  required: false # required for spectrometric data
   validate: false
 WAVEREF:
-  allowed_values:
-  - air
-  - vacuum
   data_type: str
   default: null
   derived: false
   description: Wavelength related kwds in vacuum
   human_readable: Wavelength reference
   overwrite: false
-  required: true
+  required: false # required for spectrometric data
   validate: false
+  allowed_values:
+  - air
+  - vacuum
 WAVEUNIT:
   data_type: str
   default: null
@@ -537,10 +1908,64 @@ WAVEUNIT:
   description: 'Wavelength related kwds have unit: 10^(WAVEUNIT) m'
   human_readable: Wavelength unit
   overwrite: false
+  required: false # required for spectrometric data
+  validate: false
+WCSAXES:
+  data_type: int
+  default: null
+  derived: false
+  description: Number of WCS axes
+  human_readable: WCS axes
+  overwrite: false
   required: true
   validate: false
+WCSNAMEa:
+  data_type: str
+  default: null
+  derived: false
+  description: WCS name for axis a
+  human_readable: WCS name
+  overwrite: false
+  required: false
+  validate: false
+WCSNn:
+  data_type: str
+  default: null
+  derived: false
+  description: WCS name for axis n
+  human_readable: WCS name
+  overwrite: false
+  required: false
+  validate: false
+WGTEXT:
+  data_type: str
+  default: null
+  derived: false
+  description: data weights w used during fitting ([x,y,lambda,t]). When not present, all data points are assumed to have equal weight.
+  human_readable: extension weights
+  overwrite: false
+  required: false
+  validate: false
+XDIMTYm:
+  data_type: str
+  default: null
+  derived: false
+  description:  the CTYPEi of the mth dimension absorbed by the fitting process.
+  human_readable: Dimension type
+  overwrite: false
+  required: false
+  validate: false
+XTIMXTm:
+  data_type: str
+  default: null
+  derived: false
+  description: The values of coordinates absorbed by the fitting process ([x,y,lambda,t]) specified by XDIMTYm, (see above) may be included in separate extensions as a convenience, although this is redundant whenever any of the arrays with all dimensions of the original data is present and contains the appropriate WCS information. Thus, XDIMXTm refers to the extension containing absorbed coordinate number m (with coordinate specification given by XDIMTYm).
+  human_readable: Dimension extension
+  overwrite: false
+  required: false
+  validate: false
 XPOSURE:
-  data_type: quantity
+  data_type: float
   default: null
   derived: false
   description: '[s] Total effective exposure time'
@@ -548,3 +1973,31 @@ XPOSURE:
   overwrite: false
   required: true
   validate: false
+iCRVLn:
+  data_type: float
+  default: null
+  derived: false
+  description: The reference value of the coordinate axis i in the data cube, which is the value of the coordinate axis i at the reference pixel. The reference pixel is the pixel at which the WCS coordinate values are CRVALn. The reference value is the value of the coordinate axis at the reference pixel.
+  human_readable: Reference value
+  overwrite: false
+  required: true
+  validate: false
+iCTYPn:
+  data_type: str
+  default: null
+  derived: false
+  description: The type of the coordinate axis i in the data cube, which is the physical quantity that the coordinate axis represents. The type is specified by the keyword CTYPEi, where i is the axis number in the data cube. The type is a string that is a valid FITS keyword value, e.g., 'RA---TAN' for a tangent-plane projection in right ascension.
+  human_readable: Coordinate type
+  overwrite: false
+  required: true
+  validate: false
+jCRPXn:
+  data_type: float
+  default: null
+  derived: false
+  description: The reference pixel of the coordinate axis j in the data cube
+  human_readable: Reference pixel
+  overwrite: false
+  required: true
+  validate: false
+

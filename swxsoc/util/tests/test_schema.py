@@ -48,9 +48,9 @@ def get_test_sw_data():
     return sw_data
 
 
-def test_sw_data_schema():
-    """Test Schema Template and Info Functions"""
-    schema = SWXSchema()
+def test_sw_data_cdf_defaults():
+    """Test Schema Template and Info Functions for CDF Attributes"""
+    schema = SWXSchema(defaults="cdf")
 
     # Global Attribute Schema
     assert schema.global_attribute_schema is not None
@@ -87,6 +87,31 @@ def test_sw_data_schema():
     )
     with pytest.raises(KeyError):
         _ = schema.measurement_attribute_info(attribute_name="NotAnAttribute")
+
+
+def test_sw_data_fits_defaults():
+    """Test Schema Template and Info Functions for FITS Attributes"""
+    schema = SWXSchema(defaults="fits")
+
+    # Global Attribute Schema
+    assert schema.global_attribute_schema is not None
+    assert isinstance(schema.global_attribute_schema, dict)
+
+    # Variable Attribute Schema
+    assert schema.variable_attribute_schema is not None
+    assert isinstance(schema.variable_attribute_schema, dict)
+
+    # Default Global Attributes
+    assert schema.default_global_attributes is not None
+    assert isinstance(schema.default_global_attributes, dict)
+
+    # Global Attribute Template
+    assert schema.global_attribute_template() is not None
+    assert isinstance(schema.global_attribute_template(), OrderedDict)
+
+    # Measurement Attribute Template
+    assert schema.measurement_attribute_template() is not None
+    assert isinstance(schema.measurement_attribute_template(), OrderedDict)
 
 
 def test_load_yaml_data():

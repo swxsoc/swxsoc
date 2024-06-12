@@ -10,7 +10,6 @@ from contextlib import redirect_stdout
 import pytest
 
 import swxsoc
-from swxsoc import config
 from swxsoc.util import SWXWarning
 from swxsoc.util.config import (
     CONFIG_DIR,

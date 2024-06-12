@@ -1,9 +1,9 @@
 """Tests for util.py"""
 
+import importlib
 import pytest
-
 from astropy.time import Time
-from swxsoc.util import util
+
 
 time = "2024-04-06T12:06:21"
 time_formatted = "20240406T120621"
@@ -13,12 +13,15 @@ time_formatted = "20240406T120621"
 @pytest.mark.parametrize("instrument,time,level,version,result", [
     ("eea", time, "l1", "1.2.3", f"swxsoc_eea_l1_{time_formatted}_v1.2.3.cdf"),
     ("merit", time, "l2", "2.4.5", f"swxsoc_mrt_l2_{time_formatted}_v2.4.5.cdf"),
-    ("nemisis", time, "l2", "1.3.5", f"swxsoc_nms_l2_{time_formatted}_v1.3.5.cdf"),
+    ("nemisis", time, "l2", "1.3.5", f"swxsoc_nem_l2_{time_formatted}_v1.3.5.cdf"),
     ("spani", time, "l3", "2.4.5", f"swxsoc_spn_l3_{time_formatted}_v2.4.5.cdf"),
 ]
 )
 def test_science_filename_output_a(instrument, time, level, version, result):
     """Test simple cases with expected output"""
+    # Import the 'util' submodule from 'swxsoc.util'
+    util = importlib.import_module('swxsoc.util.util')
+
     assert (
         util.create_science_filename(instrument, time, level=level, version=version)
         == result
@@ -28,6 +31,8 @@ def test_science_filename_output_a(instrument, time, level, version, result):
 
 def test_science_filename_output_b():
     """Test more complex cases of expected output"""
+    # Import the 'util' submodule from 'swxsoc.util'
+    util = importlib.import_module("swxsoc.util.util")
 
     # mode
     assert (
@@ -86,6 +91,8 @@ def test_science_filename_output_b():
 
 def test_parse_science_filename_output():
     """Test for known outputs"""
+    # Import the 'util' submodule from 'swxsoc.util'
+    util = importlib.import_module("swxsoc.util.util")
     # all parameters
     input = {
         "instrument": "spani",
@@ -171,6 +178,8 @@ def test_parse_science_filename_output():
 
 def test_parse_science_filename_errors_l1():
     """Test for errors in l1 and above files"""
+    # Import the 'util' submodule from 'swxsoc.util'
+    util = importlib.import_module("swxsoc.util.util")
     with pytest.raises(ValueError):
         # wrong mission name
         f = "veeger_spn_2s_l3test_burst_20240406_120621_v2.4.5"
@@ -210,6 +219,8 @@ good_version = "1.3.4"
 )
 def test_science_filename_errors_l1_a(instrument, time, level, version):
     """"""
+    # Import the 'util' submodule from 'swxsoc.util'
+    util = importlib.import_module('swxsoc.util.util')
     with pytest.raises(ValueError) as e:
         util.create_science_filename(
             instrument, time, level=level, version=version
@@ -218,6 +229,8 @@ def test_science_filename_errors_l1_a(instrument, time, level, version):
 
 
 def test_science_filename_errors_l1_b():
+    # Import the 'util' submodule from 'swxsoc.util'
+    util = importlib.import_module("swxsoc.util.util")
     with pytest.raises(ValueError):
         # _ character in mode
         util.create_science_filename(
@@ -236,7 +249,7 @@ def test_science_filename_errors_l1_b():
 
 # fmt: off
 @pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
-    ("swxsoc_MAG_l0_2024094-124603_v01.bin", "nemisis", "2024-04-03T12:46:03", "l0", "01", None),
+    ("swxsoc_NEM_l0_2024094-124603_v01.bin", "nemisis", "2024-04-03T12:46:03", "l0", "01", None),
     ("swxsoc_EEA_l0_2026337-124603_v11.bin", "eea", "2026-12-03T12:46:03", "l0", "11", None),
     ("swxsoc_MERIT_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03", "l0", "21", None),
     ("swxsoc_SPANI_l0_2026337-065422_v11.bin", "spani", "2026-12-03T06:54:22", "l0", "11", None),
@@ -245,6 +258,8 @@ def test_science_filename_errors_l1_b():
 ])
 def test_parse_l0_filenames(filename, instrument, time, level, version, mode):
     """Testing parsing of MOC-generated level 0 files."""
+    # Import the 'util' submodule from 'swxsoc.util'
+    util = importlib.import_module('swxsoc.util.util')
     result = util.parse_science_filename(filename)
     assert result['instrument'] == instrument
     assert result['level'] == level

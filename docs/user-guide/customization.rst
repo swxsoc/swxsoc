@@ -5,7 +5,7 @@ Customization and Global Configuration
 **************************************
 
 The :file:`config.yml` file
-=========================
+===========================
 
 This package uses a :file:`config.yml` configuration file to customize
 certain properties. You can control a number of key features of such as
@@ -16,7 +16,7 @@ in a platform specific directory, which you can see the path for by running::
   >>> swxsoc.print_config()  # doctest: +SKIP
 
 Using your own :file:`config.yml` file
-=====================================
+======================================
 To maintain your own customizations, you must place your customized :file:`config.yml` inside the appropriate configuration folder (which is based off the operating system you are working on). The `AppDirs module <https://github.com/sunpy/sunpy/blob/main/sunpy/extern/appdirs.py>`_  provided by the `sunpy` package is used to figure out where to look for your configuration file. 
 
 .. warning::

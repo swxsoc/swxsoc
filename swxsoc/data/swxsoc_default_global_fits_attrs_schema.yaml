@@ -8,13 +8,13 @@ ANA_NCMP:
   required: false # Required for Type P data
   validate: false
 AO_LOCK:
-  data_type: int # 0 or 1, floating averages may also be specified as appropriate
+  data_type: float # 0 or 1, floating averages may also be specified as appropriate
   default: null
   derived: false
   description: should be used to indicate the status of any adaptive optics. When specified for individual exposures, the value should be either 0 or 1, but as mentioned above, averages may also be specified as appropriate.
-  human_readable: Adaptive Optics Status
+  human_readable: Adaptive optics status, 0.0=no lock, 1.0=lock
   overwrite: false
-  required: true # (should)
+  required: # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
   validate: false
 AO_NMODE:
   data_type: int
@@ -23,7 +23,7 @@ AO_NMODE:
   description: should be used to indicate the number of adaptive optics modes corrected. As mentioned above, averages may also be specified as appropriate. The type of the modes (e.g., Zernike, Karhunen-Loeve, etc.) should be given in the keyword comment.
   human_readable: Number of AO modes
   overwrite: false
-  required: true # (should)
+  required: # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
   validate: false
 ATMOS_R0:
   data_type: float
@@ -32,7 +32,7 @@ ATMOS_R0:
   description: atmospheric coherence length r0. If available, the value of r0 should be stored in the keyword ATMOS_R0. Since there are multiple ways of measuring this value, its only use should be to reflect the quality of the observing conditions whenever the measurements are performed in the same (or similar enough) way.
   human_readable: Atmospheric coherence length
   overwrite: false
-  required: true # (should)
+  required: false # Optional quality aspects keywords (sections 18, 3.1, 5.5)
   validate: false
 AUTHOR:
   data_type: str
@@ -63,7 +63,7 @@ BNAME:
   description: may be used to provide a human readable explanation of the data contents. This keyword is not mentioned in any FITS standard document, but it is a natural analogy to the CNAMEi keywords used to provide additional description of the WCS coordinate.
   human_readable: Data description
   overwrite: false
-  required: true
+  required: false # Optional data description keywords (sections 18, 5.1)
   validate: false
 BNDCTR:
   data_type: float
@@ -72,7 +72,7 @@ BNDCTR:
   description: For radio observations, BNDCTR may be used instead of WAVELNTH to specify a corresponding frequency in Hz.
   human_readable: Band center
   overwrite: false
-  required: false
+  required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
   validate: false
 BTYPE:
   data_type: str
@@ -117,7 +117,7 @@ CADAVG:
   description: '[s] Average (actual) measurement cadence (frame to frame spacing)'
   human_readable: Average actual measurement cadence
   overwrite: false
-  required: true
+  required: false # Optional keywords describing cadence (sections 18, 5.3)
   validate: false
 CADENCE:
   data_type: float
@@ -126,7 +126,7 @@ CADENCE:
   description: '[s] Planned/commanded cadence (frame to frame spacing)'
   human_readable: Planned measurement cadence
   overwrite: false
-  required: true
+  required: false # Optional keywords describing cadence (sections 18, 5.3)
   validate: false
 CADMAX:
   data_type: float
@@ -135,7 +135,7 @@ CADMAX:
   description: '[s] Maximum frame-to-frame spacing'
   human_readable: Maximum measurement cadence
   overwrite: false
-  required: true
+  required: false # Optional keywords describing cadence (sections 18, 5.3)
   validate: false
 CADMIN:
   data_type: float
@@ -144,7 +144,7 @@ CADMIN:
   description: '[s] Minimum frame-to-frame spacing'
   human_readable: Minimum measurement cadence
   overwrite: false
-  required: true
+  required: false # Optional keywords describing cadence (sections 18, 5.3)
   validate: false
 CADVAR:
   data_type: float
@@ -153,7 +153,7 @@ CADVAR:
   description: '[s] Variability of the frame-to-frame spacing'
   human_readable: Measurement cadence variability
   overwrite: false
-  required: true
+  required: false # Optional keywords describing cadence (sections 18, 5.3)
   validate: false
 CAMERA: 
   data_type: str
@@ -312,7 +312,7 @@ COMPQUAL:
   description: set to a number between 0.0 and 1.0, where 1.0 indicates lossless compression (if any) and 0.0 indicates “all information is lost”. In practice, however, the actual value is not crucial, as long as a higher value corresponds to a higher data quality. If there is a choice between different compression algorithms for this instrument, the name of the algorithm should be given in COMP_ALG - starting with either 'Lossy' or 'Lossless', then typically a concatenation of all instrument-specific compression-related keywords, separated with slashes.
   human_readable: Quality of data after lossy compression
   overwrite: false
-  required: false
+  required: false # Optional quality aspects keywords (sections 18, 3.1, 5.5)
   validate: false
 COMP_ALG:
   data_type: str
@@ -321,7 +321,7 @@ COMP_ALG:
   description: Name of the compression algorithm used
   human_readable: Name of lossy compression algorithm
   overwrite: false
-  required: false
+  required: false # Optional quality aspects keywords (sections 18, 3.1, 5.5)
   validate: false
 CONSTEXT:
   data_type: int # ?
@@ -393,7 +393,7 @@ CREATOR:
   description: Name of software pipeline that produced the FITS file
   human_readable: File Creator
   overwrite: false
-  required: true
+  required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
   validate: false
 CROTia:
   data_type: float
@@ -483,7 +483,7 @@ DATAKURT:
   description: Kurtosis of the data array
   human_readable: Kurtosis
   overwrite: false
-  required: false
+  required: false # Optional data statistics keywords (sections 18, 5.6)
   validate: false
 DATAMAD:
   data_type: float
@@ -492,7 +492,7 @@ DATAMAD:
   description: Median absolute deviation of the data array
   human_readable: Median absolute deviation
   overwrite: false
-  required: false
+  required: false # Optional data statistics keywords (sections 18, 5.6)
   validate: false
 DATAMAX:
   data_type: float
@@ -501,7 +501,7 @@ DATAMAX:
   description: Maximum value of the data array
   human_readable: Maximum of data
   overwrite: false
-  required: false
+  required: false # Optional data statistics keywords (sections 18, 5.6)
   validate: false
 DATAMEAN:
   data_type: float
@@ -510,7 +510,7 @@ DATAMEAN:
   description: Mean of the data array
   human_readable: Mean of data
   overwrite: false
-  required: false
+  required: false # Optional data statistics keywords (sections 18, 5.6)
   validate: false
 DATAMEDN:
   data_type: float
@@ -519,7 +519,7 @@ DATAMEDN:
   description: Median of the data array
   human_readable: Median of data
   overwrite: false
-  required: false
+  required: false # Optional data statistics keywords (sections 18, 5.6)
   validate: false
 DATAMIN:
   data_type: float
@@ -528,7 +528,7 @@ DATAMIN:
   description: Minimum value of the data array
   human_readable: Minimum of data
   overwrite: false
-  required: false
+  required: false # Optional data statistics keywords (sections 18, 5.6)
   validate: false
 DATANMAD:
   data_type: float
@@ -537,7 +537,7 @@ DATANMAD:
   description: Normalized median absolute deviation of the data array
   human_readable: Normalized median absolute deviation
   overwrite: false
-  required: false
+  required: false # Optional data statistics keywords (sections 18, 5.6)
   validate: false
 DATANPnn:
   data_type: float
@@ -546,7 +546,7 @@ DATANPnn:
   description: Normalized Percentiles from DATAPnn, of the nn percentile (where nn is e.g., 01, 02, 05, 10, 25, 50, 75, 90, 95, 98, and 99).
   human_readable: Normalized Percentiles
   overwrite: false
-  required: false
+  required: false # Optional data statistics keywords (sections 18, 5.6)
   validate: false
 DATANRMS:
   data_type: float
@@ -555,7 +555,7 @@ DATANRMS:
   description: Normalized root mean square of the data array
   human_readable: Normalized root mean square
   overwrite: false
-  required: false
+  required: false # Optional data statistics keywords (sections 18, 5.6)
   validate: false
 DATAPnn:
   data_type: float
@@ -564,7 +564,7 @@ DATAPnn:
   description: Percentiles of the data array, of the nn percentile (where nn is e.g., 01, 02, 05, 10, 25, 50, 75, 90, 95, 98, and 99).
   human_readable: Percentiles
   overwrite: false
-  required: false
+  required: false # Optional data statistics keywords (sections 18, 5.6)
   validate: false
 DATARMS:
   data_type: float
@@ -573,7 +573,7 @@ DATARMS:
   description: Root mean square of the data array
   human_readable: Root mean square
   overwrite: false
-  required: false
+  required: false # Optional data statistics keywords (sections 18, 5.6)
   validate: false
 DATASKEW:
   data_type: float
@@ -582,7 +582,7 @@ DATASKEW:
   description: Skewness of the data array
   human_readable: Skewness
   overwrite: false
-  required: false
+  required: false # Optional data statistics keywords (sections 18, 5.6)
   validate: false
 DATASUM:
   data_type: float
@@ -616,9 +616,9 @@ DATE-AVG:
   default: null
   derived: false
   description: used to give the average date of the observation. However, there is no unambiguous definition of the average when applied to observations with varying cadence or varying exposure times
-  human_readable: Aquisition average time
+  human_readable: Average date of observation
   overwrite: false
-  required: false
+  required: false # Optional date and time keywords (sections 18, 4)
   validate: false
 DATE-BEG:
   data_type: date
@@ -634,9 +634,9 @@ DATE-END:
   default: null
   derived: false
   description: End time of the data aquisition
-  human_readable: Aquisition end time
+  human_readable: Date of end of observation
   overwrite: false
-  required: false
+  required: false # Optional date and time keywords (sections 18, 4)
   validate: false
 DATEREF:
   data_type: date
@@ -681,7 +681,7 @@ DSUN_AU:
   description: Distance to Sun (in Astronomical Units)
   human_readable: Distance to Sun
   overwrite: false
-  required: false # Optional for deep space missions (section 3.2)
+  required: false # Optional for deep space missions (sections 18, 3.2)
   validate: false
 DSUN_OBS:
   data_type: float
@@ -708,7 +708,7 @@ ELEV_ANG:
   description: This keyword should be used to quote the telescope's elevation angle at the time of data acquisition, in degrees.
   human_readable: Elevation angle
   overwrite: false
-  required: true
+  required: false # Optional quality aspects keywords (sections 18, 3.1, 5.5)
   validate: false
 EXTNAME:
   data_type: str
@@ -753,7 +753,7 @@ FT_LOCK:
   description: The keyword FT_LOCK is used to indicate the status of any feature tracking FT_LOCK=0 (no feature tracking lock) or FT_LOCK=1 (feature tracking lock) for individual exposures, with appropriate averages as mentioned above.
   human_readable: Feature tracking status
   overwrite: false
-  required: true
+  required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
   validate: false
 GEOX_OBS:
   data_type: float
@@ -798,7 +798,7 @@ HASH_SW:
   description: Commit hash of software applied
   human_readable: Software Hash
   overwrite: false
-  required: true
+  required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
   validate: false
 HGLN_OBS:
   data_type: float
@@ -834,7 +834,7 @@ INFO_URL:
   description:  should point to a human-readable web page describing “everything” about the data set - what it is, how to use it, links to e.g., user guides, instrument/site/telescope descriptions, descriptions of caveats, information about data rights, preferred acknowledgements, whom to contact if you have questions, and repositories of observing/engineering logs.
   human_readable: Info url
   overwrite: false
-  required: true
+  required: false # Optional keyword for administrative information (sections 18, 9)
   validate: false
 INSTRUME:
   data_type: str
@@ -850,9 +850,9 @@ LEVEL:
   default: null
   derived: false
   description: Data level of fits file
-  human_readable: Data level
+  human_readable: Data level of fits file
   overwrite: false
-  required: true
+  required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
   validate: false
 METADIM:
   data_type: str
@@ -897,7 +897,7 @@ MOSAICID:
   description: For mosaic observations, the keyword MOSAICID can be used to tie individual observations together.
   human_readable: Mosaic ID
   overwrite: false
-  required: false
+  required: false # Optional keywords for grouping (sections 18, 7)
   validate: false
 NAPRXPIX:
   data_type: float
@@ -906,7 +906,7 @@ NAPRXPIX:
   description: the number of pixels with approximated values (used by e.g., SolO/SPICE)
   human_readable: Number of approximated pixels
   overwrite: false
-  required: false
+  required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
   validate: false
 NAXIS:
   data_type: int
@@ -951,7 +951,7 @@ NDATAPIX:
   description: the number of usable pixels NTOTPIX - NLOSTPIX - NSATPIX - NSPIKPIX
   human_readable: Number of usable pixels
   overwrite: false
-  required: false
+  required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
   validate: false
 NLOSTPIX:
   data_type: int
@@ -960,7 +960,7 @@ NLOSTPIX:
   description: the number of lost pixels due to telemetry/acquisition glitches
   human_readable: Number of lost pixels
   overwrite: false
-  required: false
+  required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
   validate: false
 NMASKPIX:
   data_type: int
@@ -969,7 +969,7 @@ NMASKPIX:
   description: the number of dust-affected/hot/cold/padded pixels etc.
   human_readable: Number of masked pixels
   overwrite: false
-  required: false
+  required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
   validate: false
 NSATPIX:
   data_type: int
@@ -978,7 +978,7 @@ NSATPIX:
   description: the number of saturated pixels
   human_readable: Number of saturated pixels
   overwrite: false
-  required: false
+  required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
   validate: false
 NSPIKPIX:
   data_type: int
@@ -987,7 +987,7 @@ NSPIKPIX:
   description: the number of identified spike pixels 
   human_readable: Number of spike pixels
   overwrite: false
-  required: false
+  required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
   validate: false
 NSUMEXP:
   data_type: int
@@ -1005,7 +1005,7 @@ NTOTPIX:
   description: the number of potentially usable pixels. the number of data cube pixels minus NMASKPIX
   human_readable: Total number of pixels
   overwrite: false
-  required: false
+  required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
   validate: false
 NXDIM:
   data_type: int
@@ -1095,7 +1095,7 @@ OBS_LOG:
   description: Location of the log file that is relevant to this observation, if available, given as a URL.
   human_readable: URL of observation log
   overwrite: false
-  required: true
+  required: false # Optional quality aspects keywords (sections 18, 3.1, 5.5)
   validate: false
 OBS_MODE:
   data_type: str
@@ -1140,7 +1140,7 @@ PCT_APRX:
   description: the percentage of pixels with approximated values (used by e.g., SolO/SPICE) (NAPRXPIX/NTOTPIX*100)
   human_readable: Percentage of approximated pixels
   overwrite: false
-  required: false
+  required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
   validate: false
 PCT_DATA:
   data_type: float
@@ -1149,7 +1149,7 @@ PCT_DATA:
   description: the percentage of usable pixels (NDATAPIX/NTOTPIX*100)
   human_readable: Percentage of usable pixels
   overwrite: false
-  required: false
+  required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
   validate: false
 PCT_LOST:
   data_type: float
@@ -1158,7 +1158,7 @@ PCT_LOST:
   description: the percentage of lost pixels due to telemetry/acquisition glitches (NLOSTPIX/NTOTPIX*100)
   human_readable: Percentage of lost pixels
   overwrite: false
-  required: false
+  required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
   validate: false
 PCT_MASK:
   data_type: float
@@ -1167,7 +1167,7 @@ PCT_MASK:
   description: the percentage of dust-affected/hot/cold/padded pixels etc. (NMASKPIX/NTOTPIX*100)
   human_readable: Percentage of masked pixels
   overwrite: false
-  required: false
+  required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
   validate: false
 PCT_SATP:
   data_type: float
@@ -1176,7 +1176,7 @@ PCT_SATP:
   description: the percentage of saturated pixels (NSATPIX/NTOTPIX*100)
   human_readable: Percentage of saturated pixels
   overwrite: false
-  required: false
+  required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
   validate: false
 PCT_SPIK:
   data_type: float
@@ -1185,7 +1185,7 @@ PCT_SPIK:
   description: the percentage of identified spike pixels (NSPIKPIX/NTOTPIX*100)
   human_readable: Percentage of spike pixels
   overwrite: false
-  required: false
+  required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
   validate: false
 PCi_ja:
   data_type: float
@@ -1329,7 +1329,7 @@ PRBRAna:
   description: Optional pipeline processing keyword. Branch name of code use in processing step n
   human_readable: Branch name
   overwrite: false
-  required: false
+  required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
   validate: false
 PRENVn:
   data_type: str
@@ -1338,7 +1338,7 @@ PRENVn:
   description: specify the operating environment of the pipeline such as the hardware (CPU type) and the operating system type/version, compiler/interpreter versions, compiler options, etc.6 The default value of a PRENVn keyword is the value of PRENVn in the previous processing step, so for a pipeline that has been run from beginning to end in a single environment, only PRENV1 will have to be specified.
   human_readable: Processing environment
   overwrite: false
-  required: false
+  required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
   validate: false
 PRHSHna:
   data_type: str
@@ -1347,7 +1347,7 @@ PRHSHna:
   description: Optional pipeline processing keyword. Convenience keyword to easily find the exact git commit for a library that has been used. Note that it does not replace PRVERna, because PRHSHna is not a number that increases with the maturity of the libraries (but such a number can be constructed, see above)
   human_readable: Processing code hash
   overwrite: false
-  required: false
+  required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
   validate: false
 PRLIBna:
   data_type: str
@@ -1356,7 +1356,7 @@ PRLIBna:
   description: Optional pipeline processing keyword. Library name used in processing step n
   human_readable: Library name
   overwrite: false
-  required: false
+  required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
   validate: false
 PRLOGna:
   data_type: str
@@ -1365,7 +1365,7 @@ PRLOGna:
   description: Optional pipeline processing keyword. used to include a processing log in case messages/warnings from the processing may be of importance.
   human_readable: Processing Log
   overwrite: false
-  required: false
+  required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
   validate: false
 PRMODEna:
   data_type: str
@@ -1374,7 +1374,7 @@ PRMODEna:
   description: Optional pipeline processing keyword. Meant for pipelines that may be run with different trade-offs between e.g., signal to noise ratio versus spatial resolution or contrast. This should already be apparent from the other keywords, but PRMODEn provides a much simpler way of identifying data processed in a particular way (e.g., “BALANCED” or “HIGH CONTRAST”). Note that a single observation may be registered multiple times in an SVO with different values of PRMODEn - but then a PRMODEnspecific identifier in the file name is necessary in order to ensure uniqueness.
   human_readable: Processing mode
   overwrite: false
-  required: false
+  required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
   validate: false
 PROJECT:
   data_type: str
@@ -1392,7 +1392,7 @@ PRPARAn:
   description: Optional pipeline processing keyword. The PRPARAn keyword can be used in different ways 1. As a plain comma-separated listing of parameters and their values, signalled by the first character matching the regular expression '[A-Za-z_$]' 2. As a JSON string, signalled by the first character being an opening curly bracket 3. As an XML specification, signalled by the first character being a '<' 4. As the EXTNAME of an ASCII table, signalled by the first character being a '['
   human_readable: Processing parameters
   overwrite: false
-  required: false
+  required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
   validate: false
 PRPROCn:
   data_type: str
@@ -1401,7 +1401,7 @@ PRPROCn:
   description: Optional pipeline processing keyword. Name of Processing Procedure used in processing step n
   human_readable: Processing Procedure used for Step n
   overwrite: false
-  required: false
+  required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
   validate: false
 PRPVERn:
   data_type: str
@@ -1410,7 +1410,16 @@ PRPVERn:
   description: Optional pipeline processing keyword. Version of processing pipeline used in processing step n
   human_readable: Processing code version for Step n
   overwrite: false
-  required: false
+  required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
+  validate: false
+PRREFn:
+  data_type: str
+  default: null
+  derived: false
+  description: Optional pipeline processing keyword. Reference to the processing step n
+  human_readable: Factors influencing PRSTEP1
+  overwrite: false
+  required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
   validate: false
 PRSTEPn:
   data_type: str
@@ -1419,7 +1428,7 @@ PRSTEPn:
   description: should specify the nature of the processing steps, if any, that has been applied to the data. Each PRSTEPn may contain a comma separated list if multiple processing steps are inseparable. The number n specifies the step number and should reflect the order in which the steps have been performed
   human_readable: Processing step
   overwrite: false
-  required: false
+  required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
   validate: false
 PRVERna:
   data_type: str
@@ -1428,7 +1437,7 @@ PRVERna:
   description: Optional pipeline processing keyword. Version of code used in processing step n for library a
   human_readable: Processing code version for library a in step n
   overwrite: false
-  required: false
+  required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
   validate: false
 PTRAna:
   data_type: float
@@ -1464,7 +1473,7 @@ RELEASE:
   description: Public release date of data. Proprietary data should be marked by setting the keyword RELEASE to the date at which the data can be freely distributed.
   human_readable: Release date
   overwrite: false
-  required: true
+  required: false # Optional keyword for administrative information (sections 18, 9)
   validate: false
 RELEASEC:
   data_type: str
@@ -1473,7 +1482,7 @@ RELEASEC:
   description: Email address of data release administrator.  The keyword RELEASEC may be used to give contact information for one or more people (name/email addresses, comma separated) administering the release details.
   human_readable: Release administrator
   overwrite: false
-  required: true
+  required: false # Optional keyword for administrative information (sections 18, 9)
   validate: false
 REQUESTR:
   data_type: str
@@ -1509,7 +1518,7 @@ RESOLVPW:
   description: Resolving power for spectrometric data
   human_readable: Resolving power
   overwrite: false
-  required: false # Required for spectrometric data
+  required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
   validate: false
 RESPAPPL:
   data_type: str
@@ -1518,7 +1527,7 @@ RESPAPPL:
   description: Response function applied
   human_readable: Applid response function
   overwrite: false
-  required: false
+  required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
   validate: false
 RESPONSE:
   data_type: str
@@ -1527,16 +1536,16 @@ RESPONSE:
   description: Response function used
   human_readable: Response function
   overwrite: false
-  required: false
+  required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
   validate: false
 ROT_COMP:
   data_type: int
   default: null
   derived: false
   description: set to 1 if automated solar rotation compensation was in effect during the observation, and to 0 if not. 
-  human_readable: Rotation compensation
+  human_readable: Solar rotation compensation on (1)/off (0)
   overwrite: false
-  required: true
+  required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
   validate: false
 ROT_FORM:
   data_type: str
@@ -1545,16 +1554,16 @@ ROT_FORM:
   description: The formula specified is meant to be human-readable, not machine readable, thus e.g., ' A sin(….)', using parameter names that are common within your community. An explanation in the comments may be useful. The units should be degrees per day. More important, though is that the coordinate variation is reflected in the WCS description of the data, using cross terms between the time coordinate and spatial coordinates in the PCi_j matrix or by tabulating the coordinates.
   human_readable: Rotation formula
   overwrite: false
-  required: false
+  required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
   validate: false
 ROT_MODL:
   data_type: str
   default: null
   derived: false
   description: The keyword ROT_MODL should be set to specify the rotation model used for rotation compensation4. It can refer to specific, predefined models such as ALLEN (Allen, Astrophys. Quantities, 1979), HOWARD (Howard et al.), SIDEREAL, SYNODIC, CARRINGTON, SNODGRASS or aaa.a - arcseconds per hour (units [arcsec/h]). See also the SolarSoft routine diff_rot.pro. If other models have been used, please contact prits-group@astro.uio.no, or set ROT_MODL to FORMULA, and specify the formula in the keyword ROT_FORM.
-  human_readable: Rotation model
+  human_readable: Model used for rotation compensation
   overwrite: false
-  required: false # required if ROT_COMP=1
+  required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5), required if ROT_COMP=1
   validate: false
 RSUN_ARC: 
   data_type: float
@@ -1570,9 +1579,9 @@ RSUN_REF:
   default: null
   derived: false
   description: '[m] Reference solar radius in meters. For observations (instruments) where the plate scale/pointing is derived from measurements of the apparent solar radius versus the physical size, the keywords RSUN_REF should be used to report the reference value for the physical radius used in the calculations (see Thompson 2010, Section 8).'
-  human_readable: Solar radius
+  human_readable: Solar radius. [m] Solar rad. used for calc. px scale
   overwrite: false
-  required: false
+  required: false # Optional quality aspects keywords (sections 18, 3.1, 5.5)
   validate: false
 SETTINGS:
   data_type: str
@@ -1668,7 +1677,16 @@ SVO_GRP:
   description: SVO_GRP may be used to achieve the opposite, to tie observations together even if they have different POINT_IDs and/or have other differing characteristics. Heuristically, a shared value for SVO_GRP signals that “if you are interested in this observation, you are probably interested in all of these observations (with the same SVO_GRP value)”. 
   human_readable: SVO Group
   overwrite: false
-  required: false
+  required: false # Optional keywords for grouping (sections 18, 7)
+  validate: false
+SVO_SEPn:
+  data_type: str
+  default: null
+  derived: false
+  description: To guide archive designers in the process of presenting grouped observations, we introduce the keywords SVO_SEPn, with n spanning from 1 to 5. SVO_SEP1 should have a comma-separated list of keywords giving the most fine grained grouping, and SVO_SEP5 should have a commaseparated list of keywords giving the coarsest sensible grouping. Normally, the first keyword should be POINT_ID, and it may be the only keyword. Not all SVO_SEPn keywords need to be defined, but they should be populated starting with SVO_SEP1.
+  human_readable: Separation keywords
+  overwrite: false
+  required: false # Optional keywords for grouping (sections 18, 7)
   validate: false
 TCTYPn:
   data_type: str
@@ -1686,7 +1704,7 @@ TDESCn:
   description: TDESCn may be used to give a description of the contents of the binary table column.
   human_readable: Table column description
   overwrite: false
-  required: false
+  required: false # Optional keyword for binary table extensions using the variable-keyword, pixel list or meta-observation mechanism (sections 18, Appendix 1)
   validate: false
 TDIMn:
   data_type: str
@@ -1733,16 +1751,16 @@ TFORMn:
   overwrite: false
   required: false # required for binary tables
   validate: false
-TIMESYS:
+TIMESYS: # There is conflict about this attribute. It is listed as optional in the SOLARNET paper, but seems intended to be required based on the FITS standard V4.0. 
   allowed_values:
   - UTC
   data_type: str
-  default: null
+  default: UTC
   derived: false
   description: Time scale of the time-related keywords.
   human_readable: Time system
   overwrite: false
-  required: true
+  required: false # Optional date and time keywords (sections 18, 4)
   validate: false
 TKEYSn:
   data_type: str
@@ -1798,6 +1816,15 @@ TZEROn:
   overwrite: false
   required: false
   validate: false
+UCD:
+  data_type: str
+  default: null
+  derived: false
+  description: UCD (Unified Content Descriptor) is a standard for describing the content of data in a machine-readable way. It is a string that describes the physical quantity represented by the data in the column.
+  human_readable: Unified Content Descriptor
+  overwrite: false
+  required: false # Optional data description keywords (sections 18, 5.1)
+  validate: false
 VAR_KEYS:
   data_type: str
   default: null
@@ -1823,7 +1850,7 @@ VERSION:
   description: FITS file processing generation/version. VERSION should be set to the processing version of the file, an integer that should be increased whenever a reprocessing is performed in order to improve the data set (e.g., with a better flatfield, better detection of cosmic rays, more complete telemetry, etc). The version numbers in files published through an SVO may increase by more than one for each new published “generation”, allowing the use of intermediate values for internal/experimental use.
   human_readable: Processed version
   overwrite: false
-  required: true
+  required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
   validate: false  
 VERS_CAL:
   data_type: str
@@ -1832,7 +1859,7 @@ VERS_CAL:
   description: Version of calibration pack applied
   human_readable: Calibration version
   overwrite: false
-  required: true
+  required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
   validate: false
 VERS_SW:
   data_type: str
@@ -1841,7 +1868,7 @@ VERS_SW:
   description: Version of software applied
   human_readable: Software version
   overwrite: false
-  required: true
+  required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
   validate: false
 WAVEBAND:
   data_type: str
@@ -1850,7 +1877,7 @@ WAVEBAND:
   description: Human-readable description of the waveband
   human_readable: Waveband description
   overwrite: false
-  required: false
+  required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
   validate: false
 WAVECOV:
   data_type: str
@@ -1860,7 +1887,7 @@ WAVECOV:
     etc.)
   human_readable: Wavelength coverage
   overwrite: false
-  required: false
+  required: false # Optional keyword for spectrographs (sections 18, 5.4)
   validate: false
 WAVELNTH:
   data_type: float
@@ -1869,7 +1896,7 @@ WAVELNTH:
   description: The characteristic wavelength of the observation
   human_readable: Characteristic wavelength
   overwrite: false
-  required: false
+  required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
   validate: false
 WAVEMAX:
   data_type: float
@@ -1878,7 +1905,7 @@ WAVEMAX:
   description: '[Angstrom] Maximum wavelength covered by filter'
   human_readable: Maximum wavelength
   overwrite: false
-  required: false # required for spectrometric data
+  required: false # required for spectrometric data (section 5.4)
   validate: false
 WAVEMIN:
   data_type: float
@@ -1887,7 +1914,7 @@ WAVEMIN:
   description: '[Angstrom] Minimum wavelength covered by filter'
   human_readable: Minimum wavelength
   overwrite: false
-  required: false # required for spectrometric data
+  required: false # required for spectrometric data (section 5.4)
   validate: false
 WAVEREF:
   data_type: str

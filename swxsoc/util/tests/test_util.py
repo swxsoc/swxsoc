@@ -360,10 +360,10 @@ def test_parse_configdir_configured(filename, instrument, time, level, version, 
     with open(tmp_file_path, 'w') as file:
         yaml.dump(config_content, file, default_flow_style=False)
 
-    print(f"Configuration file written to {tmp_file_path}")
+    print(f"Configuration file written to {str(tmp_file_path)}")
 
     # Set SWXSOC_CONFIGDIR
-    os.environ["SWXSOC_CONFIGDIR"] = tmp_file_path.parent
+    os.environ["SWXSOC_CONFIGDIR"] = str(tmp_file_path.parent)
 
     # Remove SWXSOC_MISSION environment variable if it exists
     if "SWXSOC_MISSION" in os.environ:
@@ -402,10 +402,10 @@ def test_create_configdir_configured(instrument, time, level, version, result):
     with open(tmp_file_path, 'w') as file:
         yaml.dump(config_content, file, default_flow_style=False)
 
-    print(f"Configuration file written to {tmp_file_path}")
+    print(f"Configuration file written to {str(tmp_file_path)}")
 
     # Set SWXSOC_CONFIGDIR
-    os.environ["SWXSOC_CONFIGDIR"] = tmp_file_path.parent
+    os.environ["SWXSOC_CONFIGDIR"] = str(tmp_file_path.parent)
 
     # Remove SWXSOC_MISSION environment variable if it exists
     if "SWXSOC_MISSION" in os.environ:

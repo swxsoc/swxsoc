@@ -49,7 +49,8 @@ For testing purposes, you might need to reload the configuration after making ch
 
   from swxsoc import _reconfigure
 
-  # Make changes to the config.yml file 
+  # Make changes to the config.yml file
+  # ...
 
   # Reconfigure the module to reload the configuration
   _reconfigure()
@@ -69,6 +70,8 @@ You can also dynamically change most of the default settings. One setting that c
     swxsoc.config.set('downloads', 'download_dir', '/home/user/Downloads')
 
 .. _config.yml-sample:
+
+
 A sample config.yml file
 --------------------------------------------------------------------
 

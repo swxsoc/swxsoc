@@ -85,11 +85,12 @@ def load_config():
 
     return config
 
+
 def _get_user_configdir():
     """
     Return the configuration directory path.
 
-    The configuration directory is determined by the "SWXSOC_CONFIGDIR" 
+    The configuration directory is determined by the "SWXSOC_CONFIGDIR"
     environment variable or a default directory set by the application.
 
     Returns:

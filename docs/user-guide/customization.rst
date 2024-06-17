@@ -30,11 +30,11 @@ If you work in our developer environment you can place your configuration file i
 
   /home/vscode/.config/swxsoc/
 
-You can also specify the configuration directory by setting the environment variable `SWXSOC_CONFIG_DIR` to the path of your configuration directory. For example, you can set the environment variable in your terminal by running:
+You can also specify the configuration directory by setting the environment variable `SWXSOC_CONFIGDIR` to the path of your configuration directory. For example, you can set the environment variable in your terminal by running:
 
 .. code-block:: bash
 
-  export SWXSOC_CONFIG_DIR=/path/to/your/config/dir
+  export SWXSOC_CONFIGDIR=/path/to/your/config/dir
 
 If you do not use our developer environment, you can run the following code to see where to place it on your specific machine as well:
 

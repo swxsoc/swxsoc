@@ -3,6 +3,7 @@
 import os
 import pytest
 import yaml
+from pathlib import Path
 
 from astropy.time import Time
 import swxsoc
@@ -48,7 +49,7 @@ config_content = {
 }
 
 # Path to the temporary file
-tmp_file_path = "/tmp/config.yml"
+tmp_file_path = Path("/tmp/config.yml")
 
 
 # fmt: off
@@ -362,7 +363,7 @@ def test_parse_configdir_configured(filename, instrument, time, level, version, 
     print(f"Configuration file written to {tmp_file_path}")
 
     # Set SWXSOC_CONFIGDIR
-    os.environ["SWXSOC_CONFIGDIR"] = '/tmp'
+    os.environ["SWXSOC_CONFIGDIR"] = tmp_file_path.parent
 
     # Remove SWXSOC_MISSION environment variable if it exists
     if "SWXSOC_MISSION" in os.environ:
@@ -404,7 +405,7 @@ def test_create_configdir_configured(instrument, time, level, version, result):
     print(f"Configuration file written to {tmp_file_path}")
 
     # Set SWXSOC_CONFIGDIR
-    os.environ["SWXSOC_CONFIGDIR"] = '/tmp'
+    os.environ["SWXSOC_CONFIGDIR"] = tmp_file_path.parent
 
     # Remove SWXSOC_MISSION environment variable if it exists
     if "SWXSOC_MISSION" in os.environ:

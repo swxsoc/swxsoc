@@ -43,7 +43,7 @@ def test_is_level_configed():
 
     log_level
     """
-    config_level_numeric = level_to_numeric.get(config.get("logger", "log_level"))
+    config_level_numeric = level_to_numeric.get(config.get("logger")["log_level"])
     assert log.getEffectiveLevel() == config_level_numeric
 
 
@@ -54,7 +54,7 @@ def test_is_log_to_file_configed():
     log_to_file, log_file_level, log_file_path
     """
 
-    if config.get("logger", "log_to_file") == "True":
+    if config["logger"]["log_file_level"] == "True":
         #  there must be two handlers, one streaming and one to file.
         assert len(log.handlers) == 2
         #  one of the handlers must be FileHandler

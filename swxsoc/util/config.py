@@ -7,8 +7,7 @@ This code is based on that provided by SunPy see
 
 import os
 import shutil
-import json
-import configparser
+import yaml
 from pathlib import Path
 
 import swxsoc
@@ -28,7 +27,7 @@ CACHE_DIR = "/tmp/.cache"
 if not os.getenv("LAMBDA_ENVIRONMENT"):
     # This is to avoid creating a new config dir for each new dev version.
     # We use AppDirs to locate and create the config directory.
-    dirs = AppDirs("hermes_core", "hermes_core")
+    dirs = AppDirs("swxsoc", "swxsoc")
     # Default one set by AppDirs
     CONFIG_DIR = dirs.user_config_dir
     CACHE_DIR = dirs.user_cache_dir
@@ -36,194 +35,133 @@ if not os.getenv("LAMBDA_ENVIRONMENT"):
 
 def load_config():
     """
-    Read the configuration file.
+    Load and read the configuration file.
 
-    If one does not exists in the user's home directory then read in the defaults.
+    If a configuration file does not exist in the user's home directory,
+    it will read in the defaults from the package's data directory.
+
+    The selected mission can be overridden by setting the `SWXSOC_MISSION`
+    environment variable. This environment variable will take precedence
+    over the mission specified in the configuration file.
+
+    Returns:
+        dict: The loaded configuration data.
     """
-    config = configparser.RawConfigParser()
+    config_path = Path(_get_user_configdir()) / "config.yml"
+    if not config_path.exists():
+        config_path = Path(swxsoc.__file__).parent / "data" / "config.yml"
 
-    # Get locations of configuration files to be loaded
-    config_files = _find_config_files()
+    with open(config_path, "r") as file:
+        config = yaml.safe_load(file)
 
-    # Read in configuration files
-    config.read(config_files)
+    selected_mission = os.getenv("SWXSOC_MISSION", config["selected_mission"])
+    missions_data = config.get("missions_data", {})
+    mission_data = missions_data.get(selected_mission, {})
+    file_extension = mission_data.get("file_extension", "")
 
-    # This is to fix issue with AppDirs not writing to /tmp/ in AWS Lambda
+    config["mission"] = {
+        "file_extension": (
+            f".{file_extension}"
+            if not file_extension.startswith(".")
+            else file_extension
+        ),
+        "mission_name": selected_mission,
+        "inst_names": [inst["name"] for inst in mission_data.get("instruments", [])],
+        "inst_shortnames": [
+            inst["shortname"] for inst in mission_data.get("instruments", [])
+        ],
+        "inst_fullnames": [
+            inst["fullname"] for inst in mission_data.get("instruments", [])
+        ],
+        "inst_targetnames": [
+            inst["targetname"] for inst in mission_data.get("instruments", [])
+        ],
+    }
+
+    config["mission"].update(
+        {
+            "inst_to_shortname": dict(
+                zip(
+                    config["mission"]["inst_names"],
+                    config["mission"]["inst_shortnames"],
+                )
+            ),
+            "inst_to_fullname": dict(
+                zip(
+                    config["mission"]["inst_names"], config["mission"]["inst_fullnames"]
+                )
+            ),
+            "inst_to_targetname": dict(
+                zip(
+                    config["mission"]["inst_names"],
+                    config["mission"]["inst_targetnames"],
+                )
+            ),
+        }
+    )
+
     if os.getenv("LAMBDA_ENVIRONMENT"):
-        config.set("logger", "log_to_file", "False")
-
-    # Specify the working directory as a default so that the user's home
-    # directory can be located in an OS-independent manner
-    if not config.has_option("general", "working_dir"):
-        config.set("general", "working_dir", str(Path.home() / "hermes"))
-
-    # Set the download_dir to be relative to the working_dir
-    working_dir = Path(config.get("general", "working_dir"))
-    download_dir = Path(config.get("downloads", "download_dir"))
-    config.set(
-        "downloads",
-        "download_dir",
-        (working_dir / download_dir).expanduser().resolve().as_posix(),
-    )
-
-    # Set Mission-Specific Configuration
-    config.set("mission", "inst_names", json.loads(config.get("mission", "inst_names")))
-    config.set(
-        "mission",
-        "inst_shortnames",
-        json.loads(config.get("mission", "inst_shortnames")),
-    )
-    config.set(
-        "mission", "inst_fullnames", json.loads(config.get("mission", "inst_fullnames"))
-    )
-    config.set(
-        "mission",
-        "inst_targetnames",
-        json.loads(config.get("mission", "inst_targetnames")),
-    )
-    config.set(
-        "mission",
-        "inst_to_shortname",
-        dict(
-            zip(
-                config.get("mission", "inst_names"),
-                config.get("mission", "inst_shortnames"),
-            )
-        ),
-    )
-    config.set(
-        "mission",
-        "inst_to_targetname",
-        dict(
-            zip(
-                config.get("mission", "inst_names"),
-                config.get("mission", "inst_targetnames"),
-            )
-        ),
-    )
-    config.set(
-        "mission",
-        "inst_to_fullname",
-        dict(
-            zip(
-                config.get("mission", "inst_names"),
-                config.get("mission", "inst_fullnames"),
-            )
-        ),
-    )
+        config["logger"]["log_to_file"] = False
 
     return config
 
 
-def _find_config_files():
+def _get_user_configdir():
     """
-    Finds locations of configuration files.
+    Return the configuration directory path.
+
+    The configuration directory is determined by the "SWXSOC_CONFIGDIR"
+    environment variable or a default directory set by the application.
+
+    Returns:
+        str: The path to the configuration directory.
+
+    Raises:
+        RuntimeError: If the configuration directory is not writable.
     """
-    config_files = []
-    config_filename = "configrc"
+    configdir = os.environ.get("SWXSOC_CONFIGDIR", CONFIG_DIR)
 
-    # find default configuration file
-    module_dir = Path(swxsoc.__file__).parent
-    config_files.append(str(module_dir / "data" / "configrc"))
-
-    # if a user configuration file exists, add that to list of files to read
-    # so that any values set there will override ones specified in the default
-    # config file
-    config_path = Path(_get_user_configdir())
-    if config_path.joinpath(config_filename).exists():
-        config_files.append(str(config_path.joinpath(config_filename)))
-
-    return config_files
+    if not _is_writable_dir(configdir):
+        raise RuntimeError(f'Could not write to SWXSOC_CONFIGDIR="{configdir}"')
+    return configdir
 
 
-def get_and_create_download_dir():
+def _is_writable_dir(path):
     """
-    Get the config of download directory and create one if not present.
-    """
-    download_dir = os.environ.get("HERMES_DOWNLOADDIR")
-    if download_dir:
-        return download_dir
+    Check if the specified path is a writable directory.
 
-    download_dir = (
-        Path(swxsoc.config.get("downloads", "download_dir")).expanduser().resolve()
-    )
-    if not _is_writable_dir(download_dir):
-        raise RuntimeError(
-            f'Could not write to hermes downloads directory="{download_dir}"'
-        )
+    Args:
+        path (str or Path): The path to check.
 
-    return swxsoc.config.get("downloads", "download_dir")
+    Returns:
+        bool: True if the path is a writable directory, False otherwise.
 
-
-def get_and_create_sample_dir():
-    """
-    Get the config of download directory and create one if not present.
-    """
-    sample_dir = (
-        Path(swxsoc.config.get("downloads", "sample_dir")).expanduser().resolve()
-    )
-    if not _is_writable_dir(sample_dir):
-        raise RuntimeError(
-            f'Could not write to hermes sample data directory="{sample_dir}"'
-        )
-
-    return swxsoc.config.get("downloads", "sample_dir")
-
-
-def print_config():
-    """
-    Print current configuration options.
-    """
-    print("FILES USED:")
-    for file_ in _find_config_files():
-        print("  " + file_)
-
-    print("\nCONFIGURATION:")
-    for section in swxsoc.config.sections():
-        print(f"  [{section}]")
-        for option in swxsoc.config.options(section):
-            print(f"  {option} = {swxsoc.config.get(section, option)}")
-        print("")
-
-
-def _is_writable_dir(p):
-    """
-    Checks to see if a directory is writable.
+    Raises:
+        FileExistsError: If a file exists at the path instead of a directory.
     """
     # Worried about multiple threads creating the directory at the same time.
     try:
-        Path(p).mkdir(parents=True, exist_ok=True)
+        Path(path).mkdir(parents=True, exist_ok=True)
     except FileExistsError:  # raised if there's an existing file instead of a directory
         return False
     else:
-        return Path(p).is_dir() and os.access(p, os.W_OK)
-
-
-def _get_user_configdir():
-    """
-    Return the string representing the configuration dir.
-
-    The default is set by "AppDirs" and can be accessed by importing
-    ``hermes.util.config.CONFIG_DIR``. You can override this with the
-    "hermes_CONFIGDIR" environment variable.
-    """
-    configdir = os.environ.get("hermes_CONFIGDIR", CONFIG_DIR)
-
-    if not _is_writable_dir(configdir):
-        raise RuntimeError(f'Could not write to hermes_CONFIGDIR="{configdir}"')
-    return configdir
+        return Path(path).is_dir() and os.access(path, os.W_OK)
 
 
 def copy_default_config(overwrite=False):
     """
-    Copies the default config file to the user's config directory.
+    Copy the default configuration file to the user's configuration directory.
 
-    Parameters
-    ----------
-    overwrite : `bool`
-        If True, existing config file will be overwritten.
+    If the configuration file already exists, it will be overwritten if the
+    `overwrite` parameter is set to True.
+
+    Args:
+        overwrite (bool): Whether to overwrite an existing configuration file.
+
+    Raises:
+        RuntimeError: If the configuration directory is not writable.
     """
-    config_filename = "configrc"
+    config_filename = "config.yml"
     config_file = Path(swxsoc.__file__).parent / "data" / config_filename
     user_config_dir = Path(_get_user_configdir())
     user_config_file = user_config_dir / config_filename
@@ -248,3 +186,46 @@ def copy_default_config(overwrite=False):
             warn_user(message)
     else:
         shutil.copyfile(config_file, user_config_file)
+
+
+def print_config(config):
+    """
+    Print the current configuration options.
+
+    Args:
+        config (dict): The configuration data to print.
+    """
+    print("FILES USED:")
+    for file_ in _find_config_files():
+        print("  " + file_)
+
+    print("\nCONFIGURATION:")
+    for section, settings in config.items():
+        print(f"  [{section}]")
+        for option, value in settings.items():
+            print(f"  {option} = {value}")
+        print("")
+
+
+def _find_config_files():
+    """
+    Find the locations of configuration files.
+
+    Returns:
+        list: A list of paths to the configuration files.
+    """
+    config_files = []
+    config_filename = "config.yml"
+
+    # find default configuration file
+    module_dir = Path(swxsoc.__file__).parent
+    config_files.append(str(module_dir / "data" / config_filename))
+
+    # if a user configuration file exists, add that to list of files to read
+    # so that any values set there will override ones specified in the default
+    # config file
+    config_path = Path(_get_user_configdir())
+    if config_path.joinpath(config_filename).exists():
+        config_files.append(str(config_path.joinpath(config_filename)))
+
+    return config_files

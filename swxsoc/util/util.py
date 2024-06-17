@@ -100,7 +100,7 @@ def create_science_filename(
     filename = f"{swxsoc.config['mission']['mission_name']}_{swxsoc.config['mission']['inst_to_shortname'][instrument]}_{mode}_{level}{test_str}_{descriptor}_{time_str}_v{version}"
     filename = filename.replace("__", "_")  # reformat if mode or descriptor not given
 
-    return filename + FILENAME_EXTENSION
+    return filename + swxsoc.config["mission"]["file_extension"]
 
 
 def parse_science_filename(filepath: str) -> dict:
@@ -167,7 +167,7 @@ def parse_science_filename(filepath: str) -> dict:
 
         result["time"] = Time.strptime(filename_components[3 + offset], TIME_FORMAT_L0)
 
-    elif file_ext == ".cdf":
+    elif file_ext == swxsoc.config["mission"]["file_extension"]:
         if filename_components[1] not in swxsoc.config["mission"]["inst_shortnames"]:
             raise ValueError(
                 "File {filename} not recognized. Not a valid instrument name."

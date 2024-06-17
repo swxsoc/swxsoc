@@ -4,31 +4,37 @@
 Customization and Global Configuration
 **************************************
 
-The :file:`configrc` file
-=========================
+The :file:`config.yml` file
+===========================
 
-This package uses a :file:`configrc` configuration file to customize
-certain properties. You can control a number of key features of such as
+This package uses a :file:`config.yml` configuration file to customize
+certain properties. You can control a number of key features such as
 where your data will download to. SWxSOC packages look for this configuration file
-in a platform specific directory, which you can see the path for by running::
+in a platform-specific directory, which you can see the path for by running::
 
   >>> import swxsoc
   >>> swxsoc.print_config()  # doctest: +SKIP
 
-Using your own :file:`configrc` file
-=====================================
-To maintain your own customizations, you must place your customized :file:`configrc` inside the appropriate configuration folder (which is based off the operating system you are working on). The `AppDirs module <https://github.com/sunpy/sunpy/blob/main/sunpy/extern/appdirs.py>`_  provided by the `sunpy` package is used to figure out where to look for your configuration file. 
+Using your own :file:`config.yml` file
+======================================
+To maintain your own customizations, you must place your customized :file:`config.yml` inside the appropriate configuration folder (which is based on the operating system you are working on). The `AppDirs module <https://github.com/sunpy/sunpy/blob/main/sunpy/extern/appdirs.py>`_ provided by the `sunpy` package is used to determine where to look for your configuration file.
 
 .. warning::
-    Do not edit the configrc file directly in the Python package as it will get overwritten  every time you re-install or update the package.
+    Do not edit the config.yml file directly in the Python package as it will get overwritten every time you re-install or update the package.
 
-You can copy the file below, customize it, and then place your customized :file:`configrc` file inside your config folder.
+You can copy the file below, customize it, and then place your customized :file:`config.yml` file inside your config folder.
 
 If you work in our developer environment you can place your configuration file in this directory:
 
 .. code-block:: bash
 
   /home/vscode/.config/swxsoc/
+
+You can also specify the configuration directory by setting the environment variable `SWXSOC_CONFIGDIR` to the path of your configuration directory. For example, you can set the environment variable in your terminal by running:
+
+.. code-block:: bash
+
+  export SWXSOC_CONFIGDIR=/path/to/your/config/dir
 
 If you do not use our developer environment, you can run the following code to see where to place it on your specific machine as well:
 
@@ -38,33 +44,63 @@ If you do not use our developer environment, you can run the following code to s
   >>> print(util.config._get_user_configdir())
   /home/vscode/.config/swxsoc
 
-
 .. note:: 
-  For more information on where to place your configuration file depending on your operating system, you can refer to the `AppDirs module docstrings <https://github.com/sunpy/sunpy/blob/1459206e11dc0c7bfeeeec6aede701ca60a8630c/sunpy/extern/appdirs.py#L165>`_. 
+  For more information on where to place your configuration file depending on your operating system, you can refer to the `AppDirs module docstrings <https://github.com/sunpy/sunpy/blob/1459206e11dc0c7bfeeeec6aede701ca60a8630c/sunpy/extern/appdirs.py#L165>`_.
+
+Customizing the Mission Configuration
+=====================================
+The configuration file supports keeping multiple mission configurations. You must select one mission to be used either directly in the configuration file or via an environmental variable.
+
+In the `config.yml` file, you can specify the mission by setting the `selected_mission` variable. Here is an example snippet from a `config.yml` file:
+
+.. code-block:: yaml
+
+  selected_mission: "mission_name"
+  missions_data:
+    mission_name:
+      file_extension: ".txt"
+      instruments:
+        - name: "Instrument1"
+          shortname: "Inst1"
+          fullname: "Instrument 1"
+          targetname: "Target 1"
+        - name: "Instrument2"
+          shortname: "Inst2"
+          fullname: "Instrument 2"
+          targetname: "Target 2"
+
+You can override the selected mission by setting the `SWXSOC_MISSION` environment variable. This is useful for scenarios such as running in different environments (e.g., Lambda containers). For example:
+
+.. code-block:: bash
+
+  export SWXSOC_MISSION=another_mission
+
+Reconfiguring for Testing
+=========================
+For testing purposes, you might need to reload the configuration after making changes to the :file:`config.yml` file. You can use the `_reconfigure` function to reload the configuration during your testing process. This function reloads the configuration and updates the global `config` variable.
+
+.. code-block:: python
+
+  from swxsoc import _reconfigure
+
+  # Make changes to the config.yml file
+  # ...
+
+  # Reconfigure the module to reload the configuration
+  _reconfigure()
+
+To learn more about how to set up your development environment, see :ref:`dev_env`.
+
+See below (:ref:`config.yml-sample`) for an example configuration file.
+
+.. _config.yml-sample:
 
 
-To learn more about how to set-up your development environment see :ref:`dev_env`.
-
-See below (:ref:`configrc-sample`) for an example configuration file.
-
-.. _customizing-with-dynamic-settings:
-
-Dynamic settings
-================
-
-You can also dynamically change most of the default settings. One setting that cannot be changed is the location of the log file which is set on import. All settings are stored in a Python ConfigParser instance called ``swxsoc.config``, which is global to the package. Settings can be modified directly, for example::
-
-    import swxsoc
-    swxsoc.config.set('downloads', 'download_dir', '/home/user/Downloads')
-
-
-.. _configrc-sample:
-
-A sample configrc file
+A sample config.yml file
 --------------------------------------------------------------------
 
 .. only:: html
 
-    `(download) <../_static/configrc>`__
+    `(download) <../_static/config.yml>`__
 
-.. literalinclude:: ../../swxsoc/data/configrc
+.. literalinclude:: ../../swxsoc/data/config.yml

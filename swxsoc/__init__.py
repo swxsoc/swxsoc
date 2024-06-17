@@ -17,6 +17,20 @@ log = _init_log(config=config)
 
 # Function to reconfigure the module for testing
 def _reconfigure():
+    """
+    Reconfigure the module by reloading the configuration.
+
+    This function reloads the configuration from the config.yml file
+    and updates the global `config` variable. It is useful for testing
+    purposes when changes to the configuration file need to be applied
+    without restarting the Python session.
+
+    Example:
+        from swxsoc import _reconfigure
+
+        # Reconfigure the module to reload the configuration
+        _reconfigure()
+    """
     global config
     config = load_config()
 

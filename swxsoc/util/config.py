@@ -60,19 +60,45 @@ def load_config():
     file_extension = mission_data.get("file_extension", "")
 
     config["mission"] = {
-        "file_extension": f".{file_extension}" if not file_extension.startswith(".") else file_extension,
+        "file_extension": (
+            f".{file_extension}"
+            if not file_extension.startswith(".")
+            else file_extension
+        ),
         "mission_name": selected_mission,
         "inst_names": [inst["name"] for inst in mission_data.get("instruments", [])],
-        "inst_shortnames": [inst["shortname"] for inst in mission_data.get("instruments", [])],
-        "inst_fullnames": [inst["fullname"] for inst in mission_data.get("instruments", [])],
-        "inst_targetnames": [inst["targetname"] for inst in mission_data.get("instruments", [])],
+        "inst_shortnames": [
+            inst["shortname"] for inst in mission_data.get("instruments", [])
+        ],
+        "inst_fullnames": [
+            inst["fullname"] for inst in mission_data.get("instruments", [])
+        ],
+        "inst_targetnames": [
+            inst["targetname"] for inst in mission_data.get("instruments", [])
+        ],
     }
 
-    config["mission"].update({
-        "inst_to_shortname": dict(zip(config["mission"]["inst_names"], config["mission"]["inst_shortnames"])),
-        "inst_to_fullname": dict(zip(config["mission"]["inst_names"], config["mission"]["inst_fullnames"])),
-        "inst_to_targetname": dict(zip(config["mission"]["inst_names"], config["mission"]["inst_targetnames"])),
-    })
+    config["mission"].update(
+        {
+            "inst_to_shortname": dict(
+                zip(
+                    config["mission"]["inst_names"],
+                    config["mission"]["inst_shortnames"],
+                )
+            ),
+            "inst_to_fullname": dict(
+                zip(
+                    config["mission"]["inst_names"], config["mission"]["inst_fullnames"]
+                )
+            ),
+            "inst_to_targetname": dict(
+                zip(
+                    config["mission"]["inst_names"],
+                    config["mission"]["inst_targetnames"],
+                )
+            ),
+        }
+    )
 
     if os.getenv("LAMBDA_ENVIRONMENT"):
         config["logger"]["log_to_file"] = False
@@ -81,7 +107,9 @@ def load_config():
 
     working_dir = Path(config["general"]["working_dir"])
     download_dir = Path(config["downloads"]["download_dir"])
-    config["downloads"]["download_dir"] = str((working_dir / download_dir).expanduser().resolve())
+    config["downloads"]["download_dir"] = str(
+        (working_dir / download_dir).expanduser().resolve()
+    )
 
     return config
 

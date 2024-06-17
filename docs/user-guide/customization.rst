@@ -8,19 +8,19 @@ The :file:`config.yml` file
 ===========================
 
 This package uses a :file:`config.yml` configuration file to customize
-certain properties. You can control a number of key features of such as
+certain properties. You can control a number of key features such as
 where your data will download to. SWxSOC packages look for this configuration file
-in a platform specific directory, which you can see the path for by running::
+in a platform-specific directory, which you can see the path for by running::
 
   >>> import swxsoc
   >>> swxsoc.print_config()  # doctest: +SKIP
 
 Using your own :file:`config.yml` file
 ======================================
-To maintain your own customizations, you must place your customized :file:`config.yml` inside the appropriate configuration folder (which is based off the operating system you are working on). The `AppDirs module <https://github.com/sunpy/sunpy/blob/main/sunpy/extern/appdirs.py>`_  provided by the `sunpy` package is used to figure out where to look for your configuration file. 
+To maintain your own customizations, you must place your customized :file:`config.yml` inside the appropriate configuration folder (which is based on the operating system you are working on). The `AppDirs module <https://github.com/sunpy/sunpy/blob/main/sunpy/extern/appdirs.py>`_ provided by the `sunpy` package is used to determine where to look for your configuration file.
 
 .. warning::
-    Do not edit the config.yml file directly in the Python package as it will get overwritten  every time you re-install or update the package.
+    Do not edit the config.yml file directly in the Python package as it will get overwritten every time you re-install or update the package.
 
 You can copy the file below, customize it, and then place your customized :file:`config.yml` file inside your config folder.
 
@@ -38,12 +38,23 @@ If you do not use our developer environment, you can run the following code to s
   >>> print(util.config._get_user_configdir())
   /home/vscode/.config/swxsoc
 
-
 .. note:: 
-  For more information on where to place your configuration file depending on your operating system, you can refer to the `AppDirs module docstrings <https://github.com/sunpy/sunpy/blob/1459206e11dc0c7bfeeeec6aede701ca60a8630c/sunpy/extern/appdirs.py#L165>`_. 
+  For more information on where to place your configuration file depending on your operating system, you can refer to the `AppDirs module docstrings <https://github.com/sunpy/sunpy/blob/1459206e11dc0c7bfeeeec6aede701ca60a8630c/sunpy/extern/appdirs.py#L165>`_.
 
+Reconfiguring for Testing
+=========================
+For testing purposes, you might need to reload the configuration after making changes to the :file:`config.yml` file. You can use the `_reconfigure` function to reload the configuration during your testing process. This function reloads the configuration and updates the global `config` variable.
 
-To learn more about how to set-up your development environment see :ref:`dev_env`.
+.. code-block:: python
+
+  from swxsoc import _reconfigure
+
+  # Make changes to the config.yml file 
+
+  # Reconfigure the module to reload the configuration
+  _reconfigure()
+
+To learn more about how to set up your development environment, see :ref:`dev_env`.
 
 See below (:ref:`config.yml-sample`) for an example configuration file.
 
@@ -52,14 +63,12 @@ See below (:ref:`config.yml-sample`) for an example configuration file.
 Dynamic settings
 ================
 
-You can also dynamically change most of the default settings. One setting that cannot be changed is the location of the log file which is set on import. All settings are stored in a Python ConfigParser instance called ``swxsoc.config``, which is global to the package. Settings can be modified directly, for example::
+You can also dynamically change most of the default settings. One setting that cannot be changed is the location of the log file, which is set on import. All settings are stored in a Python ConfigParser instance called ``swxsoc.config``, which is global to the package. Settings can be modified directly, for example::
 
     import swxsoc
     swxsoc.config.set('downloads', 'download_dir', '/home/user/Downloads')
 
-
 .. _config.yml-sample:
-
 A sample config.yml file
 --------------------------------------------------------------------
 

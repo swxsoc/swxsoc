@@ -103,14 +103,6 @@ def load_config():
     if os.getenv("LAMBDA_ENVIRONMENT"):
         config["logger"]["log_to_file"] = False
 
-    config["general"].setdefault("working_dir", str(Path.home() / "swxsoc"))
-
-    working_dir = Path(config["general"]["working_dir"])
-    download_dir = Path(config["downloads"]["download_dir"])
-    config["downloads"]["download_dir"] = str(
-        (working_dir / download_dir).expanduser().resolve()
-    )
-
     return config
 
 
@@ -237,47 +229,3 @@ def _find_config_files():
         config_files.append(str(config_path.joinpath(config_filename)))
 
     return config_files
-
-
-def get_and_create_download_dir():
-    """
-    Get the download directory from the configuration and create it if it doesn't exist.
-
-    Returns:
-        str: The path to the download directory.
-
-    Raises:
-        RuntimeError: If the download directory is not writable.
-    """
-    download_dir = os.environ.get("SWXSOC_CONFIGDIR")
-    if download_dir:
-        return download_dir
-
-    config = load_config()
-    download_dir = Path(config["downloads"]["download_dir"]).expanduser().resolve()
-    if not _is_writable_dir(download_dir):
-        raise RuntimeError(
-            f'Could not write to swxsoc downloads directory="{download_dir}"'
-        )
-
-    return config["downloads"]["download_dir"]
-
-
-def get_and_create_sample_dir():
-    """
-    Get the sample data directory from the configuration and create it if it doesn't exist.
-
-    Returns:
-        str: The path to the sample data directory.
-
-    Raises:
-        RuntimeError: If the sample data directory is not writable.
-    """
-    config = load_config()
-    sample_dir = Path(config["downloads"]["sample_dir"]).expanduser().resolve()
-    if not _is_writable_dir(sample_dir):
-        raise RuntimeError(
-            f'Could not write to swxsoc sample data directory="{sample_dir}"'
-        )
-
-    return config["downloads"]["sample_dir"]

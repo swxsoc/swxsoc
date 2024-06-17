@@ -35,7 +35,6 @@ config_content = {
             ],
         }
     },
-    "downloads": {"download_dir": "data"},
     "logger": {
         "log_level": "INFO",
         "use_color": True,
@@ -360,8 +359,6 @@ def test_parse_configdir_configured(filename, instrument, time, level, version, 
     with open(tmp_file_path, 'w') as file:
         yaml.dump(config_content, file, default_flow_style=False)
 
-    print(f"Configuration file written to {str(tmp_file_path)}")
-
     # Set SWXSOC_CONFIGDIR
     os.environ["SWXSOC_CONFIGDIR"] = str(tmp_file_path.parent)
 
@@ -401,8 +398,6 @@ def test_create_configdir_configured(instrument, time, level, version, result):
     # Write the dictionary to a YAML file
     with open(tmp_file_path, 'w') as file:
         yaml.dump(config_content, file, default_flow_style=False)
-
-    print(f"Configuration file written to {str(tmp_file_path)}")
 
     # Set SWXSOC_CONFIGDIR
     os.environ["SWXSOC_CONFIGDIR"] = str(tmp_file_path.parent)

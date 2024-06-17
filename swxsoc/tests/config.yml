@@ -1,5 +1,3 @@
-downloads:
-  download_dir: data
 general:
   time_format: '%Y-%m-%d %H:%M:%S'
 logger:

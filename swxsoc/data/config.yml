@@ -61,12 +61,6 @@ missions_data:
         fullname: Noise Eliminating Magnetometer Instrument in a Small Integrated System
         targetname: NEM
 
-downloads:
-  # Location to save download data to. Path should be specified relative to the
-  # SWxSOC working directory.
-  # Default value: data/
-  download_dir: data
-
 logger:
   # Threshold for the logging messages. Logging messages that are less severe
   # than this level will be ignored. The levels are 'DEBUG', 'INFO', 'WARNING', 'ERROR'

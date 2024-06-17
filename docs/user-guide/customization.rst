@@ -30,6 +30,12 @@ If you work in our developer environment you can place your configuration file i
 
   /home/vscode/.config/swxsoc/
 
+You can also specify the configuration directory by setting the environment variable `SWXSOC_CONFIG_DIR` to the path of your configuration directory. For example, you can set the environment variable in your terminal by running:
+
+.. code-block:: bash
+
+  export SWXSOC_CONFIG_DIR=/path/to/your/config/dir
+
 If you do not use our developer environment, you can run the following code to see where to place it on your specific machine as well:
 
 .. doctest::
@@ -40,6 +46,34 @@ If you do not use our developer environment, you can run the following code to s
 
 .. note:: 
   For more information on where to place your configuration file depending on your operating system, you can refer to the `AppDirs module docstrings <https://github.com/sunpy/sunpy/blob/1459206e11dc0c7bfeeeec6aede701ca60a8630c/sunpy/extern/appdirs.py#L165>`_.
+
+Customizing the Mission Configuration
+=====================================
+The configuration file supports keeping multiple mission configurations. You must select one mission to be used either directly in the configuration file or via an environmental variable.
+
+In the `config.yml` file, you can specify the mission by setting the `selected_mission` variable. Here is an example snippet from a `config.yml` file:
+
+.. code-block:: yaml
+
+  selected_mission: "mission_name"
+  missions_data:
+    mission_name:
+      file_extension: ".txt"
+      instruments:
+        - name: "Instrument1"
+          shortname: "Inst1"
+          fullname: "Instrument 1"
+          targetname: "Target 1"
+        - name: "Instrument2"
+          shortname: "Inst2"
+          fullname: "Instrument 2"
+          targetname: "Target 2"
+
+You can override the selected mission by setting the `SWXSOC_MISSION` environment variable. This is useful for scenarios such as running in different environments (e.g., Lambda containers). For example:
+
+.. code-block:: bash
+
+  export SWXSOC_MISSION=another_mission
 
 Reconfiguring for Testing
 =========================
@@ -58,16 +92,6 @@ For testing purposes, you might need to reload the configuration after making ch
 To learn more about how to set up your development environment, see :ref:`dev_env`.
 
 See below (:ref:`config.yml-sample`) for an example configuration file.
-
-.. _customizing-with-dynamic-settings:
-
-Dynamic settings
-================
-
-You can also dynamically change most of the default settings. One setting that cannot be changed is the location of the log file, which is set on import. All settings are stored in a Python ConfigParser instance called ``swxsoc.config``, which is global to the package. Settings can be modified directly, for example::
-
-    import swxsoc
-    swxsoc.config.set('downloads', 'download_dir', '/home/user/Downloads')
 
 .. _config.yml-sample:
 

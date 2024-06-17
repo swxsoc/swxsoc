@@ -14,6 +14,13 @@ config = load_config()
 
 log = _init_log(config=config)
 
+
+# Function to reconfigure the module for testing
+def _reconfigure():
+    global config
+    config = load_config()
+
+
 # Then you can be explicit to control what ends up in the namespace,
 __all__ = ["config", "print_config"]
 

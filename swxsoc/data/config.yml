@@ -11,7 +11,7 @@ selected_mission: swxsoc
 
 missions_data:
   swxsoc:
-    file_type: cdf
+    file_extension: cdf
     instruments:
       - name: eea
         shortname: eea
@@ -31,7 +31,7 @@ missions_data:
         targetname: SPANI
 
   hermes:
-    file_type: cdf
+    file_extension: cdf
     instruments:
       - name: eea
         shortname: eea
@@ -50,7 +50,7 @@ missions_data:
         fullname: Solar Probe Analyzer for Ions
         targetname: SPANI
   padre:
-    file_type: fits
+    file_extension: fits
     instruments:
       - name: eea
         shortname: eea

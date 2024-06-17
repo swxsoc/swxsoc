@@ -55,6 +55,14 @@ def load_config():
     missions_data = config.get("missions_data")
     config["mission"] = {}
 
+    # If file extension has a . in front, keep it, otherwise add one
+    file_extension = (
+        missions_data[selected_mission]["file_extension"]
+        if missions_data[selected_mission]["file_extension"].startswith(".")
+        else "." + missions_data[selected_mission]["file_extension"]
+    )
+    config["mission"]["file_extension"] = file_extension
+
     config["mission"]["mission_name"] = selected_mission
     instruments = missions_data[selected_mission]["instruments"]
 

@@ -35,79 +35,68 @@ if not os.getenv("LAMBDA_ENVIRONMENT"):
 
 def load_config():
     """
-    Read the configuration file.
+    Load and read the configuration file.
 
-    If one does not exist in the user's home directory then read in the defaults.
+    If a configuration file does not exist in the user's home directory,
+    it will read in the defaults from the package's data directory.
+
+    The selected mission can be overridden by setting the `SWXSOC_MISSION`
+    environment variable. This environment variable will take precedence
+    over the mission specified in the configuration file.
+
+    Returns:
+        dict: The loaded configuration data.
     """
-    # Get the default config file
     config_path = Path(_get_user_configdir()) / "config.yml"
-
     if not config_path.exists():
         config_path = Path(swxsoc.__file__).parent / "data" / "config.yml"
 
     with open(config_path, "r") as file:
         config = yaml.safe_load(file)
 
-    # Extract the selected mission from environment variable or default to 'swxsoc'
     selected_mission = os.getenv("SWXSOC_MISSION", config["selected_mission"])
+    missions_data = config.get("missions_data", {})
+    mission_data = missions_data.get(selected_mission, {})
+    file_extension = mission_data.get("file_extension", "")
 
-    # Filter the mission data for the selected mission
-    missions_data = config.get("missions_data")
-    config["mission"] = {}
+    config["mission"] = {
+        "file_extension": f".{file_extension}" if not file_extension.startswith(".") else file_extension,
+        "mission_name": selected_mission,
+        "inst_names": [inst["name"] for inst in mission_data.get("instruments", [])],
+        "inst_shortnames": [inst["shortname"] for inst in mission_data.get("instruments", [])],
+        "inst_fullnames": [inst["fullname"] for inst in mission_data.get("instruments", [])],
+        "inst_targetnames": [inst["targetname"] for inst in mission_data.get("instruments", [])],
+    }
 
-    # If file extension has a . in front, keep it, otherwise add one
-    file_extension = (
-        missions_data[selected_mission]["file_extension"]
-        if missions_data[selected_mission]["file_extension"].startswith(".")
-        else "." + missions_data[selected_mission]["file_extension"]
-    )
-    config["mission"]["file_extension"] = file_extension
+    config["mission"].update({
+        "inst_to_shortname": dict(zip(config["mission"]["inst_names"], config["mission"]["inst_shortnames"])),
+        "inst_to_fullname": dict(zip(config["mission"]["inst_names"], config["mission"]["inst_fullnames"])),
+        "inst_to_targetname": dict(zip(config["mission"]["inst_names"], config["mission"]["inst_targetnames"])),
+    })
 
-    config["mission"]["mission_name"] = selected_mission
-    instruments = missions_data[selected_mission]["instruments"]
-
-    inst_names = [inst["name"] for inst in instruments]
-    config["mission"]["inst_names"] = inst_names
-
-    inst_shortnames = [inst["shortname"] for inst in instruments]
-    config["mission"]["inst_shortnames"] = inst_shortnames
-
-    inst_fullnames = [inst["fullname"] for inst in instruments]
-    config["mission"]["inst_fullnames"] = inst_fullnames
-
-    inst_targetnames = [inst["targetname"] for inst in instruments]
-    config["mission"]["inst_targetnames"] = inst_targetnames
-
-    config["mission"]["inst_to_shortname"] = dict(zip(inst_names, inst_shortnames))
-    config["mission"]["inst_to_fullname"] = dict(zip(inst_names, inst_fullnames))
-    config["mission"]["inst_to_targetname"] = dict(zip(inst_names, inst_targetnames))
-
-    # This is to fix issue with AppDirs not writing to /tmp/ in AWS Lambda
     if os.getenv("LAMBDA_ENVIRONMENT"):
         config["logger"]["log_to_file"] = False
 
-    # Specify the working directory as a default so that the user's home
-    # directory can be located in an OS-independent manner
-    if "working_dir" not in config["general"]:
-        config["general"]["working_dir"] = str(Path.home() / "swxsoc")
+    config["general"].setdefault("working_dir", str(Path.home() / "swxsoc"))
 
-    # Set the download_dir to be relative to the working_dir
     working_dir = Path(config["general"]["working_dir"])
     download_dir = Path(config["downloads"]["download_dir"])
-    config["downloads"]["download_dir"] = str(
-        (working_dir / download_dir).expanduser().resolve()
-    )
+    config["downloads"]["download_dir"] = str((working_dir / download_dir).expanduser().resolve())
 
     return config
 
-
 def _get_user_configdir():
     """
-    Return the string representing the configuration dir.
+    Return the configuration directory path.
 
-    The default is set by "AppDirs" and can be accessed by importing
-    ``hermes.util.config.CONFIG_DIR``. You can override this with the
-    "SWXSOC_CONFIGDIR" environment variable.
+    The configuration directory is determined by the "SWXSOC_CONFIGDIR" 
+    environment variable or a default directory set by the application.
+
+    Returns:
+        str: The path to the configuration directory.
+
+    Raises:
+        RuntimeError: If the configuration directory is not writable.
     """
     configdir = os.environ.get("SWXSOC_CONFIGDIR", CONFIG_DIR)
 
@@ -116,27 +105,40 @@ def _get_user_configdir():
     return configdir
 
 
-def _is_writable_dir(p):
+def _is_writable_dir(path):
     """
-    Checks to see if a directory is writable.
+    Check if the specified path is a writable directory.
+
+    Args:
+        path (str or Path): The path to check.
+
+    Returns:
+        bool: True if the path is a writable directory, False otherwise.
+
+    Raises:
+        FileExistsError: If a file exists at the path instead of a directory.
     """
     # Worried about multiple threads creating the directory at the same time.
     try:
-        Path(p).mkdir(parents=True, exist_ok=True)
+        Path(path).mkdir(parents=True, exist_ok=True)
     except FileExistsError:  # raised if there's an existing file instead of a directory
         return False
     else:
-        return Path(p).is_dir() and os.access(p, os.W_OK)
+        return Path(path).is_dir() and os.access(path, os.W_OK)
 
 
 def copy_default_config(overwrite=False):
     """
-    Copies the default config file to the user's config directory.
+    Copy the default configuration file to the user's configuration directory.
 
-    Parameters
-    ----------
-    overwrite : `bool`
-        If True, existing config file will be overwritten.
+    If the configuration file already exists, it will be overwritten if the
+    `overwrite` parameter is set to True.
+
+    Args:
+        overwrite (bool): Whether to overwrite an existing configuration file.
+
+    Raises:
+        RuntimeError: If the configuration directory is not writable.
     """
     config_filename = "config.yml"
     config_file = Path(swxsoc.__file__).parent / "data" / config_filename
@@ -167,7 +169,10 @@ def copy_default_config(overwrite=False):
 
 def print_config(config):
     """
-    Print current configuration options.
+    Print the current configuration options.
+
+    Args:
+        config (dict): The configuration data to print.
     """
     print("FILES USED:")
     for file_ in _find_config_files():
@@ -183,7 +188,10 @@ def print_config(config):
 
 def _find_config_files():
     """
-    Finds locations of configuration files.
+    Find the locations of configuration files.
+
+    Returns:
+        list: A list of paths to the configuration files.
     """
     config_files = []
     config_filename = "config.yml"
@@ -204,7 +212,13 @@ def _find_config_files():
 
 def get_and_create_download_dir():
     """
-    Get the config of download directory and create one if not present.
+    Get the download directory from the configuration and create it if it doesn't exist.
+
+    Returns:
+        str: The path to the download directory.
+
+    Raises:
+        RuntimeError: If the download directory is not writable.
     """
     download_dir = os.environ.get("SWXSOC_CONFIGDIR")
     if download_dir:
@@ -222,7 +236,13 @@ def get_and_create_download_dir():
 
 def get_and_create_sample_dir():
     """
-    Get the config of download directory and create one if not present.
+    Get the sample data directory from the configuration and create it if it doesn't exist.
+
+    Returns:
+        str: The path to the sample data directory.
+
+    Raises:
+        RuntimeError: If the sample data directory is not writable.
     """
     config = load_config()
     sample_dir = Path(config["downloads"]["sample_dir"]).expanduser().resolve()

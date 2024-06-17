@@ -50,7 +50,7 @@ missions_data:
         fullname: Solar Probe Analyzer for Ions
         targetname: SPANI
   padre:
-    file_type: cdf
+    file_type: fits
     instruments:
       - name: eea
         shortname: eea

@@ -49,7 +49,7 @@ config_content = {
 }
 
 # Path to the temporary file
-tmp_file_path = Path("/tmp/config.yml")
+tmp_file_path = Path("swxsoc/tests/config.yml")
 
 
 # fmt: off

@@ -50,6 +50,7 @@ config_content = {
 # Path to the temporary file
 tmp_file_path = "/tmp/config.yml"
 
+
 # fmt: off
 @pytest.mark.parametrize("instrument,time,level,version,result", [
     ("eea", time, "l1", "1.2.3", f"swxsoc_eea_l1_{time_formatted}_v1.2.3.cdf"),
@@ -293,6 +294,7 @@ def test_parse_l0_filenames(filename, instrument, time, level, version, mode):
     assert result['mode'] == mode
 # fmt: on
 
+
 # fmt: off
 @pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
     ("hermes_NEM_l0_2024094-124603_v01.bin", "nemisis", "2024-04-03T12:46:03", "l0", "01", None),
@@ -302,12 +304,11 @@ def test_parse_l0_filenames(filename, instrument, time, level, version, mode):
     (f"hermes_eea_l1_{time_formatted}_v1.2.3.cdf", "eea", "2024-04-06T12:06:21", "l1", "1.2.3", None),
     (f"hermes_mrt_l2_{time_formatted}_v1.2.5.cdf", "merit", "2024-04-06T12:06:21", "l2", "1.2.5", None),
 ])
-
 def test_parse_env_var_configured(filename, instrument, time, level, version, mode):
     """Testing parsing of MOC-generated level 0 files."""
     # Set SWXSOC_MISSION to 'hermes' mission
     os.environ["SWXSOC_MISSION"] = "hermes"
-    
+
     swxsoc._reconfigure()
     result = util.parse_science_filename(filename)
     assert result['instrument'] == instrument
@@ -318,7 +319,6 @@ def test_parse_env_var_configured(filename, instrument, time, level, version, mo
 # fmt: on
 
 
-
 # fmt: off
 @pytest.mark.parametrize("instrument,time,level,version,result", [
     ("eea", time, "l1", "1.2.3", f"hermes_eea_l1_{time_formatted}_v1.2.3.cdf"),
@@ -327,7 +327,6 @@ def test_parse_env_var_configured(filename, instrument, time, level, version, mo
     ("spani", time, "l3", "2.4.5", f"hermes_spn_l3_{time_formatted}_v2.4.5.cdf"),
 ]
 )
-
 def test_create_env_var_configured(instrument, time, level, version, result):
     """Test simple cases with expected output"""
     # Set SWXSOC_MISSION to 'hermes' mission
@@ -340,6 +339,7 @@ def test_create_env_var_configured(instrument, time, level, version, result):
     )
 # fmt: on
 
+
 # fmt: off
 @pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
     ("mission_INS1_l0_2024094-124603_v01.bin", "instrument1", "2024-04-03T12:46:03", "l0", "01", None),
@@ -349,7 +349,6 @@ def test_create_env_var_configured(instrument, time, level, version, result):
     (f"mission_ins1_l1_{time_formatted}_v1.2.3.txt", "instrument1", "2024-04-06T12:06:21", "l1", "1.2.3", None),
     (f"mission_ins2_l2_{time_formatted}_v1.2.5.txt", "instrument2", "2024-04-06T12:06:21", "l2", "1.2.5", None),
 ])
-
 def test_parse_configdir_configured(filename, instrument, time, level, version, mode):
     """Testing parsing of MOC-generated level 0 files."""
     # If the file exists, delete it
@@ -361,28 +360,27 @@ def test_parse_configdir_configured(filename, instrument, time, level, version, 
         yaml.dump(config_content, file, default_flow_style=False)
 
     print(f"Configuration file written to {tmp_file_path}")
-    
+
     # Set SWXSOC_CONFIGDIR
     os.environ["SWXSOC_CONFIGDIR"] = '/tmp'
-    
+
     # Remove SWXSOC_MISSION environment variable if it exists
     if "SWXSOC_MISSION" in os.environ:
         del os.environ["SWXSOC_MISSION"]
-        
+
     # Import the 'util' submodule from 'swxsoc.util'
     swxsoc._reconfigure()
-    
+
     result = util.parse_science_filename(filename)
     assert result['instrument'] == instrument
     assert result['level'] == level
     assert result['version'] == version
     assert result['time'] == Time(time)
     assert result['mode'] == mode
-    
+
     del os.environ["SWXSOC_CONFIGDIR"]
     swxsoc._reconfigure()
 # fmt: on
-
 
 
 # fmt: off
@@ -393,9 +391,8 @@ def test_parse_configdir_configured(filename, instrument, time, level, version, 
     ("instrument2", time, "l3", "2.4.5", f"mission_ins2_l3_{time_formatted}_v2.4.5.txt"),
 ]
 )
-
 def test_create_configdir_configured(instrument, time, level, version, result):
-    """Test simple cases with expected output"""    
+    """Test simple cases with expected output"""
     # If the file exists, delete it
     if os.path.exists(tmp_file_path):
         os.remove(tmp_file_path)
@@ -405,24 +402,22 @@ def test_create_configdir_configured(instrument, time, level, version, result):
         yaml.dump(config_content, file, default_flow_style=False)
 
     print(f"Configuration file written to {tmp_file_path}")
-    
+
     # Set SWXSOC_CONFIGDIR
     os.environ["SWXSOC_CONFIGDIR"] = '/tmp'
-    
+
     # Remove SWXSOC_MISSION environment variable if it exists
     if "SWXSOC_MISSION" in os.environ:
         del os.environ["SWXSOC_MISSION"]
-        
+
     # Import the 'util' submodule from 'swxsoc.util'
     swxsoc._reconfigure()
-    
-    
+
     assert (
         util.create_science_filename(instrument, time, level=level, version=version)
         == result
     )
-    
+
     del os.environ["SWXSOC_CONFIGDIR"]
     swxsoc._reconfigure()
-
 # fmt: on

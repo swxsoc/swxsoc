@@ -126,13 +126,13 @@ def parse_science_filename(filepath: str) -> dict:
     """
 
     result = {
-        "instrument": None,
-        "mode": None,
+        "instrument": "",
+        "mode": "",
         "test": False,
-        "time": None,
-        "level": None,
-        "version": None,
-        "descriptor": None,
+        "time": "",
+        "level": "",
+        "version": "",
+        "descriptor": "",
     }
 
     filename = os.path.basename(filepath)

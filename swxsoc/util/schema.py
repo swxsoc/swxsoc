@@ -1372,26 +1372,22 @@ class SWXSchema:
         attr_name = "Logical_file_id"
         if (attr_name not in data.meta) or (not data.meta[attr_name][0]):
             # Get Parts
-            spacecraft_id, _ = self._get_spacecraft_id(data)
             instrument_id, _ = self._get_instrument_id(data)
             start_time, _ = self._get_start_time(data)
             data_level, _ = self._get_data_level(data)
             version, _ = self._get_version(data)
-            extension = ".cdf"
             mode, _ = self._get_instrument_mode(data)
 
             # Build Derivation
             science_filename = util.create_science_filename(
-                mission=spacecraft_id,
                 instrument=instrument_id,
                 time=start_time,
                 level=data_level,
                 version=version,
-                extension=extension,
                 mode=mode,
             )
             science_filename, comment = (
-                science_filename.rstrip(extension),
+                science_filename.rstrip(util.FILENAME_EXTENSION),
                 "",
             )
         else:

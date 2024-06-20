@@ -327,7 +327,7 @@ CONSTEXT:
   data_type: int # ?
   default: null
   derived: false
-  description: constant mask ([x,y,t,p]) – if the constant mask value (x,y,t,p)=1, parameter p has been kept constant/frozen at the stored value during the fitting process for point (x,y,t). When the constant mask extension is not present, it is assumed that all parameters have been fitted freely (between the specified min and max values) at all times unless PCONSna=1.
+  description: constant mask ([x,y,t,p]) - if the constant mask value (x,y,t,p)=1, parameter p has been kept constant/frozen at the stored value during the fitting process for point (x,y,t). When the constant mask extension is not present, it is assumed that all parameters have been fitted freely (between the specified min and max values) at all times unless PCONSna=1.
   human_readable: Constant mask
   overwrite: false
   required: false

@@ -273,7 +273,7 @@ CMPTYPn:
     - 'Gaussian', a Gaussian
     - 'SSW comp_bgauss', a broadened Gaussian, see SSW routine comp_bgauss
     - 'SSW comp_voigt', a Voigt profile, see SSW routine comp_voigt
-    - … etc. If you need additional component types, contact prits-group@astro.uio.no.
+    - ... etc. If you need additional component types, contact prits-group@astro.uio.no.
   human_readable: Component type
   overwrite: false
   required: false # Required for Type P data
@@ -309,7 +309,7 @@ COMPQUAL:
   data_type: float
   default: null
   derived: false
-  description: set to a number between 0.0 and 1.0, where 1.0 indicates lossless compression (if any) and 0.0 indicates “all information is lost”. In practice, however, the actual value is not crucial, as long as a higher value corresponds to a higher data quality. If there is a choice between different compression algorithms for this instrument, the name of the algorithm should be given in COMP_ALG - starting with either 'Lossy' or 'Lossless', then typically a concatenation of all instrument-specific compression-related keywords, separated with slashes.
+  description: set to a number between 0.0 and 1.0, where 1.0 indicates lossless compression (if any) and 0.0 indicates "all information is lost". In practice, however, the actual value is not crucial, as long as a higher value corresponds to a higher data quality. If there is a choice between different compression algorithms for this instrument, the name of the algorithm should be given in COMP_ALG - starting with either 'Lossy' or 'Lossless', then typically a concatenation of all instrument-specific compression-related keywords, separated with slashes.
   human_readable: Quality of data after lossy compression
   overwrite: false
   required: false # Optional quality aspects keywords (sections 18, 3.1, 5.5)
@@ -831,7 +831,7 @@ INFO_URL:
   data_type: str
   default: null
   derived: false
-  description:  should point to a human-readable web page describing “everything” about the data set - what it is, how to use it, links to e.g., user guides, instrument/site/telescope descriptions, descriptions of caveats, information about data rights, preferred acknowledgements, whom to contact if you have questions, and repositories of observing/engineering logs.
+  description:  should point to a human-readable web page describing "everything" about the data set - what it is, how to use it, links to e.g., user guides, instrument/site/telescope descriptions, descriptions of caveats, information about data rights, preferred acknowledgements, whom to contact if you have questions, and repositories of observing/engineering logs.
   human_readable: Info url
   overwrite: false
   required: false # Optional keyword for administrative information (sections 18, 9)
@@ -1065,7 +1065,7 @@ OBSTITLE:
   data_type: str
   default: null
   derived: false
-  description: Title of observation. A more generic/higher-level description, e.g., “Flare sit-and-stare”, “High cadence large raster”), which often corresponds to OBS_MODE, though not necessarily as a oneto-one relationship. Used by IRIS and SPICE, corresponds to Hinode OBS_DEC. Should be identical to OBS_DESC or OBS_MODE when no more suitable value is available.
+  description: Title of observation. A more generic/higher-level description, e.g., "Flare sit-and-stare", "High cadence large raster"), which often corresponds to OBS_MODE, though not necessarily as a oneto-one relationship. Used by IRIS and SPICE, corresponds to Hinode OBS_DEC. Should be identical to OBS_DESC or OBS_MODE when no more suitable value is available.
   human_readable: Observation title
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
@@ -1074,7 +1074,7 @@ OBS_DESC:
   data_type: str
   default: null
   derived: false
-  description: Description of observation. A string describing the observation, e.g., “Sit and stare on AR10333”. Should be identical to OBSTITLE when no more suitable value is available.
+  description: Description of observation. A string describing the observation, e.g., "Sit and stare on AR10333". Should be identical to OBSTITLE when no more suitable value is available.
   human_readable: Observation description
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
@@ -1308,7 +1308,7 @@ POLCANGL:
   data_type: float
   default: null
   derived: false
-  description: If the polarimetric reference frame is not aligned with any set of WCS coordinate names, a rotation of the reference frame given in POLCCONV can be specified in POLCANGL. The rotation, specified in degrees, should be applied to the POLCCONV-specified system around its third axis. The rotation is counter-clockwise as seen from a point with a positive third-axis coordinate value, taking the sign from POLCCONV into account. I.e., specifying a positive angle with POLCCONV='(…, …, +HPRZ) ' specifies a counter-clockwise rotation as seen from Earth, whereas zwith POLCCONV='(…, …, -HPRZ) ' would specify a clockwise rotation as seen from Earth.
+  description: If the polarimetric reference frame is not aligned with any set of WCS coordinate names, a rotation of the reference frame given in POLCCONV can be specified in POLCANGL. The rotation, specified in degrees, should be applied to the POLCCONV-specified system around its third axis. The rotation is counter-clockwise as seen from a point with a positive third-axis coordinate value, taking the sign from POLCCONV into account. I.e., specifying a positive angle with POLCCONV='(..., ..., +HPRZ) ' specifies a counter-clockwise rotation as seen from Earth, whereas zwith POLCCONV='(..., ..., -HPRZ) ' would specify a clockwise rotation as seen from Earth.
   human_readable: Polarimetric angle
   overwrite: false
   required: true # Mandatory keywords for polarimetric data (sections 15, 5.4.1)
@@ -1371,7 +1371,7 @@ PRMODEna:
   data_type: str
   default: null
   derived: false
-  description: Optional pipeline processing keyword. Meant for pipelines that may be run with different trade-offs between e.g., signal to noise ratio versus spatial resolution or contrast. This should already be apparent from the other keywords, but PRMODEn provides a much simpler way of identifying data processed in a particular way (e.g., “BALANCED” or “HIGH CONTRAST”). Note that a single observation may be registered multiple times in an SVO with different values of PRMODEn - but then a PRMODEnspecific identifier in the file name is necessary in order to ensure uniqueness.
+  description: Optional pipeline processing keyword. Meant for pipelines that may be run with different trade-offs between e.g., signal to noise ratio versus spatial resolution or contrast. This should already be apparent from the other keywords, but PRMODEn provides a much simpler way of identifying data processed in a particular way (e.g., "BALANCED" or "HIGH CONTRAST"). Note that a single observation may be registered multiple times in an SVO with different values of PRMODEn - but then a PRMODEnspecific identifier in the file name is necessary in order to ensure uniqueness.
   human_readable: Processing mode
   overwrite: false
   required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
@@ -1551,7 +1551,7 @@ ROT_FORM:
   data_type: str
   default: null
   derived: false
-  description: The formula specified is meant to be human-readable, not machine readable, thus e.g., ' A sin(….)', using parameter names that are common within your community. An explanation in the comments may be useful. The units should be degrees per day. More important, though is that the coordinate variation is reflected in the WCS description of the data, using cross terms between the time coordinate and spatial coordinates in the PCi_j matrix or by tabulating the coordinates.
+  description: The formula specified is meant to be human-readable, not machine readable, thus e.g., ' A sin(...)', using parameter names that are common within your community. An explanation in the comments may be useful. The units should be degrees per day. More important, though is that the coordinate variation is reflected in the WCS description of the data, using cross terms between the time coordinate and spatial coordinates in the PCi_j matrix or by tabulating the coordinates.
   human_readable: Rotation formula
   overwrite: false
   required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
@@ -1674,7 +1674,7 @@ SVO_GRP:
   data_type: str
   default: null
   derived: false
-  description: SVO_GRP may be used to achieve the opposite, to tie observations together even if they have different POINT_IDs and/or have other differing characteristics. Heuristically, a shared value for SVO_GRP signals that “if you are interested in this observation, you are probably interested in all of these observations (with the same SVO_GRP value)”. 
+  description: SVO_GRP may be used to achieve the opposite, to tie observations together even if they have different POINT_IDs and/or have other differing characteristics. Heuristically, a shared value for SVO_GRP signals that if you are interested in this observation, you are probably interested in all of these observations (with the same SVO_GRP value). 
   human_readable: SVO Group
   overwrite: false
   required: false # Optional keywords for grouping (sections 18, 7)
@@ -1847,7 +1847,7 @@ VERSION:
   data_type: str
   default: null
   derived: false
-  description: FITS file processing generation/version. VERSION should be set to the processing version of the file, an integer that should be increased whenever a reprocessing is performed in order to improve the data set (e.g., with a better flatfield, better detection of cosmic rays, more complete telemetry, etc). The version numbers in files published through an SVO may increase by more than one for each new published “generation”, allowing the use of intermediate values for internal/experimental use.
+  description: FITS file processing generation/version. VERSION should be set to the processing version of the file, an integer that should be increased whenever a reprocessing is performed in order to improve the data set (e.g., with a better flatfield, better detection of cosmic rays, more complete telemetry, etc). The version numbers in files published through an SVO may increase by more than one for each new published "generation", allowing the use of intermediate values for internal/experimental use.
   human_readable: Processed version
   overwrite: false
   required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)

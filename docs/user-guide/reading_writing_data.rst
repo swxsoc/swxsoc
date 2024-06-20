@@ -265,7 +265,7 @@ by querying the measurement column directly.
     >>> sw_data.timeseries['Bx'].meta.update(
     ...     {"CATDESC": "X component of the Magnetic field measured by HERMES"}
     ... )
-    >>> sw_data.timeseries['Bx'].meta # doctest: +SKIP
+    >>> sw_data.timeseries['Bx'].meta  # doctest: +SKIP
 
 The class does its best to fill in metadata fields if it can and leaves others blank that it 
 cannot. Those should be filled in manually. Be careful when editing metadata that was 
@@ -278,7 +278,7 @@ Creating a ``SWXData`` from an existing CDF File
 Given a current CDF File you can load it into a :py:class:`~swxsoc.swxdata.SWXData` by providing a path to the CDF file::
 
     >>> from swxsoc.swxdata import SWXData
-    >>> sw_data = SWXData.load("hermes_eea_default_ql_20240406T120621_v0.0.1.cdf") # doctest: +SKIP
+    >>> sw_data = SWXData.load("hermes_eea_default_ql_20240406T120621_v0.0.1.cdf")  # doctest: +SKIP
 
 The :py:class:`~swxsoc.swxdata.SWXData` can the be updated, measurements added, metadata added, and written to a new CDF file.
 
@@ -367,20 +367,6 @@ The comment fields are not required for either CDF or FITS files, but can be opt
     >>> SWXData.global_attribute_template()
     OrderedDict([('Data_level', (None, None)), ('Data_version', (None, None)), ('Descriptor', (None, None)), ('Discipline', (None, None)), ('Instrument_type', (None, None)), ('Mission_group', (None, None)), ('PI_affiliation', (None, None)), ('PI_name', (None, None)), ('Project', (None, None)), ('Source_name', (None, None)), ('TEXT', (None, None))])
 
-.. code-block:: python
-    OrderedDict([
-        ('Data_level', (None, None)), 
-        ('Data_version', (None, None)), 
-        ('Descriptor', (None, None)), 
-        ('Discipline', (None, None)), 
-        ('Instrument_type', (None, None)), 
-        ('Mission_group', (None, None)), 
-        ('PI_affiliation', (None, None)), 
-        ('PI_name', (None, None)), 
-        ('Project', (None, None)), 
-        ('Source_name', (None, None)), 
-        ('TEXT', (None, None))])
-
 You can also pass arguments into the function to get a partially populated template:: 
 
     >>> from collections import OrderedDict
@@ -391,20 +377,6 @@ You can also pass arguments into the function to get a partially populated templ
     ...     version='0.1.0'
     ... )
     OrderedDict([('Data_level', ('L1>Level 1', '')), ('Data_version', ('0.1.0', '')), ('Descriptor', ('EEA>Electron Electrostatic Analyzer', '')), ('Discipline', (None, None)), ('Instrument_type', (None, None)), ('Mission_group', (None, None)), ('PI_affiliation', (None, None)), ('PI_name', (None, None)), ('Project', (None, None)), ('Source_name', (None, None)), ('TEXT', (None, None))])
-
-.. code-block:: python
-    OrderedDict([
-        ('Data_level', ('L1>Level 1', '')), 
-        ('Data_version', ('0.1.0', '')), 
-        ('Descriptor', ('EEA>Electron Electrostatic Analyzer', '')), 
-        ('Discipline', (None, None)), 
-        ('Instrument_type', (None, None)), 
-        ('Mission_group', (None, None)), 
-        ('PI_affiliation', (None, None)), 
-        ('PI_name', (None, None)), 
-        ('Project', (None, None)), 
-        ('Source_name', (None, None)), 
-        ('TEXT', (None, None))])
 
 This can make the definition of global metadata easier since instrument teams or users only need 
 to supply pieces of metadata that are in this template. Additional metadata items can be added 
@@ -485,8 +457,8 @@ By default, a plot will be generated with each measurement in its own plot panel
     >>> sw_data.add_measurement(measure_name=f"By", data=u.Quantity(by, 'nanoTesla', dtype=np.int16))
     >>> sw_data.add_measurement(measure_name=f"Bz", data=u.Quantity(bz, 'nanoTesla', dtype=np.int16))
     >>> fig = plt.figure()
-    >>> sw_data.plot() # doctest: +SKIP
-    >>> plt.show() # doctest: +SKIP
+    >>> sw_data.plot()  # doctest: +SKIP
+    >>> plt.show()  # doctest: +SKIP
 
 Writing a CDF File
 ==================

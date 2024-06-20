@@ -617,7 +617,7 @@ def test_sw_data_plot():
     q.meta = OrderedDict({"CATDESC": "Test Variable"})
     test_data.add_measurement(measure_name="test", data=q)
 
-    assert test_data.timeseries["test"].meta["LABLAXIS"] != None
+    assert test_data.timeseries["test"].meta["LABLAXIS"] is not None
 
     # Plot All Columns
     ax = test_data.plot(subplots=True)

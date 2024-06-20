@@ -11,6 +11,7 @@ from astropy.wcs import WCS
 import astropy.units as u
 from ndcube import NDCollection
 from ndcube import NDCube
+from swxsoc import log
 from swxsoc.util.exceptions import warn_user
 from swxsoc.util.schema import SWXSchema
 

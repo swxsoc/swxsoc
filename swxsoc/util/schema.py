@@ -385,8 +385,16 @@ class SWXSchema:
                 and not attr_schema["derived"]
                 and attr_name not in self.default_global_attributes
             ):
+                # Get the Human Readable Attribute Name as a Comment
+                if (
+                    "human_readable" in attr_schema
+                    and attr_schema["human_readable"] is not None
+                ):
+                    attr_comment = attr_schema["human_readable"]
+                else:
+                    attr_comment = None
                 # Return Attributes as (value, comment) tuple
-                template[attr_name] = (None, None)
+                template[attr_name] = (None, attr_comment)
         return template
 
     def measurement_attribute_template(self) -> OrderedDict:
@@ -406,9 +414,21 @@ class SWXSchema:
         for attr_name, attr_schema in self.variable_attribute_schema[
             "attribute_key"
         ].items():
-            if attr_schema["required"] and not attr_schema["derived"]:
+            if (
+                attr_schema["required"]
+                and not attr_schema["derived"]
+                and attr_name not in self.default_variable_attributes
+            ):
+                # Get the Human Readable Attribute Name as a Comment
+                if (
+                    "human_readable" in attr_schema
+                    and attr_schema["human_readable"] is not None
+                ):
+                    attr_comment = attr_schema["human_readable"]
+                else:
+                    attr_comment = None
                 # Return Attributes as (value, comment) tuple
-                template[attr_name] = (None, None)
+                template[attr_name] = (None, attr_comment)
         return template
 
     def global_attribute_info(self, attribute_name: Optional[str] = None) -> Table:

@@ -72,7 +72,7 @@ BTYPE:
   required: true # Mandatory data description keywords (sections 15, 5.1, 5.2, 5.6.2)
 BSCALE:
   data_type: float
-  default: null
+  default: 1.0
   derived: false
   description: The value of the pixel in the FITS file is given by BZERO + BSCALE * pixel value
   human_readable: Linear scaling factor

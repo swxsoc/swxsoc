@@ -452,6 +452,20 @@ class SWXData:
         # Measurement Attributes
         for data_structure in [self.timeseries, self.support, self.spectra]:
             for col in data_structure.keys():
+                # Update with Default Metadata
+                for attr_name, (
+                    attr_value,
+                    attr_comment,
+                ) in self.schema.default_variable_attributes.items():
+                    self._update_measurement_attribute(
+                        data_structure=data_structure,
+                        var_name=col,
+                        attr_name=attr_name,
+                        attr_value=attr_value,
+                        attr_comment=attr_comment,
+                    )
+
+                # Update with Derived Metadata
                 for attr_name, (
                     attr_value,
                     attr_comment,
@@ -911,7 +925,7 @@ class SWXData:
         file_extension: str = ".cdf",
     ):
         """
-        Save the data to a CDF file.
+        Save the data to a file.
 
         Parameters
         ----------

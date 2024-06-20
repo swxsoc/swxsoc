@@ -7,6 +7,7 @@ import astropy
 from spacepy.pycdf import CDF, CDFError
 from spacepy.pycdf.istp import FileChecks, VariableChecks
 
+from swxsoc import log
 from swxsoc.swxdata import SWXData
 from swxsoc.util.schema import SWXSchema
 
@@ -516,7 +517,7 @@ class FITSValidator(SWXDataValidator):
             "float": [float],
             "str": [str],
             "bool": [bool],
-            "date": [astropy.time.Time],
+            "date": [str, astropy.time.Time],
         }
 
     def validate(self, file_path: str) -> list[str]:
@@ -563,7 +564,11 @@ class FITSValidator(SWXDataValidator):
         # Loop for each attribute in the schema
         for attr_name, attr_schema in self.schema.global_attribute_schema.items():
             # If it is a required attribute and not present
-            if attr_schema["required"] and (attr_name not in fits_data.meta):
+            if (
+                attr_schema["required"]
+                and attr_name not in fits_data.meta
+                and attr_name.upper() not in fits_data.meta
+            ):
                 global_attr_validation_errors.append(
                     f"Required attribute ({attr_name}) not present in global attributes.",
                 )
@@ -659,7 +664,11 @@ class FITSValidator(SWXDataValidator):
                 attr_name
             ]
             # If it is a required attribute and not present
-            if attr_schema["required"] and attr_name not in var_data.meta:
+            if (
+                attr_schema["required"]
+                and attr_name not in var_data.meta
+                and attr_name.upper() not in var_data.meta
+            ):
                 variable_errors.append(
                     f"Variable: {var_name} missing '{attr_name}' attribute."
                 )

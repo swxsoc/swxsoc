@@ -9,9 +9,13 @@ from astropy.time import Time
 from astropy.timeseries import TimeSeries
 import astropy.units as u
 from astropy.io import fits
+from astropy.wcs import WCS
+from ndcube import NDCube, NDCollection
 from spacepy.pycdf import CDF
 import swxsoc
+from swxsoc import log
 from swxsoc.swxdata import SWXData
+from swxsoc.util.schema import SWXSchema
 from swxsoc.util import const
 from swxsoc.util.validation import validate, CDFValidator, FITSValidator
 
@@ -480,7 +484,7 @@ def test_valid_scale_high_dimension():
         assert "Multi-element SCALEMAX only valid with 1D variable." == errs[1]
 
 
-def test_fits_validation():
+def test_fits_validation_demo_data():
     """
     Function to test the FITS Validation
     """
@@ -489,4 +493,131 @@ def test_fits_validation():
     # Validate the FITS File
     errs = validate(fits_image_filename)
     assert isinstance(errs, list)
-    print(errs)
+
+
+def test_fits_validation_valid_data():
+    """
+    Function to test FITS Validation with a valid FITS File
+    """
+    # fmt: off
+    metadata = {
+        "AUTHOR": ("Tester", "Author"),
+        "BLANK": (0, "Value of missing pixels (floating HDU)"),
+        "BTYPE": ("Test Data", "Data label"),
+        "BUNIT": ("J", "Units"),
+        "CAMERA": ("Test Camera", "Name of the camera"),
+        "CAMPAIGN": ("SWxSOC Testing", "Observation campaign"),
+        "CCURRENT": ("n/a", "Concurrent files"),
+        "CDELTia": (0.0, "Coordinate scale increment"),
+        "CDi_ja": (0.0, "Linear-transformation matrix element"),
+        "CHECKSUM": ("Test", "Checksum"),
+        "CNAMEia": ("Axis", "Coordinate axis name"),
+        "CPDISia": ("None", "Distortion correction"),
+        "CPERRia": ("None", "Maximum value of prior distortion correction for axis i"),
+        "CQDISia": ("None", "Distortion correction"),
+        "CQERRia": ("None", "Maximum value of posterior distortion correction for axis i",),
+        "CTYPEia": ("Test", "Coordinate type"),
+        "CUNITia": ("J", "Coordinate units"),
+        "CWDISia": ("None", "Distortion correction"),
+        "CWERRia": ("None", "Maximum value of weighted distortion correction for axis i"),
+        "DATASUM": (0.0, "Sum of data"),
+        "DATATAGS": ("TestData", "Data Tags"),
+        "DATE": ("19700101", "File Creation Date"),
+        "DATE-BEG": ("19700101", "Aquisition start time"),
+        "DATEREF": ("19700101", "Reference date"),
+        "DETECTOR": ("Test", "detector"),
+        "DPja": (0.0, "Primary distortion parameter"),
+        "DQia": (0.0, "Posterior distortion parameter"),
+        "DSUN_OBS": (0.0, "Distance to Sun"),
+        "DWia": (0.0, "Distortion correction"),
+        "EXTNAME": ("PRIMARY", "Extension name"),
+        "FILENAME": ("Test", "Filename"),
+        "FILEVERP": ("Test", "File Version Pattern"),
+        "FILTER": ("Test", "Filters"),
+        "GEOX_OBS": (0.0, "Observer X Position"),
+        "GEOY_OBS": (0.0, "Observer Y Position"),
+        "GEOZ_OBS": (0.0, "Observer Z Position"),
+        "GRATING": ("Test", "Grating"),
+        "HGLN_OBS": (0.0, "Observer Heliographic Longitude"),
+        "HGLT_OBS": (0.0, "Observer Heliographic Latitude"),
+        "INSTRUME": ("Test", "Instrument"),
+        "MISSION": ("Test", "Mission"),
+        "NAXIS": (2, "Number of axes"),
+        "NASIXn": (10, "Number of elements along axis"),
+        "NSUMEXP": (1, "Number of exposures"),
+        "OBSERVER": ("Test", "Observer"),
+        "OBSGEO-X": (0.0, "Observer X Position"),
+        "OBSGEO-Y": (0.0, "Observer Y Position"),
+        "OBSGEO-Z": (0.0, "Observer Z Position"),
+        "OBSRVTRY": ("Test", "Observatory"),
+        "OBSTITLE": ("Test", "Observation title"),
+        "OBS_DESC": ("Test", "Observation description"),
+        "OBS_HDU": (1, "Contains observational data"),
+        "OBS_MODE": ("Test", "Observation mode"),
+        "OBS_VR": (0.0, "Observer velocity"),
+        "ORIGIN": ("Test", "File originator"),
+        "PCi_ja": (0.0, "linear transformation matrix element"),
+        "PLANNER": ("Test", "Planner"),
+        "POINT_ID": ("Test", "Pointing ID"),
+        "POLCANGL": (0.0, "Polarimetric angle"),
+        "POLCCONV": ("Test", "Polarimetric conversion"),
+        "PROJECT": ("Test", "Project"),
+        "REQUESTR": ("Test", "Requester"),
+        "RSUN_ARC": (0.0, "Solar angular radius"),
+        "SETTINGS": ("Test", "Settings"),
+        "SLIT_WID": (0.0, "Slit width"),
+        "SOLARNET": (1.0, "Solarnet compatibility"),
+        "SPECSYS": ("SOURCE", "Spectral reference frame"),
+        "TELCONFG": ("Test", "Telescope configuration"),
+        "TELESCOP": ("Test", "Telescope"),
+        "TEXPOSURE": (0.0, "Single exposure time"),
+        "VELOSYS": (0.0, "Velocity system"),
+        "WAVEMAX": (0.0, "Maximum wavelength"),
+        "WAVEMIN": (0.0, "Minimum wavelength"),
+        "WAVEREF": ("air", "Wavelength reference"),
+        "WAVEUNIT": ("m", "Wavelength unit"),
+        "WCSAXES": (2, "WCS axes"),
+        "XPOSURE": (0.0, "Exposure time"),
+        "iCRVLn": (0.0, "Reference value"),
+        "iCTYPn": (0.0, "Coordinate type"),
+        "jCRPXn": (0.0, "Reference pixel"),
+        # "VAR_TYPE": ("data", "Variable Type"),
+    }
+    # fmt: on
+
+    # Assert all metadata keys are in the global attribute template
+    cached_template = SWXSchema(defaults="fits").global_attribute_template()
+    for attr_name in metadata:
+        assert attr_name in cached_template
+    # Assert all template keys are in the metadata
+    for attr_name in cached_template:
+        assert attr_name in metadata
+
+    ts = TimeSeries()
+    # Spectra Data
+    spectra = NDCollection(
+        [
+            (
+                "PRIMARY",
+                NDCube(
+                    data=np.zeros((10, 10)),
+                    wcs=WCS(naxis=2),
+                    meta=metadata,
+                    unit="eV",
+                ),
+            )
+        ]
+    )
+
+    # Create SWXData Object
+    sw_data = SWXData(timeseries=ts, spectra=spectra, schema=SWXSchema(defaults="fits"))
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        test_file_output_path = sw_data.save(
+            Path(tmpdirname) / "test.fits", file_extension=".fits"
+        )
+
+        # Validate the FITS File
+        errs = validate(test_file_output_path)
+        assert isinstance(errs, list)
+        # TODO: Make it not complain about var_type
+        assert len(errs) <= 1

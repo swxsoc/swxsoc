@@ -83,10 +83,15 @@ def _init_log(config=None):
 
 def _config_to_loggerConf(config):
     """
-    Translates a user-provided config to ~`astropy.logger.LoggerConf`.
-    """
+    Translates a user-provided YAML config dictionary to `astropy.logger.LoggerConf`.
 
-    if config.has_section("logger"):
+    Parameters:
+    config (dict): Configuration dictionary loaded from a YAML file.
+
+    Returns:
+    LoggerConf: Configured LoggerConf object, or None if 'logger' section is missing.
+    """
+    if "logger" in config:
         from astropy.logger import Conf as LoggerConf
 
         conf = LoggerConf()
@@ -100,7 +105,11 @@ def _config_to_loggerConf(config):
             "log_file_level",
             "log_file_format",
         ]
+
+        # Iterate through each option and set it on the LoggerConf object if it exists
         for this_option in loggerconf_option_list:
-            if config.has_option("logger", this_option):
-                setattr(conf, this_option, config.get("logger", this_option))
-    return conf
+            if this_option in config["logger"]:
+                setattr(conf, this_option, config["logger"][this_option])
+        return conf
+    else:
+        return None

@@ -1,0 +1,24 @@
+general:
+  time_format: '%Y-%m-%d %H:%M:%S'
+logger:
+  log_exceptions: true
+  log_file_format: '%(asctime)s, %(origin)s, %(levelname)s, %(message)s'
+  log_file_level: INFO
+  log_file_path: swxsoc.log
+  log_level: INFO
+  log_to_file: true
+  log_warnings: true
+  use_color: true
+missions_data:
+  mission:
+    file_extension: .txt
+    instruments:
+    - fullname: Instrument 1
+      name: instrument1
+      shortname: ins1
+      targetname: INS1
+    - fullname: Instrument 2
+      name: instrument2
+      shortname: ins2
+      targetname: INS2
+selected_mission: mission

@@ -14,59 +14,52 @@ __all__ = ["create_science_filename", "parse_science_filename", "VALID_DATA_LEVE
 TIME_FORMAT_L0 = "%Y%j-%H%M%S"
 TIME_FORMAT = "%Y%m%dT%H%M%S"
 VALID_DATA_LEVELS = ["l0", "l1", "ql", "l2", "l3", "l4"]
-FILENAME_EXTENSIONS = [".cdf", ".fits", ".bin"]
+FILENAME_EXTENSION = ".cdf"
 
 
 def create_science_filename(
-    mission: str,
     instrument: str,
     time: str,
     level: str,
     version: str,
-    extension: str,
     mode: str = "",
     descriptor: str = "",
     test: bool = False,
 ):
     """Return a compliant filename. The format is defined as
 
-    {mission}_{inst}_{mode}_{level}{test}_{descriptor}_{time}_v{version}{extension}
+    {mission}_{inst}_{mode}_{level}{test}_{descriptor}_{time}_v{version}.cdf
 
     This format is only appropriate for data level >= 1.
 
     Parameters
     ----------
-    mission: `str`
-        The mission/project name.
     instrument : `str`
-        The instrument name.
+        The instrument name. Must be one of the following "eea", "nemesis", "merit", "spani"
     time : `str` (in isot format) or ~astropy.time
         The time
     level : `str`
         The data level. Must be one of the following "l0", "l1", "l2", "l3", "l4", "ql"
     version : `str`
         The file version which must be given as X.Y.Z
-    extension : `str`
-        The file extension. Must be one of the following: ".cdf", ".fits", ".bin"
     descriptor : `str`
-        An optional file descriptor. Must not contain the underscore symbol '_'.
+        An optional file descriptor.
     mode : `str`
-        An optional instrument mode. Must not contain the underscore symbol '_'.
+        An optional instrument mode.
     test : bool
         Selects whether the file is a test file.
 
     Returns
     -------
     filename : `str`
-        A file name including the given parameters that matches the file naming conventions
+        A CDF file name including the given parameters that matches the mission's file naming conventions
 
     Raises
     ------
     ValueError: If the instrument is not recognized as one of the mission's instruments
-    ValueError: If the data level is not recognized as one of the valid data levels
-    ValueError: If the data version does not match the data version formatting conventions
-    ValueError: If the data product descriptor or instrument mode do not match the formatting conventions
-    ValueError: If the file extension is not recognized
+    ValueError: If the data level is not recognized as one of the mission's valid data levels
+    ValueError: If the data version does not match the mission's data version formatting conventions
+    ValueError: If the data product descriptor or instrument mode do not match the mission's formatting conventions
     """
     test_str = ""
 
@@ -75,36 +68,25 @@ def create_science_filename(
     else:
         time_str = time.strftime(TIME_FORMAT)
 
-    # check that the instrument is valid
     if instrument not in swxsoc.config["mission"]["inst_names"]:
         raise ValueError(
             f"Instrument, {instrument}, is not recognized. Must be one of {swxsoc.config['mission']['inst_names']}."
         )
-
-    # check that level is valid
     if level not in VALID_DATA_LEVELS[1:]:
         raise ValueError(
             f"Level, {level}, is not recognized. Must be one of {VALID_DATA_LEVELS[1:]}."
         )
-
     # check that version is in the right format with three parts
     if len(version.split(".")) != 3:
         raise ValueError(
             f"Version, {version}, is not formatted correctly. Should be X.Y.Z"
         )
-
     # check that version has integers in each part
     for item in version.split("."):
         try:
             int_value = int(item)
         except ValueError:
             raise ValueError(f"Version, {version}, is not all integers.")
-
-    # check that the extension is valid
-    if extension not in FILENAME_EXTENSIONS:
-        raise ValueError(
-            f"Extension, {extension}, is not recognized. Must be one of {FILENAME_EXTENSIONS}."
-        )
 
     if test is True:
         test_str = "test"
@@ -115,19 +97,15 @@ def create_science_filename(
             "The underscore symbol _ is not allowed in mode or descriptor."
         )
 
-    filename = f"{mission}_{swxsoc.config['mission']['inst_to_shortname'][instrument]}_{mode}_{level}{test_str}_{descriptor}_{time_str}_v{version}{extension}"
+    filename = f"{swxsoc.config['mission']['mission_name']}_{swxsoc.config['mission']['inst_to_shortname'][instrument]}_{mode}_{level}{test_str}_{descriptor}_{time_str}_v{version}"
     filename = filename.replace("__", "_")  # reformat if mode or descriptor not given
 
-    return filename
+    return filename + swxsoc.config["mission"]["file_extension"]
 
 
 def parse_science_filename(filepath: str) -> dict:
     """
-    Parses a science filename, given in the required file name format, into its constituent properties (mission, instrument, mode, test, time, level, version, descriptor, extension).
-
-    The required file name format is defined as:
-
-    {mission}_{inst}_{mode}_{level}{test}_{descriptor}_{time}_v{version}{extension}
+    Parses a science filename into its consitutient properties (instrument, mode, test, time, level, version, descriptor).
 
     Parameters
     ----------
@@ -141,21 +119,20 @@ def parse_science_filename(filepath: str) -> dict:
 
     Raises
     ------
-    ValueError: If the file's mission name does not match the conigured mission name
+    ValueError: If the file's mission name is not "swxsoc"
     ValueError: If the file's instreument name is not one of the mission's instruments
     ValueError: If the data level >0 for packet files
+    ValueError: If not a CDF File
     """
 
     result = {
-        "mission": "",
-        "instrument": "",
-        "mode": "",
+        "instrument": None,
+        "mode": None,
         "test": False,
-        "time": "",
-        "level": "",
-        "version": "",
-        "descriptor": "",
-        "extension": "",
+        "time": None,
+        "level": None,
+        "version": None,
+        "descriptor": None,
     }
 
     filename = os.path.basename(filepath)
@@ -163,13 +140,10 @@ def parse_science_filename(filepath: str) -> dict:
 
     filename_components = file_name.split("_")
 
-    # check that the mission is valid
     if filename_components[0] != swxsoc.config["mission"]["mission_name"]:
         raise ValueError(f"File {filename} not recognized. Not a valid mission name.")
 
     if file_ext == ".bin":
-
-        # check that the instrument is valid
         if filename_components[1] not in swxsoc.config["mission"]["inst_targetnames"]:
             raise ValueError(
                 f"File {filename} not recognized. Not a valid target name."
@@ -193,7 +167,7 @@ def parse_science_filename(filepath: str) -> dict:
 
         result["time"] = Time.strptime(filename_components[3 + offset], TIME_FORMAT_L0)
 
-    elif file_ext == ".cdf":
+    elif file_ext == swxsoc.config["mission"]["file_extension"]:
         if filename_components[1] not in swxsoc.config["mission"]["inst_shortnames"]:
             raise ValueError(
                 "File {filename} not recognized. Not a valid instrument name."
@@ -224,9 +198,7 @@ def parse_science_filename(filepath: str) -> dict:
     else:
         raise ValueError(f"File extension {file_ext} not recognized.")
 
-    result["mission"] = filename_components[0]
     result["instrument"] = from_shortname[filename_components[1]]
     result["version"] = filename_components[-1][1:]  # remove the v
-    result["extension"] = file_ext
 
     return result

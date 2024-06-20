@@ -48,9 +48,16 @@ def get_test_sw_data():
     return sw_data
 
 
-def test_sw_data_cdf_defaults():
+@pytest.mark.parametrize(
+    "defaults",
+    [
+        ("cdf"),
+        ("fits"),
+    ],
+)
+def test_sw_data_defaults(defaults):
     """Test Schema Template and Info Functions for CDF Attributes"""
-    schema = SWXSchema(defaults="cdf")
+    schema = SWXSchema(defaults=defaults)
 
     # Global Attribute Schema
     assert schema.global_attribute_schema is not None
@@ -63,6 +70,10 @@ def test_sw_data_cdf_defaults():
     # Default Global Attributes
     assert schema.default_global_attributes is not None
     assert isinstance(schema.default_global_attributes, dict)
+
+    # Default Variable Attributes
+    assert schema.default_variable_attributes is not None
+    assert isinstance(schema.default_variable_attributes, dict)
 
     # Global Attribute Template
     assert schema.global_attribute_template() is not None
@@ -75,43 +86,30 @@ def test_sw_data_cdf_defaults():
     # Global Attribute Info
     assert schema.global_attribute_info() is not None
     assert isinstance(schema.global_attribute_info(), Table)
-    assert isinstance(schema.global_attribute_info(attribute_name="Descriptor"), Table)
+    if defaults == "cdf":
+        assert isinstance(
+            schema.global_attribute_info(attribute_name="Descriptor"), Table
+        )
+    if defaults == "fits":
+        assert isinstance(
+            schema.global_attribute_info(attribute_name="INSTRUME"), Table
+        )
     with pytest.raises(KeyError):
         _ = schema.global_attribute_info(attribute_name="NotAnAttribute")
 
     # Measurement Attribute Info
     assert schema.measurement_attribute_info() is not None
     assert isinstance(schema.measurement_attribute_info(), Table)
-    assert isinstance(
-        schema.measurement_attribute_info(attribute_name="CATDESC"), Table
-    )
+    if defaults == "cdf":
+        assert isinstance(
+            schema.measurement_attribute_info(attribute_name="CATDESC"), Table
+        )
+    if defaults == "fits":
+        assert isinstance(
+            schema.measurement_attribute_info(attribute_name="WCSAXES"), Table
+        )
     with pytest.raises(KeyError):
         _ = schema.measurement_attribute_info(attribute_name="NotAnAttribute")
-
-
-def test_sw_data_fits_defaults():
-    """Test Schema Template and Info Functions for FITS Attributes"""
-    schema = SWXSchema(defaults="fits")
-
-    # Global Attribute Schema
-    assert schema.global_attribute_schema is not None
-    assert isinstance(schema.global_attribute_schema, dict)
-
-    # Variable Attribute Schema
-    assert schema.variable_attribute_schema is not None
-    assert isinstance(schema.variable_attribute_schema, dict)
-
-    # Default Global Attributes
-    assert schema.default_global_attributes is not None
-    assert isinstance(schema.default_global_attributes, dict)
-
-    # Global Attribute Template
-    assert schema.global_attribute_template() is not None
-    assert isinstance(schema.global_attribute_template(), OrderedDict)
-
-    # Measurement Attribute Template
-    assert schema.measurement_attribute_template() is not None
-    assert isinstance(schema.measurement_attribute_template(), OrderedDict)
 
 
 def test_load_yaml_data():

@@ -8,6 +8,7 @@ attribute_key:
         The value field shall contain a non-negative integer no
         greater than 999, representing the number of axes in the associated
         data array.
+      human_readable: WCS axes
       derived: false
       derivation_fn: _get_wcs_naxis
       required: false

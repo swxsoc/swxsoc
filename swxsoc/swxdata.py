@@ -5,7 +5,8 @@ Container class for Measurement Data.
 from pathlib import Path
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Optional, Union
+from typing import Optional, Union, Any
+import astropy.timeseries
 import numpy as np
 import astropy
 from astropy.time import Time
@@ -17,6 +18,7 @@ from astropy import units as u
 import ndcube
 from ndcube import NDCube, NDCollection
 import swxsoc
+from swxsoc import log
 from swxsoc.util.io import CDFHandler, FITSHandler
 from swxsoc.util.schema import SWXSchema
 from swxsoc.util.exceptions import warn_user
@@ -434,19 +436,26 @@ class SWXData:
         """
 
         # Get Default Metadata
-        for attr_name, attr_value in self.schema.default_global_attributes.items():
-            self._update_global_attribute(attr_name, (attr_value, ""))
+        for attr_name, (
+            attr_value,
+            attr_comment,
+        ) in self.schema.default_global_attributes.items():
+            self._update_global_attribute(attr_name, attr_value, attr_comment)
 
         # Global Attributes
-        for attr_name, attr_value in self.schema.derive_global_attributes(
-            self._timeseries
-        ).items():
-            self._update_global_attribute(attr_name, attr_value)
+        for attr_name, (
+            attr_value,
+            attr_comment,
+        ) in self.schema.derive_global_attributes(self._timeseries).items():
+            self._update_global_attribute(attr_name, attr_value, attr_comment)
 
         # Measurement Attributes
         for data_structure in [self.timeseries, self.support, self.spectra]:
             for col in data_structure.keys():
-                for attr_name, attr_value in self.schema.derive_measurement_attributes(
+                for attr_name, (
+                    attr_value,
+                    attr_comment,
+                ) in self.schema.derive_measurement_attributes(
                     data_structure, col
                 ).items():
                     self._update_measurement_attribute(
@@ -454,6 +463,7 @@ class SWXData:
                         var_name=col,
                         attr_name=attr_name,
                         attr_value=attr_value,
+                        attr_comment=attr_comment,
                     )
 
     @staticmethod
@@ -473,48 +483,94 @@ class SWXData:
             else:
                 current_meta[key] = (value, "")
 
-    def _update_global_attribute(self, attr_name, attr_value):
+    # TODO: Update the attribute value type hinting with the allowed data types
+    def _update_global_attribute(
+        self, attr_name: str, attr_value: Any, attr_comment: Optional[str] = None
+    ):
+        """
+        Function to update global attributes in the data file.
+
+        Parameters
+        ----------
+        attr_name : `str`
+            The attribute name to update.
+        attr_value : Any
+            The attribute value to update.
+        attr_comment : `str`, optional
+            The attribute comment to update.
+        """
         # If the attribute is set, check if we want to overwrite it
         if (
-            attr_name in self._timeseries.meta
-            and self._timeseries.meta[attr_name] is not None
+            attr_name in self.meta
+            and self.meta[attr_name][0] is not None
+            and attr_name in self.schema.global_attribute_schema
         ):
             # We want to overwrite if:
-            #   1) The actual value is not the derived value
-            #   2) The schema marks this attribute to be overwriten
+            # 1) The attribute is not NOT in the Schema
+            # OR
+            # 2) The attribute is in the Schema
+            #   2a) The actual value is not the derived value
+            #   AND
+            #   2b) The schema marks this attribute to be overwritten
             if (
-                self._timeseries.meta[attr_name] != attr_value
+                self.meta[attr_name][0] != attr_value
+                and "overwrite" in self.schema.global_attribute_schema[attr_name]
                 and self.schema.global_attribute_schema[attr_name]["overwrite"]
             ):
-                warn_user(
-                    f"Overriding Global Attribute {attr_name} : {self._timeseries.meta[attr_name]} -> {attr_value}"
+                log.debug(
+                    f"Overriding Global Attribute {attr_name} : {self.meta[attr_name]} -> {attr_value}"
                 )
-                self._timeseries.meta[attr_name] = attr_value
+                self.meta[attr_name] = (attr_value, attr_comment)
         # If the attribute is not set, set it
         else:
-            self._timeseries.meta[attr_name] = attr_value
+            self.meta[attr_name] = (attr_value, attr_comment)
 
+    # TODO: Update the attribute value type hinting with the allowed data types
     def _update_measurement_attribute(
-        self, data_structure, var_name, attr_name, attr_value
+        self,
+        data_structure: Union[TimeSeries, dict, NDCollection],
+        var_name: str,
+        attr_name: str,
+        attr_value: Any,
+        attr_comment: Optional[str] = None,
     ):
+        """
+        Function to update measurement attributes in the data file.
+
+        Parameters
+        ----------
+        data_structure : `Union[TimeSeries, dict, NDCollection]`
+            The data structure to update.
+        var_name : `str`
+            The variable name to update.
+        attr_name : `str`
+            The attribute name to update.
+        attr_value : Any
+            The attribute value to update.
+        attr_comment : `str`, optional
+            The attribute comment to update.
+        """
+        # If the attribute is set, check if we want to overwrite it
         if (
             attr_name in data_structure[var_name].meta
-            and data_structure[var_name].meta[attr_name] is not None
+            and data_structure[var_name].meta[attr_name][0] is not None
             and attr_name in self.schema.variable_attribute_schema["attribute_key"]
         ):
             attr_schema = self.schema.variable_attribute_schema["attribute_key"][
                 attr_name
             ]
             if (
-                data_structure[var_name].meta[attr_name] != attr_value
+                data_structure[var_name].meta[attr_name][0] != attr_value
+                and "overwrite" in attr_schema
                 and attr_schema["overwrite"]
             ):
-                warn_user(
+                log.debug(
                     f"Overriding Measurement {var_name} Attribute {attr_name} : {data_structure[var_name].meta[attr_name]} -> {attr_value}"
                 )
-                data_structure[var_name].meta[attr_name] = attr_value
+                data_structure[var_name].meta[attr_name] = (attr_value, attr_comment)
+        # If the attribute is not set, set it
         else:
-            data_structure[var_name].meta[attr_name] = attr_value
+            data_structure[var_name].meta[attr_name] = (attr_value, attr_comment)
 
     def add_measurement(self, measure_name: str, data: u.Quantity, meta: dict = None):
         """

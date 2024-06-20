@@ -185,7 +185,10 @@ class SWXSchema:
         self._variable_attr_schema = _variable_attr_schema
 
         # Load Default Global Attributes
-        self._default_global_attributes = self._load_default_attributes()
+        self._default_global_attributes = self._load_default_global_attributes()
+
+        # Load Default Measurement Attributes
+        self._default_variable_attributes = self._load_default_variable_attributes()
 
         self.cdftypenames = {
             const.CDF_BYTE.value: "CDF_BYTE",
@@ -258,6 +261,11 @@ class SWXSchema:
         """(`dict`) Default Global Attributes applied for all SWxSOC Data Files"""
         return self._default_global_attributes
 
+    @property
+    def default_variable_attributes(self):
+        """(`dict`) Default Variable Attributes applied for all SWxSOC Data Files"""
+        return self._default_variable_attributes
+
     def _load_default_cdf_global_attr_schema(self) -> dict:
         # The Default Schema file is contained in the `swxsoc/data` directory
         default_schema_path = str(
@@ -296,14 +304,45 @@ class SWXSchema:
         # Load the Schema
         return self._load_yaml_data(yaml_file_path=default_schema_path)
 
-    def _load_default_attributes(self) -> dict:
-        # Use the Existing Global Schema
-        global_schema = self.global_attribute_schema
-        return {
-            attr_name: info["default"]
-            for attr_name, info in global_schema.items()
-            if info["default"] is not None
-        }
+    def _load_default_global_attributes(self) -> OrderedDict:
+        default_global_attributes = OrderedDict()
+        # Loop through all attributes in global attribute schema
+        for attr_name, attr_schema in self.global_attribute_schema.items():
+            if "default" in attr_schema and attr_schema["default"] is not None:
+                # Get the Default Value
+                attr_value = attr_schema["default"]
+                # Get the Human Readable Attribute Name as a Comment
+                if (
+                    "human_readable" in attr_schema
+                    and attr_schema["human_readable"] is not None
+                ):
+                    attr_comment = attr_schema["human_readable"]
+                else:
+                    attr_comment = None
+                # Return Default Global Attributes as (value, comment) tuple
+                default_global_attributes[attr_name] = (attr_value, attr_comment)
+        return default_global_attributes
+
+    def _load_default_variable_attributes(self) -> OrderedDict:
+        default_variable_attributes = OrderedDict()
+        # Loop through all attributes in variable attribute schema
+        for attr_name, attr_schema in self.variable_attribute_schema[
+            "attribute_key"
+        ].items():
+            if "default" in attr_schema and attr_schema["default"] is not None:
+                # Get the Default Value
+                attr_value = attr_schema["default"]
+                # Get the Human Readable Attribute Name as a Comment
+                if (
+                    "human_readable" in attr_schema
+                    and attr_schema["human_readable"] is not None
+                ):
+                    attr_comment = attr_schema["human_readable"]
+                else:
+                    attr_comment = None
+                # Return Default Variable Attributes as (value, comment) tuple
+                default_variable_attributes[attr_name] = (attr_value, attr_comment)
+        return default_variable_attributes
 
     def _load_yaml_data(self, yaml_file_path: str) -> dict:
         """
@@ -340,13 +379,13 @@ class SWXSchema:
             A template for required global attributes that must be provided.
         """
         template = OrderedDict()
-        default_global_attributes = self._load_default_attributes()
         for attr_name, attr_schema in self.global_attribute_schema.items():
             if (
                 attr_schema["required"]
                 and not attr_schema["derived"]
-                and attr_name not in default_global_attributes
+                and attr_name not in self.default_global_attributes
             ):
+                # Return Attributes as (value, comment) tuple
                 template[attr_name] = (None, None)
         return template
 
@@ -368,23 +407,14 @@ class SWXSchema:
             "attribute_key"
         ].items():
             if attr_schema["required"] and not attr_schema["derived"]:
+                # Return Attributes as (value, comment) tuple
                 template[attr_name] = (None, None)
         return template
 
     def global_attribute_info(self, attribute_name: Optional[str] = None) -> Table:
         """
         Function to generate a `astropy.table.Table` of information about each global
-        metadata attribute. The `astropy.table.Table` contains all information in the SWxSOC
-        global attribute schema including:
-
-        - description: (`str`) A brief description of the attribute
-        - default: (`str`) The default value used if none is provided
-        - derived: (`bool`) Whether the attibute can be derived by the SWxSOC
-            :py:class:`~swxsoc.util.schema.SWXSchema` class
-        - required: (`bool`) Whether the attribute is required by SWxSOC standards
-        - overwrite: (`bool`) Whether the :py:class:`~swxsoc.util.schema.SWXSchema`
-            attribute derivations will overwrite an existing attribute value with an updated
-            attribute value from the derivation process.
+        metadata attribute. The `astropy.table.Table` contains all information in the SWxSOC global attribute schema including:
 
         Parameters
         ----------
@@ -415,7 +445,8 @@ class SWXSchema:
         # Add the Attribute Name as a Column
         info.add_column(col=attribute_names, name="Attribute", index=0)
         # Remove the Derivation Function Column, since this is not needed for the Docs
-        info.remove_column("derivation_fn")
+        if "derivation_fn" in info.colnames:
+            info.remove_column("derivation_fn")
 
         # Limit the Info to the requested Attribute
         if attribute_name and attribute_name in info["Attribute"]:
@@ -430,23 +461,7 @@ class SWXSchema:
     def measurement_attribute_info(self, attribute_name: Optional[str] = None) -> Table:
         """
         Function to generate a `astropy.table.Table` of information about each variable
-        metadata attribute. The `astropy.table.Table` contains all information in the SWxSOC
-        variable attribute schema including:
-
-        - description: (`str`) A brief description of the attribute
-        - derived: (`bool`) Whether the attibute can be derived by the SWxSOC
-            :py:class:`~swxsoc.util.schema.SWXSchema` class
-        - required: (`bool`) Whether the attribute is required by SWxSOC standards
-        - overwrite: (`bool`) Whether the :py:class:`~swxsoc.util.schema.SWXSchema`
-            attribute derivations will overwrite an existing attribute value with an updated
-            attribute value from the derivation process.
-        - valid_values: (`str`) List of allowed values the attribute can take for SWxSOC products,
-            if applicable
-        - alternate: (`str`) An additional attribute name that can be treated as an alternative
-            of the given attribute. Not all attributes have an alternative and only one of a given
-            attribute or its alternate are required.
-        - var_types: (`str`) A list of the variable types that require the given
-            attribute to be present.
+        metadata attribute. The `astropy.table.Table` contains all information in the SWxSOC variable attribute schema including:
 
         Parameters
         ----------
@@ -492,7 +507,10 @@ class SWXSchema:
         # Add the Attribute Name as a Column
         info.add_column(col=attribute_names, name="Attribute", index=0)
         # Remove the Derivation Function Column, since this is not needed for the Docs
-        info.remove_columns(["derivation_fn", "iterable"])
+        if "derivation_fn" in info.colnames:
+            info.remove_column("derivation_fn")
+        if "iterable" in info.colnames:
+            info.remove_column("iterable")
 
         # Limit the Info to the requested Attribute
         if attribute_name and attribute_name in info["Attribute"]:

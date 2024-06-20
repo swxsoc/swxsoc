@@ -1,15 +1,19 @@
 from pathlib import Path
 from abc import ABC, abstractmethod
 import numpy as np
-from typing import Union
+from typing import Optional
+
+import astropy
 from spacepy.pycdf import CDF, CDFError
 from spacepy.pycdf.istp import FileChecks, VariableChecks
+
+from swxsoc.swxdata import SWXData
 from swxsoc.util.schema import SWXSchema
 
 __all__ = ["validate", "SWXDataValidator", "CDFValidator"]
 
 
-def validate(filepath: str) -> list[str]:
+def validate(filepath: str, schema: Optional[SWXSchema] = None) -> list[str]:
     """
     Validate a data file such as a CDF.
 
@@ -17,6 +21,8 @@ def validate(filepath: str) -> list[str]:
     ----------
     filepath : `str`
         A fully specificed file path.
+    schema : `Optional[SWXSchema]`
+        Optional custom schema to use for validation. If not provided, the default schema will be used for either CDF or FITS file types.
 
     Returns
     -------
@@ -28,7 +34,9 @@ def validate(filepath: str) -> list[str]:
 
     # Create the appropriate validator object based on file type
     if file_extension == ".cdf":
-        validator = CDFValidator()
+        validator = CDFValidator(schema=schema)
+    elif file_extension == ".fits":
+        validator = FITSValidator(schema=schema)
     else:
         raise ValueError(f"Unsupported file type: {file_extension}")
 
@@ -59,16 +67,29 @@ class SWXDataValidator(ABC):
         pass
 
 
+# =============================================================================================
+#                             CDF FILE VALIDATION
+# =============================================================================================
+
+
 class CDFValidator(SWXDataValidator):
     """
     Validator for CDF files.
+
+    Parameters
+    ----------
+    schema : `Optional[SWXSchema]`
+        Optional custom schema to use for validation. If not provided, the default CDF schema will be used.
     """
 
-    def __init__(self):
+    def __init__(self, schema: Optional[SWXSchema] = None):
         super().__init__()
 
         # CDF Schema
-        self.schema = SWXSchema()
+        if schema is not None:
+            self.schema = schema
+        else:
+            self.schema = SWXSchema(defaults="cdf")
 
     def validate(self, file_path: str) -> list[str]:
         """
@@ -120,13 +141,13 @@ class CDFValidator(SWXDataValidator):
         # Loop for each attribute in the schema
         for attr_name, attr_schema in self.schema.global_attribute_schema.items():
             # If it is a required attribute and not present
-            if attr_schema["validate"] and (attr_name not in cdf_file.attrs):
+            if attr_schema["required"] and (attr_name not in cdf_file.attrs):
                 global_attr_validation_errors.append(
                     f"Required attribute ({attr_name}) not present in global attributes.",
                 )
             # If it is a required attribute but null
             if (
-                attr_schema["validate"]
+                attr_schema["required"]
                 and (attr_name in cdf_file.attrs)
                 and (
                     (cdf_file.attrs[attr_name][0] == "")
@@ -151,7 +172,6 @@ class CDFValidator(SWXDataValidator):
             var_data = cdf_file[var_name]
 
             # Get the Variable Type to compare the required attributes
-            var_type = ""
             if "VAR_TYPE" in var_data.attrs:
                 var_type = var_data.attrs["VAR_TYPE"]
                 variable_errors = self._validate_variable(cdf_file, var_name, var_type)
@@ -464,3 +484,223 @@ class CDFValidator(SWXDataValidator):
             if np.any(v.attrs[whichmin] > v.attrs[whichmax]):
                 errs.append("{} > {}.".format(whichmin, whichmax))
         return errs
+
+
+# =============================================================================================
+#                             FITS FILE VALIDATION
+# =============================================================================================
+
+
+class FITSValidator(SWXDataValidator):
+    """
+    Validator for FITS files.
+
+    Parameters
+    ----------
+    schema : `Optional[SWXSchema]`
+        Optional custom schema to use for validation. If not provided, the default FITS/SOLARNET schema will be used.
+    """
+
+    def __init__(self, schema: Optional[SWXSchema] = None):
+        super().__init__()
+
+        # FITS Schema
+        if schema is not None:
+            self.schema = schema
+        else:
+            self.schema = SWXSchema(defaults="fits")
+
+        # Mapping for string of data type name to the python class object
+        self.data_type_mapping = {
+            "int": [int],
+            "float": [float],
+            "str": [str],
+            "bool": [bool],
+            "date": [astropy.time.Time],
+        }
+
+    def validate(self, file_path: str) -> list[str]:
+        """
+        Validate the FITS file.
+
+        Parameters
+        ----------
+        file_path : `str`
+            The path to the FITS file.
+
+        Returns
+        -------
+        errors : `list[str]`
+            A list of validation errors returned. A valid file will result in an emppty list being returned.
+        """
+        # Initialize Validation Errrors
+        validation_errors = []
+
+        # Open the FITS File using SWxData
+        fits_data = SWXData.load(file_path)
+
+        # Verify that all `required` global attributes in the schema are present
+        global_attr_validation_errors = self._validate_global_attr_schema(
+            fits_data=fits_data
+        )
+        validation_errors.extend(global_attr_validation_errors)
+
+        # Verify that all `required` variable attributes in the schema are present
+        variable_attr_validation_errors = self._validate_variable_attr_schema(
+            fits_data=fits_data
+        )
+        validation_errors.extend(variable_attr_validation_errors)
+
+        return validation_errors
+
+    def _validate_global_attr_schema(self, fits_data: SWXData) -> list[str]:
+        """
+        Function to ensure all required global attributes in the schema are present
+        in the generated FITS File.
+        """
+        global_attr_validation_errors = []
+
+        # Loop for each attribute in the schema
+        for attr_name, attr_schema in self.schema.global_attribute_schema.items():
+            # If it is a required attribute and not present
+            if attr_schema["required"] and (attr_name not in fits_data.meta):
+                global_attr_validation_errors.append(
+                    f"Required attribute ({attr_name}) not present in global attributes.",
+                )
+            # If it is a required attribute but null
+            elif (
+                attr_schema["required"]
+                and (attr_name in fits_data.meta)
+                and (
+                    (fits_data.meta[attr_name] == "")
+                    or (fits_data.meta[attr_name] is None)
+                )
+            ):
+                global_attr_validation_errors.append(
+                    f"Required attribute ({attr_name}) not present in global attributes.",
+                )
+            # Assume that the Attribue is Present in the metadata for the Variable
+            elif attr_name in fits_data.meta:
+                # If the Var Data can be Validated
+                if (
+                    "valid_values" in attr_schema
+                    and attr_schema["valid_values"] is not None
+                ):
+                    attr_valid_values = attr_schema["valid_values"]
+                    attr_value, attr_comment = fits_data.meta[attr_name]
+                    if attr_value not in attr_valid_values:
+                        global_attr_validation_errors.append(
+                            (
+                                f"Global Attribute '{attr_name}' not one of valid options.",
+                                f"Was {attr_value}, expected one of {attr_valid_values}",
+                            )
+                        )
+                # Check the data type of the attribute
+                if "data_type" in attr_schema and attr_schema["data_type"] is not None:
+                    attr_data_type = attr_schema["data_type"]
+                    attr_value, attr_comment = fits_data.meta[attr_name]
+                    if type(attr_value) not in self.data_type_mapping[attr_data_type]:
+                        global_attr_validation_errors.append(
+                            (
+                                f"Global Attribute '{attr_name}' has incorrect data type.",
+                                f"Was {type(attr_value)}, expected one of {self.data_type_mapping[attr_data_type]}",
+                            )
+                        )
+
+        return global_attr_validation_errors
+
+    def _validate_variable_attr_schema(self, fits_data: SWXData) -> list[str]:
+        """
+        Function to ensure all required variable attributes in the schema are present
+        in the generated FITS file.
+        """
+        variable_attr_validation_errors = []
+
+        # Loop for each Variable in the FITS File
+        for data_structure in [
+            fits_data.timeseries,
+            fits_data.support,
+            fits_data.spectra,
+        ]:
+            for var_name in data_structure.keys():
+                # Get the `Var()` Class for the Variable
+                var_data = fits_data[var_name]
+
+                # Get the Variable Type to compare the required attributes
+                if "VAR_TYPE" in var_data.meta:
+                    var_type = var_data.meta["VAR_TYPE"]
+                    variable_errors = self._validate_variable(
+                        fits_data, var_name, var_type
+                    )
+                    variable_attr_validation_errors.extend(variable_errors)
+                else:
+                    variable_attr_validation_errors.append(
+                        f"Variable: {var_name} missing 'VAR_TYPE' attribute. Cannot Validate Variable."
+                    )
+
+        return variable_attr_validation_errors
+
+    def _validate_variable(
+        self, fits_data: SWXData, var_name: str, var_type: str
+    ) -> list[str]:
+        """
+        Function to Validate an individual Variable.
+        """
+        variable_errors = []
+        # Get the Expected Attributes for the Variable Type
+        var_type_attrs = self.schema.variable_attribute_schema[var_type]
+
+        # Get the `Var()` Class for the Variable
+        var_data = fits_data[var_name]
+
+        # Loop for each Variable Attribute in the schema
+        for attr_name in var_type_attrs:
+            attr_schema = self.schema.variable_attribute_schema["attribute_key"][
+                attr_name
+            ]
+            # If it is a required attribute and not present
+            if attr_schema["required"] and attr_name not in var_data.meta:
+                variable_errors.append(
+                    f"Variable: {var_name} missing '{attr_name}' attribute."
+                )
+            # If it is a required attribute but null
+            elif (
+                attr_schema["required"]
+                and attr_name in var_data.meta
+                and (
+                    (var_data.meta[attr_name] == "")
+                    or (var_data.meta[attr_name] is None)
+                )
+            ):
+                variable_errors.append(
+                    f"Variable: {var_name} missing '{attr_name}' attribute."
+                )
+            # Assume that the Attribue is Present in the metadata for the Variable
+            elif attr_name in var_data.meta:
+                # If the Var Data can be Validated
+                if (
+                    "valid_values" in attr_schema
+                    and attr_schema["valid_values"] is not None
+                ):
+                    attr_valid_values = attr_schema["valid_values"]
+                    attr_value, attr_comment = var_data.meta[attr_name]
+                    if attr_value not in attr_valid_values:
+                        variable_errors.append(
+                            (
+                                f"Variable: {var_name} Attribute '{attr_name}' not one of valid options.",
+                                f"Was {attr_value}, expected one of {attr_valid_values}",
+                            )
+                        )
+                # Check the data type of the attribute
+                if "data_type" in attr_schema and attr_schema["data_type"] is not None:
+                    attr_data_type = attr_schema["data_type"]
+                    attr_value, attr_comment = var_data.meta[attr_name]
+                    if type(attr_value) not in self.data_type_mapping[attr_data_type]:
+                        variable_errors.append(
+                            (
+                                f"Variable: {var_name} Attribute '{attr_name}' has incorrect data type.",
+                                f"Was {type(attr_value)}, expected one of {self.data_type_mapping[attr_data_type]}",
+                            )
+                        )
+
+        return variable_errors

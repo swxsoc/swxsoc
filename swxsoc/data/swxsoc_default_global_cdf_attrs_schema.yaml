@@ -5,7 +5,6 @@ CDF_Lib_version:
   derived: true
   derivation_fn: _get_cdf_lib_version
   required: false
-  validate: false
   overwrite: false
 Data_level:
   description: >
@@ -20,7 +19,6 @@ Data_level:
   default: null
   derived: false
   required: true 
-  validate: true
   overwrite: true
 Data_product_descriptor:
   description: > 
@@ -30,7 +28,6 @@ Data_product_descriptor:
   default: null
   derived: false
   required: false # NOT Required in ISTP Guide (Derived)
-  validate: false
   overwrite: true
 Data_type:
   description: >
@@ -41,7 +38,6 @@ Data_type:
   derived: true
   derivation_fn: _get_data_type
   required: true
-  validate: true
   overwrite: true
 Data_version:
   description: >
@@ -49,7 +45,6 @@ Data_version:
   default: null
   derived: false
   required: true
-  validate: true
   overwrite: false
 Descriptor:
   description: >
@@ -63,7 +58,6 @@ Descriptor:
   default: null
   derived: false
   required: true
-  validate: true
   overwrite: false
 Discipline:
   description: >
@@ -72,7 +66,6 @@ Discipline:
   default: null
   derived: false
   required: true
-  validate: true
   overwrite: false
 Generation_date:
   description: >
@@ -81,7 +74,6 @@ Generation_date:
   derived: true
   derivation_fn: _get_generation_date
   required: false # NOT Required in ISTP Guide (Recommended)
-  validate: false
   overwrite: true
 SWxSOC_version:
   description: >
@@ -90,7 +82,6 @@ SWxSOC_version:
   derived: true
   derivation_fn: _get_swxsoc_version
   required: false # NOT Required in ISTP Guide (Derived)
-  validate: false
   overwrite: false
 Instrument_type:
   description: > 
@@ -103,7 +94,6 @@ Instrument_type:
   default: null
   derived: false
   required: true
-  validate: true
   overwrite: false
 Logical_file_id:
   description: >
@@ -114,7 +104,6 @@ Logical_file_id:
   derived: true
   derivation_fn: _get_logical_file_id
   required: true
-  validate: true
   overwrite: true
 Logical_source:
   description: > 
@@ -129,7 +118,6 @@ Logical_source:
   derived: true
   derivation_fn: _get_logical_source
   required: true
-  validate: true
   overwrite: true
 Logical_source_description:
   description: >
@@ -140,7 +128,6 @@ Logical_source_description:
   derived: true
   derivation_fn: _get_logical_source_description
   required: true
-  validate: true
   overwrite: true
 Mission_group:
   description: >
@@ -149,7 +136,6 @@ Mission_group:
   default: null
   derived: false
   required: true
-  validate: true
   overwrite: false
 PI_affiliation:
   description: >
@@ -157,7 +143,6 @@ PI_affiliation:
   default: null
   derived: false
   required: true
-  validate: true
   overwrite: false
 PI_name:
   description: >
@@ -165,7 +150,6 @@ PI_name:
   default: null
   derived: false
   required: true
-  validate: true
   overwrite: false
 Project:
   description: >
@@ -178,7 +162,6 @@ Project:
   default: null
   derived: false
   required: true
-  validate: true
   overwrite: false
 Source_name:
   description: >
@@ -189,7 +172,6 @@ Source_name:
   default: null
   derived: false
   required: true
-  validate: true
   overwrite: false
 TEXT:
   description: >
@@ -203,5 +185,4 @@ TEXT:
   default: null
   derived: false
   required: true
-  validate: true
   overwrite: false

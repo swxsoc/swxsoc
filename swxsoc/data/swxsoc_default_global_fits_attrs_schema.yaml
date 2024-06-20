@@ -6,7 +6,6 @@ ANA_NCMP:
   human_readable: Number of components
   overwrite: false
   required: false # Required for Type P data
-  validate: false
 AO_LOCK:
   data_type: float # 0 or 1, floating averages may also be specified as appropriate
   default: null
@@ -15,7 +14,6 @@ AO_LOCK:
   human_readable: Adaptive optics status, 0.0=no lock, 1.0=lock
   overwrite: false
   required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
-  validate: false
 AO_NMODE:
   data_type: int
   default: null
@@ -24,7 +22,6 @@ AO_NMODE:
   human_readable: Number of AO modes
   overwrite: false
   required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
-  validate: false
 ATMOS_R0:
   data_type: float
   default: null
@@ -33,7 +30,6 @@ ATMOS_R0:
   human_readable: Atmospheric coherence length
   overwrite: false
   required: false # Optional quality aspects keywords (sections 18, 3.1, 5.5)
-  validate: false
 AUTHOR:
   data_type: str
   default: null
@@ -42,7 +38,6 @@ AUTHOR:
   human_readable: Author
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 BLANK:
   data_type: int
   default: null
@@ -50,12 +45,7 @@ BLANK:
   description: Value marking undefined pixels before the application of BSCALE, BZERO. Missing or blank pixels in floating-point-valued HDUs should be set to NaN, but missing or blank pixels in integer-valued HDUs must be given the value of BLANK
   human_readable: Value of missing pixels (floating HDU)
   overwrite: false
-  required: true
-  validate: false
-  human_readable: Value of missing pixels (integer HDU)
-  overwrite: false
   required: true # Mandatory data description keywords (sections 15, 5.1, 5.2, 5.6.2)
-  validate: false
 BNAME:
   data_type: str
   default: null
@@ -64,7 +54,6 @@ BNAME:
   human_readable: Data description
   overwrite: false
   required: false # Optional data description keywords (sections 18, 5.1)
-  validate: false
 BNDCTR:
   data_type: float
   default: null
@@ -73,7 +62,6 @@ BNDCTR:
   human_readable: Band center
   overwrite: false
   required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
-  validate: false
 BTYPE:
   data_type: str
   default: null
@@ -82,7 +70,6 @@ BTYPE:
   human_readable: Data label
   overwrite: false
   required: true # Mandatory data description keywords (sections 15, 5.1, 5.2, 5.6.2)
-  validate: false
 BSCALE:
   data_type: float
   default: null
@@ -91,7 +78,6 @@ BSCALE:
   human_readable: Linear scaling factor
   overwrite: false
   required: true
-  validate: false
 BUNIT:
   data_type: str
   default: null
@@ -100,7 +86,6 @@ BUNIT:
   human_readable: Units
   overwrite: false
   required: true # Mandatory data description keywords (sections 15, 5.1, 5.2, 5.6.2)
-  validate: false
 BZERO:
   data_type: float
   default: 0.0
@@ -109,7 +94,6 @@ BZERO:
   human_readable: Scale Base
   overwrite: false
   required: true
-  validate: false
 CADAVG:
   data_type: float
   default: null
@@ -118,7 +102,6 @@ CADAVG:
   human_readable: Average actual measurement cadence
   overwrite: false
   required: false # Optional keywords describing cadence (sections 18, 5.3)
-  validate: false
 CADENCE:
   data_type: float
   default: null
@@ -127,7 +110,6 @@ CADENCE:
   human_readable: Planned measurement cadence
   overwrite: false
   required: false # Optional keywords describing cadence (sections 18, 5.3)
-  validate: false
 CADMAX:
   data_type: float
   default: null
@@ -136,7 +118,6 @@ CADMAX:
   human_readable: Maximum measurement cadence
   overwrite: false
   required: false # Optional keywords describing cadence (sections 18, 5.3)
-  validate: false
 CADMIN:
   data_type: float
   default: null
@@ -145,7 +126,6 @@ CADMIN:
   human_readable: Minimum measurement cadence
   overwrite: false
   required: false # Optional keywords describing cadence (sections 18, 5.3)
-  validate: false
 CADVAR:
   data_type: float
   default: null
@@ -154,7 +134,6 @@ CADVAR:
   human_readable: Measurement cadence variability
   overwrite: false
   required: false # Optional keywords describing cadence (sections 18, 5.3)
-  validate: false
 CAMERA: 
   data_type: str
   default: null
@@ -163,7 +142,6 @@ CAMERA:
   human_readable: Name of the camera
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 CAMPAIGN:
   data_type: str
   default: null
@@ -172,7 +150,6 @@ CAMPAIGN:
   human_readable: Observation campaign
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 CAR_ROT:
   data_type: float
   default: null
@@ -181,7 +158,6 @@ CAR_ROT:
   human_readable: Carrington rotation
   overwrite: false
   required: false
-  validate: false
 CCURRENT:
   data_type: str
   default: null
@@ -190,7 +166,6 @@ CCURRENT:
   human_readable: Concurrent files
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 CDELTia:
   data_type: float
   default: null
@@ -199,7 +174,6 @@ CDELTia:
   human_readable: Coordinate scale increment
   overwrite: false
   required: true # Fundamental WCS coordinate keywords (sections 15, 3.1)
-  validate: false
 CDi_ja:
   data_type: float
   default: null
@@ -208,7 +182,6 @@ CDi_ja:
   human_readable: Linear-transformation matrix element
   overwrite: false
   required: true # Fundamental WCS coordinate keywords (sections 15, 3.1)
-  validate: false
 CHECKSUM:
   data_type: str
   default: null
@@ -217,7 +190,6 @@ CHECKSUM:
   human_readable: Checksum
   overwrite: false
   required: true # Mandatory general keywords (sections 15, 8, 9, Appendix V-a)
-  validate: false
 CMPDESn:
   data_type: str
   default: null
@@ -226,7 +198,6 @@ CMPDESn:
   human_readable: Component description
   overwrite: false
   required: false # Optional for Type P data
-  validate: false
 CMPINCn:
   data_type: int
   default: 1
@@ -235,7 +206,6 @@ CMPINCn:
   human_readable: Component inclusion
   overwrite: false
   required: false # Optional for Type P data
-  validate: false
 CMPMULn:
   data_type: int
   default: 0
@@ -244,7 +214,6 @@ CMPMULn:
   human_readable: Component type
   overwrite: false
   required: false # Optional for Type P data
-  validate: false
 CMPNAMn:
   data_type: str
   default: null
@@ -253,7 +222,6 @@ CMPNAMn:
   human_readable: Component name
   overwrite: false
   required: false # Optional for Type P data
-  validate: false
 CMPSTRn:
   data_type: str
   default: null
@@ -262,7 +230,6 @@ CMPSTRn:
   human_readable: Component string
   overwrite: false
   required: false # Optional for Type P data
-  validate: false
 CMPTYPn:
   data_type: str
   default: null
@@ -277,7 +244,6 @@ CMPTYPn:
   human_readable: Component type
   overwrite: false
   required: false # Required for Type P data
-  validate: false
 CMP_NPn:
   data_type: int
   default: null
@@ -286,7 +252,6 @@ CMP_NPn:
   human_readable: Number of parameters
   overwrite: false
   required: false # Required for Type P data
-  validate: false
 CNAMEia:
   data_type: str
   default: null
@@ -295,7 +260,6 @@ CNAMEia:
   human_readable: Coordinate axis name
   overwrite: false
   required: true
-  validate: false
 COMMENT:
   data_type: str
   default: null
@@ -304,7 +268,6 @@ COMMENT:
   human_readable: Comment
   overwrite: false
   required: false
-  validate: false
 COMPQUAL:
   data_type: float
   default: null
@@ -313,7 +276,6 @@ COMPQUAL:
   human_readable: Quality of data after lossy compression
   overwrite: false
   required: false # Optional quality aspects keywords (sections 18, 3.1, 5.5)
-  validate: false
 COMP_ALG:
   data_type: str
   default: null
@@ -322,7 +284,6 @@ COMP_ALG:
   human_readable: Name of lossy compression algorithm
   overwrite: false
   required: false # Optional quality aspects keywords (sections 18, 3.1, 5.5)
-  validate: false
 CONSTEXT:
   data_type: int # ?
   default: null
@@ -331,7 +292,6 @@ CONSTEXT:
   human_readable: Constant mask
   overwrite: false
   required: false
-  validate: false
 CONTINUE:
   data_type: str
   default: null
@@ -340,7 +300,6 @@ CONTINUE:
   human_readable: Continue
   overwrite: false
   required: false
-  validate: false
 CPDISia:
   data_type: str
   default: null
@@ -349,7 +308,6 @@ CPDISia:
   human_readable: Distortion correction
   overwrite: false
   required: true
-  validate: false
 CPERRia:
   data_type: float
   default: null
@@ -358,7 +316,6 @@ CPERRia:
   human_readable: Maximum value of prior distortion correction for axis i
   overwrite: false
   required: true
-  validate: false
 CQDISia:
   data_type: str
   default: null
@@ -367,7 +324,6 @@ CQDISia:
   human_readable: Distortion correction
   overwrite: false
   required: true
-  validate: false
 CQERRia:
   data_type: float
   default: null
@@ -376,7 +332,6 @@ CQERRia:
   human_readable: Maximum value of posterior distortion correction for axis i
   overwrite: false
   required: true
-  validate: false
 CRDERia:
   data_type: float
   default: 0.0
@@ -385,7 +340,6 @@ CRDERia:
   human_readable: Random error
   overwrite: false
   required: true # Fundamental WCS coordinate keywords (sections 15, 3.1)
-  validate: false
 CREATOR:
   data_type: str
   default: null
@@ -394,7 +348,6 @@ CREATOR:
   human_readable: File Creator
   overwrite: false
   required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
-  validate: false
 CROTia:
   data_type: float
   default: 0.0
@@ -403,7 +356,6 @@ CROTia:
   human_readable: Coordinate rotation
   overwrite: false
   required: true
-  validate: false
 CRPIXja:
   data_type: float
   default: 0.0
@@ -412,7 +364,6 @@ CRPIXja:
   human_readable: Reference pixel
   overwrite: false
   required: true # Fundamental WCS coordinate keywords (sections 15, 3.1)
-  validate: false
 CRVALia:
   data_type: float
   default: 0.0
@@ -421,7 +372,6 @@ CRVALia:
   human_readable: Reference value
   overwrite: false
   required: true # Fundamental WCS coordinate keywords (sections 15, 3.1)
-  validate: false
 CSYERia:
   data_type: float
   default: 0.0
@@ -430,7 +380,6 @@ CSYERia:
   human_readable: Systematic error
   overwrite: false
   required: true # Fundamental WCS coordinate keywords (sections 15, 3.1)
-  validate: false
 CTYPEia:
   data_type: str
   default: null
@@ -439,7 +388,6 @@ CTYPEia:
   human_readable: Coordinate type
   overwrite: false
   required: true # Fundamental WCS coordinate keywords (sections 15, 3.1)
-  validate: false
 CUNITia:
   data_type: str
   default: null
@@ -448,7 +396,6 @@ CUNITia:
   human_readable: Coordinate units
   overwrite: false
   required: true # Fundamental WCS coordinate keywords (sections 15, 3.1)
-  validate: false
 CWDISia: # NOTE: Not well defined in SOLARNET Recommendations
   data_type: str
   default: null
@@ -457,7 +404,6 @@ CWDISia: # NOTE: Not well defined in SOLARNET Recommendations
   human_readable: Distortion correction
   overwrite: false
   required: true
-  validate: false
 CWERRia: # NOTE: Not well defined in SOLARNET Recommendations
   data_type: float
   default: null
@@ -466,7 +412,6 @@ CWERRia: # NOTE: Not well defined in SOLARNET Recommendations
   human_readable: Maximum value of weighted distortion correction for axis i
   overwrite: false
   required: true
-  validate: false
 DATAEXT:
   data_type: str
   default: null
@@ -475,7 +420,6 @@ DATAEXT:
   human_readable: Data extension
   overwrite: false
   required: false
-  validate: false
 DATAKURT:
   data_type: float
   default: null
@@ -484,7 +428,6 @@ DATAKURT:
   human_readable: Kurtosis
   overwrite: false
   required: false # Optional data statistics keywords (sections 18, 5.6)
-  validate: false
 DATAMAD:
   data_type: float
   default: null
@@ -493,7 +436,6 @@ DATAMAD:
   human_readable: Median absolute deviation
   overwrite: false
   required: false # Optional data statistics keywords (sections 18, 5.6)
-  validate: false
 DATAMAX:
   data_type: float
   default: null
@@ -502,7 +444,6 @@ DATAMAX:
   human_readable: Maximum of data
   overwrite: false
   required: false # Optional data statistics keywords (sections 18, 5.6)
-  validate: false
 DATAMEAN:
   data_type: float
   default: null
@@ -511,7 +452,6 @@ DATAMEAN:
   human_readable: Mean of data
   overwrite: false
   required: false # Optional data statistics keywords (sections 18, 5.6)
-  validate: false
 DATAMEDN:
   data_type: float
   default: null
@@ -520,7 +460,6 @@ DATAMEDN:
   human_readable: Median of data
   overwrite: false
   required: false # Optional data statistics keywords (sections 18, 5.6)
-  validate: false
 DATAMIN:
   data_type: float
   default: null
@@ -529,7 +468,6 @@ DATAMIN:
   human_readable: Minimum of data
   overwrite: false
   required: false # Optional data statistics keywords (sections 18, 5.6)
-  validate: false
 DATANMAD:
   data_type: float
   default: null
@@ -538,7 +476,6 @@ DATANMAD:
   human_readable: Normalized median absolute deviation
   overwrite: false
   required: false # Optional data statistics keywords (sections 18, 5.6)
-  validate: false
 DATANPnn:
   data_type: float
   default: null
@@ -547,7 +484,6 @@ DATANPnn:
   human_readable: Normalized Percentiles
   overwrite: false
   required: false # Optional data statistics keywords (sections 18, 5.6)
-  validate: false
 DATANRMS:
   data_type: float
   default: null
@@ -556,7 +492,6 @@ DATANRMS:
   human_readable: Normalized root mean square
   overwrite: false
   required: false # Optional data statistics keywords (sections 18, 5.6)
-  validate: false
 DATAPnn:
   data_type: float
   default: null
@@ -565,7 +500,6 @@ DATAPnn:
   human_readable: Percentiles
   overwrite: false
   required: false # Optional data statistics keywords (sections 18, 5.6)
-  validate: false
 DATARMS:
   data_type: float
   default: null
@@ -574,7 +508,6 @@ DATARMS:
   human_readable: Root mean square
   overwrite: false
   required: false # Optional data statistics keywords (sections 18, 5.6)
-  validate: false
 DATASKEW:
   data_type: float
   default: null
@@ -583,7 +516,6 @@ DATASKEW:
   human_readable: Skewness
   overwrite: false
   required: false # Optional data statistics keywords (sections 18, 5.6)
-  validate: false
 DATASUM:
   data_type: float
   default: null
@@ -592,7 +524,6 @@ DATASUM:
   human_readable: Sum of data
   overwrite: false
   required: true # Mandatory general keywords (sections 15, 8, 9, Appendix V-a)
-  validate: false
 DATATAGS:
   data_type: str
   default: null
@@ -601,7 +532,6 @@ DATATAGS:
   human_readable: Data Tags
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 DATE:
   data_type: date
   default: null
@@ -610,7 +540,6 @@ DATE:
   human_readable: File Creation Date
   overwrite: false
   required: true # Mandatory general keywords (sections 15, 8, 9, Appendix V-a)
-  validate: false
 DATE-AVG:
   data_type: date
   default: null
@@ -619,7 +548,6 @@ DATE-AVG:
   human_readable: Average date of observation
   overwrite: false
   required: false # Optional date and time keywords (sections 18, 4)
-  validate: false
 DATE-BEG:
   data_type: date
   default: null
@@ -628,7 +556,6 @@ DATE-BEG:
   human_readable: Aquisition start time
   overwrite: false
   required: true
-  validate: false
 DATE-END:
   data_type: date
   default: null
@@ -637,7 +564,6 @@ DATE-END:
   human_readable: Date of end of observation
   overwrite: false
   required: false # Optional date and time keywords (sections 18, 4)
-  validate: false
 DATEREF:
   data_type: date
   default: null
@@ -646,7 +572,6 @@ DATEREF:
   human_readable: Reference date
   overwrite: false
   required: true
-  validate: false
 DETECTOR:
   data_type: str
   default: null
@@ -655,7 +580,6 @@ DETECTOR:
   human_readable: detector
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 DPja: # NOTE: Equivalent to CPDISia?
   data_type: str
   default: null
@@ -664,7 +588,6 @@ DPja: # NOTE: Equivalent to CPDISia?
   human_readable: Primary distortion parameter
   overwrite: false
   required: true
-  validate: false
 DQia: # NOTE: Equivalent to CQDISia?
   data_type: str
   default: null
@@ -673,7 +596,6 @@ DQia: # NOTE: Equivalent to CQDISia?
   human_readable: Posterior distortion parameter
   overwrite: false
   required: true
-  validate: false
 DSUN_AU:
   data_type: float
   default: null
@@ -682,7 +604,6 @@ DSUN_AU:
   human_readable: Distance to Sun
   overwrite: false
   required: false # Optional for deep space missions (sections 18, 3.2)
-  validate: false
 DSUN_OBS:
   data_type: float
   default: null
@@ -691,7 +612,6 @@ DSUN_OBS:
   human_readable: Distance to Sun
   overwrite: false
   required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for deep-space obervatories (not Earth-orbiting satellites)
-  validate: false
 DWia: # NOTE Equivalent to CDDISia?
   data_type: str
   default: null
@@ -700,7 +620,6 @@ DWia: # NOTE Equivalent to CDDISia?
   human_readable: Distortion correction
   overwrite: false
   required: true
-  validate: false
 ELEV_ANG:
   data_type: float
   default: null
@@ -709,7 +628,6 @@ ELEV_ANG:
   human_readable: Elevation angle
   overwrite: false
   required: false # Optional quality aspects keywords (sections 18, 3.1, 5.5)
-  validate: false
 EXTNAME:
   data_type: str
   default: null
@@ -718,7 +636,6 @@ EXTNAME:
   human_readable: Extension name
   overwrite: false
   required: true
-  validate: false
 FILENAME:
   data_type: str
   default: null
@@ -727,7 +644,6 @@ FILENAME:
   human_readable: Filename
   overwrite: false
   required: true # Mandatory general keywords (sections 15, 8, 9, Appendix V-a)
-  validate: false
 FILEVERP:
   data_type: str
   default: null
@@ -736,7 +652,6 @@ FILEVERP:
   human_readable: File Version Pattern
   overwrite: false
   required: true
-  validate: false
 FILTER:
   data_type: str
   default: null
@@ -745,7 +660,6 @@ FILTER:
   human_readable: Filters
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 FT_LOCK:
   data_type: float
   default: null
@@ -754,7 +668,6 @@ FT_LOCK:
   human_readable: Feature tracking status
   overwrite: false
   required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
-  validate: false
 GEOX_OBS:
   data_type: float
   default: null
@@ -763,7 +676,6 @@ GEOX_OBS:
   human_readable: Observer X Position
   overwrite: false
   required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for earth-orbiting obervatories
-  validate: false
 GEOY_OBS:
   data_type: float
   default: null
@@ -772,7 +684,6 @@ GEOY_OBS:
   human_readable: Observer Y Position
   overwrite: false
   required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for earth-orbiting obervatories
-  validate: false
 GEOZ_OBS:
   data_type: float
   default: null
@@ -781,7 +692,6 @@ GEOZ_OBS:
   human_readable: Observer Z Position
   overwrite: false
   required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for earth-orbiting obervatories
-  validate: false
 GRATING:
   data_type: str
   default: null
@@ -790,7 +700,6 @@ GRATING:
   human_readable: Grating
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 HASH_SW:
   data_type: str
   default: null
@@ -799,7 +708,6 @@ HASH_SW:
   human_readable: Software Hash
   overwrite: false
   required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
-  validate: false
 HGLN_OBS:
   data_type: float
   default: null
@@ -808,7 +716,6 @@ HGLN_OBS:
   human_readable: Observer Heliographic Longitude
   overwrite: false
   required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for deep-space obervatories (not Earth-orbiting satellites)
-  validate: false
 HGLT_OBS:
   data_type: float
   default: null
@@ -817,7 +724,6 @@ HGLT_OBS:
   human_readable: Observer Heliographic Latitude
   overwrite: false
   required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for deep-space obervatories (not Earth-orbiting satellites)
-  validate: false
 INCLEXT:
   data_type: str
   default: null
@@ -826,7 +732,6 @@ INCLEXT:
   human_readable: Component inclusion mask
   overwrite: false
   required: false
-  validate: false
 INFO_URL:
   data_type: str
   default: null
@@ -835,7 +740,6 @@ INFO_URL:
   human_readable: Info url
   overwrite: false
   required: false # Optional keyword for administrative information (sections 18, 9)
-  validate: false
 INSTRUME:
   data_type: str
   default: null
@@ -844,7 +748,6 @@ INSTRUME:
   human_readable: Instrument
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 LEVEL:
   data_type: float
   default: null
@@ -853,7 +756,6 @@ LEVEL:
   human_readable: Data level of fits file
   overwrite: false
   required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
-  validate: false
 METADIM:
   data_type: str
   default: null
@@ -862,7 +764,6 @@ METADIM:
   human_readable: Metadata dimension splits
   overwrite: false
   required: false
-  validate: false
 METADIMn:
   data_type: int
   default: null
@@ -871,7 +772,6 @@ METADIMn:
   human_readable: Metadata dimension splits
   overwrite: false
   required: false
-  validate: false
 METAFILS:
   data_type: str
   default: null
@@ -880,7 +780,6 @@ METAFILS:
   human_readable: Metadata filenames
   overwrite: false
   required: false
-  validate: false
 MISSION:
   data_type: str
   default: null
@@ -889,7 +788,6 @@ MISSION:
   human_readable: Mission
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 MOSAICID:
   data_type: str
   default: null
@@ -898,7 +796,6 @@ MOSAICID:
   human_readable: Mosaic ID
   overwrite: false
   required: false # Optional keywords for grouping (sections 18, 7)
-  validate: false
 NAPRXPIX:
   data_type: float
   default: null
@@ -907,7 +804,6 @@ NAPRXPIX:
   human_readable: Number of approximated pixels
   overwrite: false
   required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
-  validate: false
 NAXIS:
   data_type: int
   default: null
@@ -916,7 +812,6 @@ NAXIS:
   human_readable: Number of axes
   overwrite: false
   required: true # Fundamental WCS coordinate keywords (sections 15, 3.1)
-  validate: false
 NASIXn:
   data_type: int
   default: null
@@ -925,7 +820,6 @@ NASIXn:
   human_readable: Number of elements along axis
   overwrite: false
   required: true
-  validate: false
 NBIN:
   data_type: float
   default: null
@@ -934,7 +828,6 @@ NBIN:
   human_readable: Combined binning factor (Product of all NBINj)
   overwrite: false
   required: false # Required for binned data
-  validate: false
 NBINj:
   data_type: int
   default: null
@@ -943,7 +836,6 @@ NBINj:
   human_readable: Number of pixels binned together
   overwrite: false 
   required: false # Required for binned data
-  validate: false
 NDATAPIX:
   data_type: int
   default: null
@@ -952,7 +844,6 @@ NDATAPIX:
   human_readable: Number of usable pixels
   overwrite: false
   required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
-  validate: false
 NLOSTPIX:
   data_type: int
   default: null
@@ -961,7 +852,6 @@ NLOSTPIX:
   human_readable: Number of lost pixels
   overwrite: false
   required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
-  validate: false
 NMASKPIX:
   data_type: int
   default: null
@@ -970,7 +860,6 @@ NMASKPIX:
   human_readable: Number of masked pixels
   overwrite: false
   required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
-  validate: false
 NSATPIX:
   data_type: int
   default: null
@@ -979,7 +868,6 @@ NSATPIX:
   human_readable: Number of saturated pixels
   overwrite: false
   required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
-  validate: false
 NSPIKPIX:
   data_type: int
   default: null
@@ -988,7 +876,6 @@ NSPIKPIX:
   human_readable: Number of spike pixels
   overwrite: false
   required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
-  validate: false
 NSUMEXP:
   data_type: int
   default: null
@@ -997,7 +884,6 @@ NSUMEXP:
   human_readable: Number of exposures
   overwrite: false
   required: true # Mandatory data description keywords (sections 15, 5.1, 5.2, 5.6.2)
-  validate: false
 NTOTPIX:
   data_type: int
   default: null
@@ -1006,7 +892,6 @@ NTOTPIX:
   human_readable: Total number of pixels
   overwrite: false
   required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
-  validate: false
 NXDIM:
   data_type: int
   default: null
@@ -1015,7 +900,6 @@ NXDIM:
   human_readable: number of absorbed dimensions
   overwrite: false
   required: false
-  validate: false
 OBSERVER:
   data_type: str
   default: null
@@ -1024,7 +908,6 @@ OBSERVER:
   human_readable: Observer
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 OBSGEO-X:
   data_type: float
   default: null
@@ -1033,7 +916,6 @@ OBSGEO-X:
   human_readable: Observer X Position
   overwrite: false
   required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for ground-based observatories
-  validate: false
 OBSGEO-Y:
   data_type: float
   default: null
@@ -1042,7 +924,6 @@ OBSGEO-Y:
   human_readable: Observer Y Position
   overwrite: false
   required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for ground-based observatories
-  validate: false
 OBSGEO-Z:
   data_type: float
   default: null
@@ -1051,7 +932,6 @@ OBSGEO-Z:
   human_readable: Observer Z Position
   overwrite: false
   required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for ground-based observatories
-  validate: false
 OBSRVTRY:
   data_type: str
   default: null
@@ -1060,7 +940,6 @@ OBSRVTRY:
   human_readable: Observatory
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 OBSTITLE:
   data_type: str
   default: null
@@ -1069,7 +948,6 @@ OBSTITLE:
   human_readable: Observation title
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 OBS_DESC:
   data_type: str
   default: null
@@ -1078,7 +956,6 @@ OBS_DESC:
   human_readable: Observation description
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 OBS_HDU:
   data_type: int
   default: null
@@ -1087,7 +964,6 @@ OBS_HDU:
   human_readable: Contains observational data
   overwrite: false
   required: true
-  validate: false
 OBS_LOG:
   data_type: str
   default: null
@@ -1096,7 +972,6 @@ OBS_LOG:
   human_readable: URL of observation log
   overwrite: false
   required: false # Optional quality aspects keywords (sections 18, 3.1, 5.5)
-  validate: false
 OBS_MODE:
   data_type: str
   default: null
@@ -1105,7 +980,6 @@ OBS_MODE:
   human_readable: Observation mode
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 OBS_VR:
   data_type: float
   default: null
@@ -1114,7 +988,6 @@ OBS_VR:
   human_readable: Observer velocity
   overwrite: false
   required: true # Mandatory keywords for spectrographs and filter instruments (sections 15, 3.2, 5.4)
-  validate: false
 ORIGIN:
   data_type: str
   default: null
@@ -1123,7 +996,6 @@ ORIGIN:
   human_readable: File originator
   overwrite: false
   required: true # Mandatory general keywords (sections 15, 8, 9, Appendix V-a)
-  validate: false
 PCONSna:
   data_type: int
   default: null
@@ -1132,7 +1004,6 @@ PCONSna:
   human_readable: Parameter constant
   overwrite: false
   required: false
-  validate: false
 PCT_APRX:
   data_type: float
   default: null
@@ -1141,7 +1012,6 @@ PCT_APRX:
   human_readable: Percentage of approximated pixels
   overwrite: false
   required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
-  validate: false
 PCT_DATA:
   data_type: float
   default: null
@@ -1150,7 +1020,6 @@ PCT_DATA:
   human_readable: Percentage of usable pixels
   overwrite: false
   required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
-  validate: false
 PCT_LOST:
   data_type: float
   default: null
@@ -1159,7 +1028,6 @@ PCT_LOST:
   human_readable: Percentage of lost pixels
   overwrite: false
   required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
-  validate: false
 PCT_MASK:
   data_type: float
   default: null
@@ -1168,7 +1036,6 @@ PCT_MASK:
   human_readable: Percentage of masked pixels
   overwrite: false
   required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
-  validate: false
 PCT_SATP:
   data_type: float
   default: null
@@ -1177,7 +1044,6 @@ PCT_SATP:
   human_readable: Percentage of saturated pixels
   overwrite: false
   required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
-  validate: false
 PCT_SPIK:
   data_type: float
   default: null
@@ -1186,7 +1052,6 @@ PCT_SPIK:
   human_readable: Percentage of spike pixels
   overwrite: false
   required: false # Optional keywords for missing and saturated pixels (sections 18, 5.6.1)
-  validate: false
 PCi_ja:
   data_type: float
   default: null
@@ -1195,7 +1060,6 @@ PCi_ja:
   human_readable: linear transformation matrix element
   overwrite: false
   required: true # Fundamental WCS coordinate keywords (sections 15, 3.1)
-  validate: false
 PDESCna:
   data_type: str
   default: null
@@ -1204,7 +1068,6 @@ PDESCna:
   human_readable: Parameter Desscription
   overwrite: false
   required: false
-  validate: false
 PGEXTNAM:
   data_type: str
   default: null
@@ -1213,7 +1076,6 @@ PGEXTNAM:
   human_readable: Progenitor extension name
   overwrite: false
   required: false
-  validate: false
 PGFILENA:
   data_type: str
   default: null
@@ -1222,7 +1084,6 @@ PGFILENA:
   human_readable: Progenitor file name
   overwrite: false
   required: false
-  validate: false
 PLANNER:
   data_type: str
   default: null
@@ -1231,7 +1092,6 @@ PLANNER:
   human_readable: Planner
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 PINITna:
   data_type: float
   default: null
@@ -1240,7 +1100,6 @@ PINITna:
   human_readable: Initial value
   overwrite: false
   required: false
-  validate: false
 PIXLISTS:
   data_type: str
   default: null
@@ -1249,7 +1108,6 @@ PIXLISTS:
   human_readable: Pixel lists
   overwrite: false
   required: false
-  validate: false
 PIXTYPE:
   data_type: str
   default: null
@@ -1258,7 +1116,6 @@ PIXTYPE:
   human_readable: Pixel Type
   overwrite: false
   required: false
-  validate: false
 PLANNER:
   data_type: str
   default: null
@@ -1267,7 +1124,6 @@ PLANNER:
   human_readable: Planner
   overwrite: false
   required: true
-  validate: false
 PMAXna:
   data_type: float
   default: null
@@ -1276,7 +1132,6 @@ PMAXna:
   human_readable: Maximum value
   overwrite: false
   required: false
-  validate: false
 PMINna:
   data_type: float
   default: null
@@ -1285,7 +1140,6 @@ PMINna:
   human_readable: Minimum value
   overwrite: false
   required: false
-  validate: false
 PNAMEna:
   data_type: str
   default: null
@@ -1294,7 +1148,6 @@ PNAMEna:
   human_readable: Parameter name
   overwrite: false
   required: false
-  validate: false
 POINT_ID:
   data_type: str
   default: null
@@ -1303,7 +1156,6 @@ POINT_ID:
   human_readable: Pointing ID
   overwrite: false
   required: true # Mandatory keyword for grouping (sections 15, 7, Appendix V-b)
-  validate: false
 POLCANGL:
   data_type: float
   default: null
@@ -1312,7 +1164,6 @@ POLCANGL:
   human_readable: Polarimetric angle
   overwrite: false
   required: true # Mandatory keywords for polarimetric data (sections 15, 5.4.1)
-  validate: false
 POLCCONV:
   data_type: str
   default: null
@@ -1321,7 +1172,6 @@ POLCCONV:
   human_readable: Polarimetric conversion
   overwrite: false
   required: true # Mandatory keywords for polarimetric data (sections 15, 5.4.1)
-  validate: false
 PRBRAna:
   data_type: str
   default: null
@@ -1330,7 +1180,6 @@ PRBRAna:
   human_readable: Branch name
   overwrite: false
   required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
-  validate: false
 PRENVn:
   data_type: str
   default: null
@@ -1339,7 +1188,6 @@ PRENVn:
   human_readable: Processing environment
   overwrite: false
   required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
-  validate: false
 PRHSHna:
   data_type: str
   default: null
@@ -1348,7 +1196,6 @@ PRHSHna:
   human_readable: Processing code hash
   overwrite: false
   required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
-  validate: false
 PRLIBna:
   data_type: str
   default: null
@@ -1357,7 +1204,6 @@ PRLIBna:
   human_readable: Library name
   overwrite: false
   required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
-  validate: false
 PRLOGna:
   data_type: str
   default: null
@@ -1366,7 +1212,6 @@ PRLOGna:
   human_readable: Processing Log
   overwrite: false
   required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
-  validate: false
 PRMODEna:
   data_type: str
   default: null
@@ -1375,7 +1220,6 @@ PRMODEna:
   human_readable: Processing mode
   overwrite: false
   required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
-  validate: false
 PROJECT:
   data_type: str
   default: null
@@ -1384,7 +1228,6 @@ PROJECT:
   human_readable: Project
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 PRPARAn:
   data_type: str
   default: null
@@ -1393,7 +1236,6 @@ PRPARAn:
   human_readable: Processing parameters
   overwrite: false
   required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
-  validate: false
 PRPROCn:
   data_type: str
   default: null
@@ -1402,7 +1244,6 @@ PRPROCn:
   human_readable: Processing Procedure used for Step n
   overwrite: false
   required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
-  validate: false
 PRPVERn:
   data_type: str
   default: null
@@ -1411,7 +1252,6 @@ PRPVERn:
   human_readable: Processing code version for Step n
   overwrite: false
   required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
-  validate: false
 PRREFn:
   data_type: str
   default: null
@@ -1420,7 +1260,6 @@ PRREFn:
   human_readable: Factors influencing PRSTEP1
   overwrite: false
   required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
-  validate: false
 PRSTEPn:
   data_type: str
   default: null
@@ -1429,7 +1268,6 @@ PRSTEPn:
   human_readable: Processing step
   overwrite: false
   required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
-  validate: false
 PRVERna:
   data_type: str
   default: null
@@ -1438,7 +1276,6 @@ PRVERna:
   human_readable: Processing code version for library a in step n
   overwrite: false
   required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
-  validate: false
 PTRAna:
   data_type: float
   default: 1.0
@@ -1447,7 +1284,6 @@ PTRAna:
   human_readable: Linear transformation coefficient A
   overwrite: false
   required: false
-  validate: false
 PTRBna:
   data_type: float
   default: 0.0
@@ -1456,7 +1292,6 @@ PTRBna:
   human_readable: Linear transformation constant B
   overwrite: false
   required: false
-  validate: false
 PUNITna:
   data_type: str
   default: null
@@ -1465,7 +1300,6 @@ PUNITna:
   human_readable: Parameter unit
   overwrite: false
   required: false
-  validate: false
 RELEASE:
   data_type: date
   default: null
@@ -1474,7 +1308,6 @@ RELEASE:
   human_readable: Release date
   overwrite: false
   required: false # Optional keyword for administrative information (sections 18, 9)
-  validate: false
 RELEASEC:
   data_type: str
   default: null
@@ -1483,7 +1316,6 @@ RELEASEC:
   human_readable: Release administrator
   overwrite: false
   required: false # Optional keyword for administrative information (sections 18, 9)
-  validate: false
 REQUESTR:
   data_type: str
   default: null
@@ -1492,7 +1324,6 @@ REQUESTR:
   human_readable: Requester
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 RESEXT:
   data_type: str
   default: null
@@ -1501,7 +1332,6 @@ RESEXT:
   human_readable: Result extension
   overwrite: false
   required: false
-  validate: false
 RESIDEXT:
   data_type: str
   default: null
@@ -1510,7 +1340,6 @@ RESIDEXT:
   human_readable: Residual extension
   overwrite: false
   required: false
-  validate: false
 RESOLVPW:
   data_type: float
   default: null
@@ -1519,7 +1348,6 @@ RESOLVPW:
   human_readable: Resolving power
   overwrite: false
   required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
-  validate: false
 RESPAPPL:
   data_type: str
   default: null
@@ -1528,7 +1356,6 @@ RESPAPPL:
   human_readable: Applid response function
   overwrite: false
   required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
-  validate: false
 RESPONSE:
   data_type: str
   default: null
@@ -1537,7 +1364,6 @@ RESPONSE:
   human_readable: Response function
   overwrite: false
   required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
-  validate: false
 ROT_COMP:
   data_type: int
   default: null
@@ -1546,7 +1372,6 @@ ROT_COMP:
   human_readable: Solar rotation compensation on (1)/off (0)
   overwrite: false
   required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
-  validate: false
 ROT_FORM:
   data_type: str
   default: null
@@ -1555,7 +1380,6 @@ ROT_FORM:
   human_readable: Rotation formula
   overwrite: false
   required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
-  validate: false
 ROT_MODL:
   data_type: str
   default: null
@@ -1564,7 +1388,6 @@ ROT_MODL:
   human_readable: Model used for rotation compensation
   overwrite: false
   required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5), required if ROT_COMP=1
-  validate: false
 RSUN_ARC: 
   data_type: float
   default: null
@@ -1573,7 +1396,6 @@ RSUN_ARC:
   human_readable: Solar angular radius
   overwrite: false
   required: true
-  validate: false
 RSUN_REF:
   data_type: float
   default: null
@@ -1582,7 +1404,6 @@ RSUN_REF:
   human_readable: Solar radius. [m] Solar rad. used for calc. px scale
   overwrite: false
   required: false # Optional quality aspects keywords (sections 18, 3.1, 5.5)
-  validate: false
 SETTINGS:
   data_type: str
   default: null
@@ -1591,7 +1412,6 @@ SETTINGS:
   human_readable: Settings
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 SLIT_WID:
   data_type: float
   default: null
@@ -1600,7 +1420,6 @@ SLIT_WID:
   human_readable: Slit width
   overwrite: false
   required: true # Mandatory keywords for spectrographs (sections 15, 5.4)
-  validate: false
 SOLARNET:
   data_type: float
   default: null
@@ -1609,8 +1428,7 @@ SOLARNET:
   human_readable: Solarnet compatibility
   overwrite: false
   required: true
-  validate: false
-  allowed_values:
+  valid_values:
   - 1.0
   - 0.5
   - 0
@@ -1622,7 +1440,6 @@ SOLAR_B0:
   human_readable: Observer latitude
   overwrite: false
   required: false
-  validate: false
 SOLAR_EP:
   data_type: float
   default: null
@@ -1631,7 +1448,6 @@ SOLAR_EP:
   human_readable: Ecliptic angle
   overwrite: false
   required: false
-  validate: false
 SOLAR_P0:
   data_type: float
   default: null
@@ -1640,7 +1456,6 @@ SOLAR_P0:
   human_readable: Solar angle
   overwrite: false
   required: false
-  validate: false
 SOLNETEX:
   data_type: str
   default: null
@@ -1649,7 +1464,6 @@ SOLNETEX:
   human_readable: SOLARNET exceptions
   overwrite: false
   required: false # Required for any non-compliant keywords
-  validate: false
 SPECSYS:
   data_type: str
   default: null
@@ -1658,8 +1472,7 @@ SPECSYS:
   human_readable: Spectral reference frame
   overwrite: false
   required: true # Mandatory keywords for spectrographs and filter instruments (sections 15, 3.2, 5.4)
-  validate: false
-  allowed_values:
+  valid_values:
   - TOPOCENT  # Topocentric
   - GEOCENTR  # Geocentric
   - BARYCENT  # Barycentric
@@ -1678,7 +1491,6 @@ SVO_GRP:
   human_readable: SVO Group
   overwrite: false
   required: false # Optional keywords for grouping (sections 18, 7)
-  validate: false
 SVO_SEPn:
   data_type: str
   default: null
@@ -1687,7 +1499,6 @@ SVO_SEPn:
   human_readable: Separation keywords
   overwrite: false
   required: false # Optional keywords for grouping (sections 18, 7)
-  validate: false
 TCTYPn:
   data_type: str
   default: null
@@ -1696,7 +1507,6 @@ TCTYPn:
   human_readable: Table column type
   overwrite: false
   required: false
-  validate: false
 TDESCn:
   data_type: str
   default: null
@@ -1705,7 +1515,6 @@ TDESCn:
   human_readable: Table column description
   overwrite: false
   required: false # Optional keyword for binary table extensions using the variable-keyword, pixel list or meta-observation mechanism (sections 18, Appendix 1)
-  validate: false
 TDIMn:
   data_type: str
   default: null
@@ -1714,7 +1523,6 @@ TDIMn:
   human_readable: Table column dimensions
   overwrite: false
   required: false
-  validate: false
 TELCONFG:
   data_type: str
   default: null
@@ -1723,7 +1531,6 @@ TELCONFG:
   human_readable: Telescope configuration
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 TELESCOP:
   data_type: str
   default: null
@@ -1732,7 +1539,6 @@ TELESCOP:
   human_readable: Telescope
   overwrite: false
   required: true # Mandatory keywords identifying the origin of the observations (sections 15, 6)
-  validate: false
 TEXPOSURE:
   data_type: float
   default: null
@@ -1741,7 +1547,6 @@ TEXPOSURE:
   human_readable: Single exposure time
   overwrite: false
   required: true # Mandatory data description keywords (sections 15, 5.1, 5.2, 5.6.2)
-  validate: false
 TFORMn:
   data_type: str
   default: null
@@ -1750,9 +1555,8 @@ TFORMn:
   human_readable: Table column format
   overwrite: false
   required: false # required for binary tables
-  validate: false
 TIMESYS: # There is conflict about this attribute. It is listed as optional in the SOLARNET paper, but seems intended to be required based on the FITS standard V4.0. 
-  allowed_values:
+  valid_values:
   - UTC
   data_type: str
   default: UTC
@@ -1761,7 +1565,6 @@ TIMESYS: # There is conflict about this attribute. It is listed as optional in t
   human_readable: Time system
   overwrite: false
   required: false # Optional date and time keywords (sections 18, 4)
-  validate: false
 TKEYSn:
   data_type: str
   default: null
@@ -1770,7 +1573,6 @@ TKEYSn:
   human_readable: Table keywords
   overwrite: false
   required: false
-  validate: false
 TPCn_na:
   data_type: str
   default: null
@@ -1779,7 +1581,6 @@ TPCn_na:
   human_readable: Pixel list flag
   overwrite: false
   required: false
-  validate: false
 TPXLSn:
   data_type: str
   default: null
@@ -1788,7 +1589,6 @@ TPXLSn:
   human_readable: Pixel lists
   overwrite: false
   required: false
-  validate: false
 TTYPEn:
   data_type: str
   default: null
@@ -1797,7 +1597,6 @@ TTYPEn:
   human_readable: Table column name
   overwrite: false
   required: false
-  validate: false
 TVARKn:
   data_type: str
   default: null
@@ -1806,7 +1605,6 @@ TVARKn:
   human_readable: Var keys
   overwrite: false
   required: false
-  validate: false
 TZEROn:
   data_type: float
   default: null
@@ -1815,7 +1613,6 @@ TZEROn:
   human_readable: Zero point
   overwrite: false
   required: false
-  validate: false
 UCD:
   data_type: str
   default: null
@@ -1824,7 +1621,6 @@ UCD:
   human_readable: Unified Content Descriptor
   overwrite: false
   required: false # Optional data description keywords (sections 18, 5.1)
-  validate: false
 VAR_KEYS:
   data_type: str
   default: null
@@ -1833,7 +1629,6 @@ VAR_KEYS:
   human_readable: Variance keys
   overwrite: false
   required: false
-  validate: false
 VELOSYS:
   data_type: float
   default: null
@@ -1842,7 +1637,6 @@ VELOSYS:
   human_readable: Velocity system
   overwrite: false
   required: true # Mandatory keywords for spectrographs and filter instruments (sections 15, 3.2, 5.4)
-  validate: false
 VERSION:
   data_type: str
   default: null
@@ -1851,7 +1645,6 @@ VERSION:
   human_readable: Processed version
   overwrite: false
   required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
-  validate: false  
 VERS_CAL:
   data_type: str
   default: null
@@ -1860,7 +1653,6 @@ VERS_CAL:
   human_readable: Calibration version
   overwrite: false
   required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
-  validate: false
 VERS_SW:
   data_type: str
   default: null
@@ -1869,7 +1661,6 @@ VERS_SW:
   human_readable: Software version
   overwrite: false
   required: false # Optional pipeline processing keywords (sections 18, 8, 8.1, 8.2)
-  validate: false
 WAVEBAND:
   data_type: str
   default: null
@@ -1878,7 +1669,6 @@ WAVEBAND:
   human_readable: Waveband description
   overwrite: false
   required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
-  validate: false
 WAVECOV:
   data_type: str
   default: null
@@ -1888,7 +1678,6 @@ WAVECOV:
   human_readable: Wavelength coverage
   overwrite: false
   required: false # Optional keyword for spectrographs (sections 18, 5.4)
-  validate: false
 WAVELNTH:
   data_type: float
   default: null
@@ -1897,7 +1686,6 @@ WAVELNTH:
   human_readable: Characteristic wavelength
   overwrite: false
   required: false # Optional keywords characterizing the instrument/data (sections 18, 5.4, 5.5)
-  validate: false
 WAVEMAX:
   data_type: float
   default: null
@@ -1906,7 +1694,6 @@ WAVEMAX:
   human_readable: Maximum wavelength
   overwrite: false
   required: true # Mandatory keywords for spectrographs and filter instruments (sections 15, 3.2, 5.4)
-  validate: false
 WAVEMIN:
   data_type: float
   default: null
@@ -1915,7 +1702,6 @@ WAVEMIN:
   human_readable: Minimum wavelength
   overwrite: false
   required: true # Mandatory keywords for spectrographs and filter instruments (sections 15, 3.2, 5.4)
-  validate: false
 WAVEREF:
   data_type: str
   default: null
@@ -1924,8 +1710,7 @@ WAVEREF:
   human_readable: Wavelength reference
   overwrite: false
   required: true # Mandatory keywords for spectrographs and filter instruments (sections 15, 3.2, 5.4)
-  validate: false
-  allowed_values:
+  valid_values:
   - air
   - vacuum
 WAVEUNIT:
@@ -1936,7 +1721,6 @@ WAVEUNIT:
   human_readable: Wavelength unit
   overwrite: false
   required: true # Mandatory keywords for spectrographs and filter instruments (sections 15, 3.2, 5.4)
-  validate: false
 WCSAXES:
   data_type: int
   default: null
@@ -1945,7 +1729,6 @@ WCSAXES:
   human_readable: WCS axes
   overwrite: false
   required: true # Fundamental WCS coordinate keywords (sections 15, 3.1)
-  validate: false
 WCSNAMEa:
   data_type: str
   default: null
@@ -1954,7 +1737,6 @@ WCSNAMEa:
   human_readable: WCS name
   overwrite: false
   required: false
-  validate: false
 WCSNn:
   data_type: str
   default: null
@@ -1963,7 +1745,6 @@ WCSNn:
   human_readable: WCS name
   overwrite: false
   required: false
-  validate: false
 WGTEXT:
   data_type: str
   default: null
@@ -1972,7 +1753,6 @@ WGTEXT:
   human_readable: extension weights
   overwrite: false
   required: false
-  validate: false
 XDIMTYm:
   data_type: str
   default: null
@@ -1981,7 +1761,6 @@ XDIMTYm:
   human_readable: Dimension type
   overwrite: false
   required: false
-  validate: false
 XTIMXTm:
   data_type: str
   default: null
@@ -1990,7 +1769,6 @@ XTIMXTm:
   human_readable: Dimension extension
   overwrite: false
   required: false
-  validate: false
 XPOSURE:
   data_type: float
   default: null
@@ -1999,7 +1777,6 @@ XPOSURE:
   human_readable: Exposure time
   overwrite: false
   required: true # Mandatory data description keywords (sections 15, 5.1, 5.2, 5.6.2)
-  validate: false
 iCRVLn:
   data_type: float
   default: null
@@ -2008,7 +1785,6 @@ iCRVLn:
   human_readable: Reference value
   overwrite: false
   required: true
-  validate: false
 iCTYPn:
   data_type: str
   default: null
@@ -2017,7 +1793,6 @@ iCTYPn:
   human_readable: Coordinate type
   overwrite: false
   required: true
-  validate: false
 jCRPXn:
   data_type: float
   default: null
@@ -2026,5 +1801,4 @@ jCRPXn:
   human_readable: Reference pixel
   overwrite: false
   required: true
-  validate: false
 

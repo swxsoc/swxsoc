@@ -40,6 +40,10 @@ class SWXData:
         timeseries data.
     meta : `Optional[dict]`
         The metadata describing the time series in an ISTP-compliant format.
+    schema: `Optional[SWXSchema]`
+        Optional custom schema to use for metadata derivation.
+    enable_derivations: Optional[bool]
+        Optional flag to derive metadata attributes from the data.
 
     Examples
     --------
@@ -103,6 +107,7 @@ class SWXData:
         spectra: Optional[ndcube.NDCollection] = None,
         meta: Optional[dict] = None,
         schema: Optional[SWXSchema] = None,
+        enable_derivations: Optional[bool] = True,
     ):
         # ================================================
         #               VALIDATE INPUTS
@@ -236,12 +241,16 @@ class SWXData:
         #           DERIVE METADATA ATTRIBUTES
         # ================================================
 
-        # Derive Metadata
+        # Create a Schema
         if schema is not None:
             self.schema = schema
         else:
             self.schema = SWXSchema()
-        self._derive_metadata()
+
+        # Derive Metadata
+        self._enable_derivations = enable_derivations
+        if self._enable_derivations:
+            self._derive_metadata()
 
     @property
     def timeseries(self):
@@ -426,7 +435,7 @@ class SWXData:
 
         # Get Default Metadata
         for attr_name, attr_value in self.schema.default_global_attributes.items():
-            self._update_global_attribute(attr_name, attr_value)
+            self._update_global_attribute(attr_name, (attr_value, ""))
 
         # Global Attributes
         for attr_name, attr_value in self.schema.derive_global_attributes(

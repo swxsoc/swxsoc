@@ -54,7 +54,6 @@ class SWXSchema:
             derived: <bool> # Whether or not the attribute's value can be derived using a python function
             derivation_fn: <string> # The name of a Python function to derive the value. Must be a function member of the schema class and match the signature below.
             required: <bool> # Whether the attribute is required
-            validate: <bool> # Whether the attribute should be validated by the Validation module
             overwrite: <bool> # Whether an existing value for the attribute should be overwritten if a different value is derived.
 
     The signature for all functions to derive global attributes should follow the format below.
@@ -80,7 +79,6 @@ class SWXSchema:
                 derived: <bool> # Whether or not the attribute's value can be derived using a python function
                 derivation_fn: <string> # The name of a Python function to derive the value. Must be a function member of the schema class and match the signature below.
                 required: <bool> # Whether the attribute is required
-                validate: <bool> # Whether the attribute should be validated by the Validation module
                 overwrite: <bool> # Whether an existing value for the attribute should be overwritten if a different value is derived.
                 valid_values: <list> # A list of valid values that the attribute can take. The value of the attribute is checked against the `valid_values` in the Validation module.
                 alternate: <string> An additional attribute name that can be treated as an alternative of the given attribute.
@@ -117,9 +115,8 @@ class SWXSchema:
         Absolute file paths to variable attribute schema files. These schema files are layered
         on top of one another in a latest-priority ordering. That is, the latest file that modifies
         a common schema attribute will take precedence over earlier values for a given attribute.
-    use_defaults: `Optional[bool]`
-        Whether or not to load the default global and variable attribute schema files. These
-        default schema files contain only the requirements for CDF ISTP validation.
+    defaults: `Optional[str]`
+        Optional argument to specify the default schema to use. The default schema can be either `cdf` or `fits` for CDF and FITS file formats, respectively.
     """
 
     def __init__(
@@ -385,9 +382,6 @@ class SWXSchema:
         - derived: (`bool`) Whether the attibute can be derived by the SWxSOC
             :py:class:`~swxsoc.util.schema.SWXSchema` class
         - required: (`bool`) Whether the attribute is required by SWxSOC standards
-        - validate: (`bool`) Whether the attribute is included in the
-            :py:func:`~swxsoc.util.validation.validate` checks (Note, not all attributes that
-            are required are validated)
         - overwrite: (`bool`) Whether the :py:class:`~swxsoc.util.schema.SWXSchema`
             attribute derivations will overwrite an existing attribute value with an updated
             attribute value from the derivation process.

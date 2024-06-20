@@ -8,12 +8,12 @@ import datetime
 from astropy.time import Time
 from astropy.timeseries import TimeSeries
 import astropy.units as u
+from astropy.io import fits
 from spacepy.pycdf import CDF
-from spacepy import pycdf
 import swxsoc
 from swxsoc.swxdata import SWXData
 from swxsoc.util import const
-from swxsoc.util.validation import validate, CDFValidator
+from swxsoc.util.validation import validate, CDFValidator, FITSValidator
 
 SAMPLE_CDF_FILE = "swxsoc_nms_default_l1_20160322_123031_v0.0.1.cdf"
 
@@ -459,7 +459,7 @@ def test_valid_scale_high_dimension():
     """scalemin/scalemax with high-dimension variables"""
     with tempfile.TemporaryDirectory() as tmpdirname:
         # Create a Test CDF
-        cdf = pycdf.CDF(tmpdirname + "test.cdf", create=True)
+        cdf = CDF(tmpdirname + "test.cdf", create=True)
 
         v = cdf.new(
             "var1",
@@ -480,6 +480,13 @@ def test_valid_scale_high_dimension():
         assert "Multi-element SCALEMAX only valid with 1D variable." == errs[1]
 
 
-def test_cdf_lib():
-    lib = pycdf.lib
-    assert lib is not None
+def test_fits_validation():
+    """
+    Function to test the FITS Validation
+    """
+    fits_image_filename = fits.util.get_testdata_filepath("test1.fits")
+
+    # Validate the FITS File
+    errs = validate(fits_image_filename)
+    assert isinstance(errs, list)
+    print(errs)

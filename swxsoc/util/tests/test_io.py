@@ -12,6 +12,7 @@ from astropy.time import Time
 from astropy.units import Quantity
 from astropy.nddata import NDData
 from astropy.wcs import WCS
+from astropy.io import fits
 from ndcube import NDCube, NDCollection
 from spacepy.pycdf import CDFError, CDF
 from swxsoc.swxdata import SWXData
@@ -41,6 +42,11 @@ def get_test_sw_data():
     time = np.arange(10)
     time_col = Time(time, format="unix")
     ts["time"] = time_col
+    ts["time"].meta = OrderedDict(
+        {
+            "CATDESC": "Epoch Time",
+        }
+    )
 
     # Add Measurement
     quant = Quantity(value=random(size=(10)), unit="m", dtype=np.uint16)
@@ -53,7 +59,11 @@ def get_test_sw_data():
     )
 
     # Support Data / Non-Time Varying Data
-    support = {"support_counts": NDData(data=[1])}
+    support = {
+        "support_counts": NDData(
+            data=[1], meta={"CATDESC": "Test Metadata", "VAR_TYPE": "metadata"}
+        )
+    }
 
     # Spectra Data
     spectra = NDCollection(
@@ -151,3 +161,25 @@ def test_cdf_spectra_data():
         td_loaded = SWXData.load(test_file_output_path)
 
         assert "Test_Spectra_Var" in td_loaded.spectra
+
+
+def test_fits_io():
+    """
+    Function to test the FITS IO Handler on Default Data
+    """
+    fits_image_filename = fits.util.get_testdata_filepath("test1.fits")
+
+    # Load the Fits File to SWxData
+    td = SWXData.load(fits_image_filename)
+    assert isinstance(td, SWXData)
+    assert isinstance(td.meta, dict)
+    assert td["PRIMARY"] is not None
+
+    # Save the SWXData to a FITS File
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        # Create a fully qualified path to an output file
+        output_path = Path(tmpdirname) / "test.fits"
+        # Save the file with the the right Handler
+        test_output_path = td.save(output_path=output_path, file_extension=".fits")
+        # Assert the file exists
+        assert Path(test_output_path).exists()

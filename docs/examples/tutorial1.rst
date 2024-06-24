@@ -97,10 +97,14 @@ measurement data easier when reading and writing CDF data.
     >>> template = SWXData.measurement_attribute_template()
     >>> 
     >>> # Update the Metadata for each of the Measurements
+    >>> example_data.timeseries["time"].meta.update(
+    ...     OrderedDict({"CATDESC": ("Epoch Time", "")}))
     >>> example_data.timeseries["Bx GSE"].meta.update(
-    ...     OrderedDict({"CATDESC": "X component of magnetic Field GSE"}))
+    ...     OrderedDict({"CATDESC": ("X component of magnetic Field GSE", "")}))
     >>> example_data.timeseries["By GSE"].meta.update(
-    ...     OrderedDict({"CATDESC": "Y component of magnetic Field GSE"}))
+    ...     OrderedDict({"CATDESC": ("Y component of magnetic Field GSE", "")}))
+    >>> example_data.support["data_mask"].meta.update(
+    ...     OrderedDict({"CATDESC": ("Data Mask", "")}))
     >>> 
     >>> # You can add new scalar time-variant measurements to the SWXData container
     >>> bz = np.random.choice(a=[-1, 0, 1], size=1000).cumsum(0)

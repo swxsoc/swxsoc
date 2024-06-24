@@ -80,7 +80,6 @@ Information on the file format can be seen below:
         derived: <bool>
         derivation_fn: <string>
         required: <bool>
-        validate: <bool>
         overwrite: <bool>
     attriubte_name: 
         description: <string> ...
@@ -117,10 +116,6 @@ Each of the keys for global metadata requirements are defined in the table below
       - required only of `derived=True`
     * - `required`
       - whether the global attribute is required in your data products 
-      - `bool`
-      - `True`
-    * - `validate`
-      - whether the attribute should be validated in your data products by the :py:class:`~swxsoc.util.validation.SWXDataValidator` module
       - `bool`
       - `True`
     * - `overwrite`

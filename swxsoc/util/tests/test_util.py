@@ -62,7 +62,7 @@ tmp_file_path = Path("swxsoc/tests/config.yml")
 def test_science_filename_output_a(instrument, time, level, version, result):
     """Test simple cases with expected output"""
     assert (
-        util.create_science_filename(instrument, time, level=level, version=version)
+        util.create_science_filename(instrument, time, level, version)
         == result
     )
 # fmt: on
@@ -73,14 +73,22 @@ def test_science_filename_output_b():
     # mode
     assert (
         util.create_science_filename(
-            "spani", time, level="l3", mode="2s", version="2.4.5"
+            "spani",
+            time,
+            level="l3",
+            mode="2s",
+            version="2.4.5",
         )
         == f"swxsoc_spn_2s_l3_{time_formatted}_v2.4.5.cdf"
     )
     # test
     assert (
         util.create_science_filename(
-            "spani", time, level="l1", version="2.4.5", test=True
+            "spani",
+            time,
+            level="l1",
+            version="2.4.5",
+            test=True,
         )
         == f"swxsoc_spn_l1test_{time_formatted}_v2.4.5.cdf"
     )
@@ -138,15 +146,7 @@ def test_parse_science_filename_output():
         "time": Time("2024-04-06T12:06:21"),
     }
 
-    f = util.create_science_filename(
-        input["instrument"],
-        input["time"],
-        input["level"],
-        input["version"],
-        test=input["test"],
-        descriptor=input["descriptor"],
-        mode=input["mode"],
-    )
+    f = util.create_science_filename(**input)
     assert util.parse_science_filename(f) == input
 
     # test only
@@ -156,23 +156,17 @@ def test_parse_science_filename_output():
         "test": True,
         "version": "2.4.5",
         "time": Time("2024-04-06T12:06:21"),
-        "mode": None,
-        "descriptor": None,
+        "mode": "",
+        "descriptor": "",
     }
 
-    f = util.create_science_filename(
-        input["instrument"],
-        input["time"],
-        input["level"],
-        input["version"],
-        test=input["test"],
-    )
+    f = util.create_science_filename(**input)
     assert util.parse_science_filename(f) == input
 
     # descriptor only
     input = {
         "instrument": "spani",
-        "mode": None,
+        "mode": "",
         "level": "l3",
         "test": False,
         "descriptor": "burst",
@@ -180,13 +174,7 @@ def test_parse_science_filename_output():
         "time": Time("2024-04-06T12:06:21"),
     }
 
-    f = util.create_science_filename(
-        input["instrument"],
-        input["time"],
-        input["level"],
-        input["version"],
-        descriptor=input["descriptor"],
-    )
+    f = util.create_science_filename(**input)
     assert util.parse_science_filename(f) == input
 
     # mode only
@@ -195,18 +183,12 @@ def test_parse_science_filename_output():
         "mode": "2s",
         "level": "l2",
         "test": False,
-        "descriptor": None,
+        "descriptor": "",
         "version": "2.7.9",
         "time": Time("2024-04-06T12:06:21"),
     }
 
-    f = util.create_science_filename(
-        input["instrument"],
-        input["time"],
-        input["level"],
-        input["version"],
-        mode=input["mode"],
-    )
+    f = util.create_science_filename(**input)
     assert util.parse_science_filename(f) == input
 
 
@@ -262,7 +244,11 @@ def test_science_filename_errors_l1_b():
     with pytest.raises(ValueError):
         # _ character in mode
         util.create_science_filename(
-            "eeb", time="12345345", level=good_level, version=good_version, mode="o_o"
+            "eeb",
+            time="12345345",
+            level=good_level,
+            version=good_version,
+            mode="o_o",
         )
     with pytest.raises(ValueError):
         # _ character in descriptor
@@ -277,10 +263,10 @@ def test_science_filename_errors_l1_b():
 
 # fmt: off
 @pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
-    ("swxsoc_NEM_l0_2024094-124603_v01.bin", "nemisis", "2024-04-03T12:46:03", "l0", "01", None),
-    ("swxsoc_EEA_l0_2026337-124603_v11.bin", "eea", "2026-12-03T12:46:03", "l0", "11", None),
-    ("swxsoc_MERIT_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03", "l0", "21", None),
-    ("swxsoc_SPANI_l0_2026337-065422_v11.bin", "spani", "2026-12-03T06:54:22", "l0", "11", None),
+    ("swxsoc_NEM_l0_2024094-124603_v01.bin", "nemisis", "2024-04-03T12:46:03", "l0", "01", ""),
+    ("swxsoc_EEA_l0_2026337-124603_v11.bin", "eea", "2026-12-03T12:46:03", "l0", "11", ""),
+    ("swxsoc_MERIT_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03", "l0", "21", ""),
+    ("swxsoc_SPANI_l0_2026337-065422_v11.bin", "spani", "2026-12-03T06:54:22", "l0", "11", ""),
     ("swxsoc_MERIT_VC_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03", "l0", "21", "VC"),
     ("swxsoc_SPANI_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03", "l0", "21", "VA")
 ])
@@ -297,12 +283,12 @@ def test_parse_l0_filenames(filename, instrument, time, level, version, mode):
 
 # fmt: off
 @pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
-    ("hermes_NEM_l0_2024094-124603_v01.bin", "nemisis", "2024-04-03T12:46:03", "l0", "01", None),
-    ("hermes_EEA_l0_2026337-124603_v11.bin", "eea", "2026-12-03T12:46:03", "l0", "11", None),
-    ("hermes_MERIT_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03", "l0", "21", None),
-    ("hermes_SPANI_l0_2026337-065422_v11.bin", "spani", "2026-12-03T06:54:22", "l0", "11", None),
-    (f"hermes_eea_l1_{time_formatted}_v1.2.3.cdf", "eea", "2024-04-06T12:06:21", "l1", "1.2.3", None),
-    (f"hermes_mrt_l2_{time_formatted}_v1.2.5.cdf", "merit", "2024-04-06T12:06:21", "l2", "1.2.5", None),
+    ("hermes_NEM_l0_2024094-124603_v01.bin", "nemisis", "2024-04-03T12:46:03", "l0", "01", ""),
+    ("hermes_EEA_l0_2026337-124603_v11.bin", "eea", "2026-12-03T12:46:03", "l0", "11", ""),
+    ("hermes_MERIT_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03", "l0", "21", ""),
+    ("hermes_SPANI_l0_2026337-065422_v11.bin", "spani", "2026-12-03T06:54:22", "l0", "11", ""),
+    (f"hermes_eea_l1_{time_formatted}_v1.2.3.cdf", "eea", "2024-04-06T12:06:21", "l1", "1.2.3", ""),
+    (f"hermes_mrt_l2_{time_formatted}_v1.2.5.cdf", "merit", "2024-04-06T12:06:21", "l2", "1.2.5", ""),
 ])
 def test_parse_env_var_configured(filename, instrument, time, level, version, mode):
     """Testing parsing of MOC-generated level 0 files."""
@@ -342,12 +328,12 @@ def test_create_env_var_configured(instrument, time, level, version, result):
 
 # fmt: off
 @pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
-    ("mission_INS1_l0_2024094-124603_v01.bin", "instrument1", "2024-04-03T12:46:03", "l0", "01", None),
-    ("mission_INS1_l0_2026337-124603_v11.bin", "instrument1", "2026-12-03T12:46:03", "l0", "11", None),
-    ("mission_INS2_l0_2026215-124603_v21.bin", "instrument2", "2026-08-03T12:46:03", "l0", "21", None),
-    ("mission_INS2_l0_2026337-065422_v11.bin", "instrument2", "2026-12-03T06:54:22", "l0", "11", None),
-    (f"mission_ins1_l1_{time_formatted}_v1.2.3.txt", "instrument1", "2024-04-06T12:06:21", "l1", "1.2.3", None),
-    (f"mission_ins2_l2_{time_formatted}_v1.2.5.txt", "instrument2", "2024-04-06T12:06:21", "l2", "1.2.5", None),
+    ("mission_INS1_l0_2024094-124603_v01.bin", "instrument1", "2024-04-03T12:46:03", "l0", "01", ""),
+    ("mission_INS1_l0_2026337-124603_v11.bin", "instrument1", "2026-12-03T12:46:03", "l0", "11", ""),
+    ("mission_INS2_l0_2026215-124603_v21.bin", "instrument2", "2026-08-03T12:46:03", "l0", "21", ""),
+    ("mission_INS2_l0_2026337-065422_v11.bin", "instrument2", "2026-12-03T06:54:22", "l0", "11", ""),
+    (f"mission_ins1_l1_{time_formatted}_v1.2.3.txt", "instrument1", "2024-04-06T12:06:21", "l1", "1.2.3", ""),
+    (f"mission_ins2_l2_{time_formatted}_v1.2.5.txt", "instrument2", "2024-04-06T12:06:21", "l2", "1.2.5", ""),
 ])
 def test_parse_configdir_configured(filename, instrument, time, level, version, mode):
     """Testing parsing of MOC-generated level 0 files."""

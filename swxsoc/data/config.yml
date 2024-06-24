@@ -52,14 +52,14 @@ missions_data:
   padre:
     file_extension: fits
     instruments:
-      - name: eea
-        shortname: eea
-        fullname: Electron Electrostatic Analyzer
-        targetname: EEA
-      - name: nemisis
-        shortname: nem
-        fullname: Noise Eliminating Magnetometer Instrument in a Small Integrated System
-        targetname: NEM
+      - name: meddea
+        shortname: meddea
+        fullname: MeDDEA
+        targetname: MEDDEA
+      - name: sharp
+        shortname: sharp
+        fullname:  Solar HARd X-ray Polarimeter
+        targetname: SHARP
 
 logger:
   # Threshold for the logging messages. Logging messages that are less severe

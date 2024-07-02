@@ -29,7 +29,7 @@ __all__ = ["SWXData"]
 
 class SWXData:
     """
-    A generic object for loading, storing, and manipulating space weather time series data.
+    A generic object for loading, storing, and manipulating space weather data.
 
     Parameters
     ----------
@@ -41,10 +41,10 @@ class SWXData:
         One or more `ndcube.NDCube` objects containing spectral or higher-dimensional
         timeseries data.
     meta : `Optional[dict]`
-        The metadata describing the time series in an ISTP-compliant format.
+        The metadata describing the file-level metadata.
     schema: `Optional[SWXSchema]`
         Optional custom schema to use for metadata derivation.
-    enable_derivations: Optional[bool]
+    enable_derivations: Optional[bool], default `true` 
         Optional flag to derive metadata attributes from the data.
 
     Examples

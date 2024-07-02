@@ -611,7 +611,7 @@ DSUN_OBS:
   description: Distance to Sun (in meters)
   human_readable: Distance to Sun
   overwrite: false
-  required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for deep-space obervatories (not Earth-orbiting satellites)
+  required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for deep-space observatories (not Earth-orbiting satellites)
 DWia: # NOTE Equivalent to CDDISia?
   data_type: str
   default: null
@@ -675,7 +675,7 @@ GEOX_OBS:
   description: '[m] Observer''s non-fixed geographic X coordinate'
   human_readable: Observer X Position
   overwrite: false
-  required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for earth-orbiting obervatories
+  required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for earth-orbiting observatories
 GEOY_OBS:
   data_type: float
   default: null
@@ -683,7 +683,7 @@ GEOY_OBS:
   description: '[m] Observer''s non-fixed geographic Y coordinate'
   human_readable: Observer Y Position
   overwrite: false
-  required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for earth-orbiting obervatories
+  required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for earth-orbiting observatories
 GEOZ_OBS:
   data_type: float
   default: null
@@ -691,7 +691,7 @@ GEOZ_OBS:
   description: '[m] Observer''s non-fixed geographic Z coordinate'
   human_readable: Observer Z Position
   overwrite: false
-  required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for earth-orbiting obervatories
+  required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for earth-orbiting observatories
 GRATING:
   data_type: str
   default: null
@@ -715,7 +715,7 @@ HGLN_OBS:
   description: Observer''s heliographic longitude
   human_readable: Observer Heliographic Longitude
   overwrite: false
-  required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for deep-space obervatories (not Earth-orbiting satellites)
+  required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for deep-space observatories (not Earth-orbiting satellites)
 HGLT_OBS:
   data_type: float
   default: null
@@ -723,7 +723,7 @@ HGLT_OBS:
   description: Observer''s heliographic latitude
   human_readable: Observer Heliographic Latitude
   overwrite: false
-  required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for deep-space obervatories (not Earth-orbiting satellites)
+  required: true # Mandatory WCS Positional keywords (sections 15, 3.2), Only required for deep-space observatories (not Earth-orbiting satellites)
 INCLEXT:
   data_type: str
   default: null

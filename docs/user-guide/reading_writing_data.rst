@@ -275,10 +275,12 @@ automatically generated as you might make the resulting CDF file non-compliant.
 Creating a ``SWXData`` from an existing CDF File
 =========================================================
 
-Given a current CDF File you can load it into a :py:class:`~swxsoc.swxdata.SWXData` by providing a path to the CDF file::
+Given a current CDF File you can load it into a :py:class:`~swxsoc.swxdata.SWXData` by providing a :py:class:`~pathlib.Path` to the CDF file::
 
+    >>> from pathlib import Path
     >>> from swxsoc.swxdata import SWXData
-    >>> sw_data = SWXData.load("hermes_eea_default_ql_20240406T120621_v0.0.1.cdf") # doctest: +SKIP
+    >>> data_path = Path("hermes_eea_default_ql_20240406T120621_v0.0.1.cdf")
+    >>> sw_data = SWXData.load(data_path) # doctest: +SKIP
 
 The :py:class:`~swxsoc.swxdata.SWXData` can the be updated, measurements added, metadata added, and written to a new CDF file.
 
@@ -487,9 +489,9 @@ Writing a CDF File
 ==================
 
 The :py:class:`~swxsoc.swxdata.SWXData` class writes CDF files using the `~spacepy.pycdf` module.
-This can be done using the :py:func:`~swxsoc.swxdata.SWXData.save` method which only requires a path to the folder where the CDF file should be saved.
+This can be done using the :py:func:`~swxsoc.swxdata.SWXData.save` method which only requires a :py:class:`~pathlib.Path` to the folder where the CDF file should be saved.
 If no path is provided it writes the file to the current directory.
-This function returns the full path to the CDF file that was generated.
+This function returns the full :py:class:`~pathlib.Path` to the CDF file that was generated.
 From this you can validate and distribute your CDF file.
 
 Validating a CDF File
@@ -497,7 +499,7 @@ Validating a CDF File
 
 The :py:class:`~swxsoc.swxdata.SWXData` uses the `~spacepy.pycdf.istp` module for CDF validation, in addition to custom
 tests for additional metadata. A CDF file can be validated using the :py:func:`~swxsoc.util.validation.validate` method
-and by passing, as a parameter, the full path to the CDF file to be validated::
+and by passing, as a parameter, the full :py:class:`~pathlib.Path` to the CDF file to be validated::
 
     >>> from swxsoc.util.validation import validate
     >>> validation_errors = validate(cdf_file_path) # doctest: +SKIP

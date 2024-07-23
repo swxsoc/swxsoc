@@ -1,7 +1,6 @@
-.. _reading_writing_data:
 
 *******************************************
-Opening and Writing SWxSOC Aaffiliated Data
+Opening and Writing SWxSOC Affiliated Data
 *******************************************
 
 Overview
@@ -37,9 +36,10 @@ Creating a ``SWXData`` object
 Creating a :py:class:`~swxsoc.swxdata.SWXData` data container from scratch involves four 
 pieces of data:
 
-- `timeseries` (required) - an `~astropy.timeseries.TimeSeries` containing the time dimension of 
-    the data as well as at least one other measurement. This data structure must be used for all 
-    scalar time-varying measurement data.  
+- `timeseries` (required) - an `~astropy.timeseries.TimeSeries` or 
+    `dict[str : ~astropy.timeseries.TimeSeries]` containing one or more time variables, and any other 
+    time-varying scalar measurements. Time-varying measurements should appear in the table as columns with 
+    their associates time variable as the first column.
 - `support` (optional) - a `dict[astropy.nddata.NDdata | astropy.units.Quantity]` containing one
     or more non-time-varying (time invariant) measurements, time-invariant support or metadata
     variables. 
@@ -53,17 +53,16 @@ pieces of data:
 Alternatively, a :py:class:`~swxsoc.swxdata.SWXData` data container can be loaded from 
 an existing CDF file using the :py:func:`~swxsoc.swxdata.SWXData.load` function. 
 
-Creating a ``TimeSeries`` for ``SWXData`` `timeseries`
+Creating ``TimeSeries`` for ``SWXData`` `timeseries`
 ------------------------------------------------------
 
-A :py:class:`~swxsoc.swxdata.SWXData` must be initialized by providing a 
-`~astropy.timeseries.TimeSeries` object with at least one measurement. There are many ways to 
-initialize one but here is one example:
+A :py:class:`~swxsoc.swxdata.SWXData` must be initialized by providing one or more `~astropy.timeseries.TimeSeries` object with at least one measurement. 
+There are many ways to initialize one but here is one example:
 
     >>> import numpy as np
     >>> import astropy.units as u
     >>> from astropy.timeseries import TimeSeries
-    >>> ts = TimeSeries(
+    >>> example_ts = TimeSeries(
     ...     time_start='2016-03-22T12:30:31',
     ...     time_delta=3 * u.s,
     ...     data={'Bx': u.Quantity(
@@ -83,7 +82,7 @@ array directly
     >>> import astropy.units as u
     >>> from astropy.timeseries import TimeSeries
     >>> times = Time('2010-01-01 00:00:00', scale='utc') + TimeDelta(np.arange(100) * u.s)
-    >>> ts = TimeSeries(
+    >>> ts_2 = TimeSeries(
     ...     time=times, 
     ...     data={'diff_e_flux': u.Quantity(
     ...         value=np.arange(100) * 1e-3, 
@@ -92,8 +91,38 @@ array directly
     ...     )}
     ... )
 
-Note the use of `~astropy.time` and `astropy.units` which provide several advantages over using 
-arrays of numbers and are required by :py:class:`~swxsoc.swxdata.SWXData`.
+Note the use of `~astropy.time` and `astropy.units` which provide several advantages over using arrays of numbers and are required by :py:class:`~swxsoc.swxdata.SWXData`.
+
+For collections that have multiple Epochs, you can create a dictionary of `~astropy.timeseries.TimeSeries` objects. 
+
+    >>> from astropy.time import Time, TimeDelta
+    >>> import astropy.units as u
+    >>> from astropy.timeseries import TimeSeries
+    >>> import numpy as np
+    >>> # Collected at one-second cadence
+    >>> primary_epoch = Time('2010-01-01 00:00:00', scale='utc') + TimeDelta(np.arange(100) * u.s)
+    >>> # Collected at 10-second cadence
+    >>> secondary_epoch = Time('2010-01-01 00:00:00', scale='utc') + TimeDelta(np.arange(10) * (10*u.s))
+    >>> ts_3 = {
+    ...     'Epoch': TimeSeries(
+    ...         time=primary_epoch,
+    ...         data={'diff_e_flux': u.Quantity(
+    ...             value=np.arange(100) * 1e-3,
+    ...             unit='1/(cm**2 * s * eV * steradian)',
+    ...             dtype=np.float32
+    ...         )}
+    ...     ),
+    ...     'Epoch_state': TimeSeries(
+    ...         time=secondary_epoch,
+    ...         data={'counts': u.Quantity( 
+    ...             value=np.arange(10),
+    ...             unit='Celsius',
+    ...             dtype=np.float32
+    ...         )}
+    ...     )
+    ... }
+
+This allows  you to have multiple time series in one :py:class:`~swxsoc.swxdata.SWXData` object.
 
 Creating a ``NDCollection`` for ``SWXData`` `spectra`
 --------------------------------------------------------------
@@ -110,7 +139,7 @@ You can create a `~ndcube.NDCollection` object using an approach similar to the 
     >>> import numpy as np
     >>> from astropy.wcs import WCS
     >>> from ndcube import NDCube, NDCollection
-    >>> spectra = NDCollection(
+    >>> example_spectra = NDCollection(
     ...     [
     ...         (
     ...             "example_spectra",
@@ -147,9 +176,13 @@ data. A guide to the `~astropy.nddata` package is available in the
 
 
     >>> from astropy.nddata import NDData
-    >>> support_data = {
-    ...     "const_param": u.Quantity(value=[1e-3], unit="keV", dtype=np.uint16),
-    ...     "data_mask": NDData(data=np.eye(100, 100, dtype=np.uint16))
+    >>> const_param = u.Quantity(value=[1e-3], unit="keV", dtype=np.uint16)
+    >>> const_param.meta = {"CATDESC": "Constant Parameter", "VAR_TYPE": "support_data"}
+    >>> data_mask = NDData(data=np.eye(100, 100, dtype=np.uint16))
+    >>> data_mask.meta = {"CATDESC": "Data Mask", "VAR_TYPE": "support_data"}
+    >>> example_support_data = {
+    ...     "const_param": const_param,
+    ...     "data_mask": data_mask
     ... }
 
 Metadata passed in through the :py:class:`~astropy.nddata.NDData` object is used by 
@@ -212,31 +245,59 @@ Putting it all together here is instantiation of a :py:class:`~swxsoc.swxdata.SW
 object: 
 
     >>> from swxsoc.swxdata import SWXData
-    >>> sw_data = SWXData(
-    ...     timeseries=ts, 
-    ...     support=support_data, 
-    ...     spectra=spectra, 
+    >>> example_sw_data = SWXData(
+    ...     timeseries=example_ts, 
+    ...     support=example_support_data, 
+    ...     spectra=example_spectra, 
     ...     meta=input_attrs
     ... )
 
 For a complete example with instantiation of all objects in one code example: 
 
     >>> import numpy as np
+    >>> from astropy.time import Time, TimeDelta
     >>> import astropy.units as u
     >>> from astropy.timeseries import TimeSeries
     >>> from ndcube import NDCube, NDCollection
     >>> from astropy.nddata import NDData
     >>> from swxsoc.swxdata import SWXData
+    >>> # Collected at one-second cadence
+    >>> primary_epoch = Time('2010-01-01 00:00:00', scale='utc') + TimeDelta(np.arange(100) * u.s)
+    >>> # Collected at 10-second cadence
+    >>> secondary_epoch = Time('2010-01-01 00:00:00', scale='utc') + TimeDelta(np.arange(10) * (10*u.s))
     >>> # Create a TimeSeries structure
-    >>> data = u.Quantity([1, 2, 3, 4], "gauss", dtype=np.uint16)
-    >>> ts = TimeSeries(time_start="2016-03-22T12:30:31", time_delta=3 * u.s, data={"Bx": data})
+    >>> ts = {
+    ...     'Epoch': TimeSeries(
+    ...         time=primary_epoch,
+    ...         data={'diff_e_flux': u.Quantity(
+    ...             value=np.arange(100) * 1e-3,
+    ...             unit='1/(cm**2 * s * eV * steradian)',
+    ...             dtype=np.float32
+    ...         )}
+    ...     ),
+    ...     'Epoch_state': TimeSeries(
+    ...         time=secondary_epoch,
+    ...         data={'counts': u.Quantity( 
+    ...             value=np.arange(10),
+    ...             unit='Celsius',
+    ...             dtype=np.float32
+    ...         )}
+    ...     )
+    ... }
+    >>> # Create a Support Structure
+    >>> support_data = {
+    ...     "data_mask": NDData(
+    ...         data=np.eye(10, 10, dtype=np.uint16), 
+    ...         meta={"CATDESC": "Data Mask", "VAR_TYPE": "support_data"}
+    ...     ),
+    ... }
     >>> # Create a Spectra structure
     >>> spectra = NDCollection(
     ...     [
     ...         (
     ...             "example_spectra",
     ...             NDCube(
-    ...                 data=np.random.random(size=(4, 10)),
+    ...                 data=np.random.random(size=(10, 10)),
     ...                 wcs=WCS(naxis=2),
     ...                 meta={"CATDESC": "Example Spectra Variable"},
     ...                 unit="eV",
@@ -258,14 +319,20 @@ For a complete example with instantiation of all objects in one code example:
     ...     meta=input_attrs
     ... )
 
-The :py:class:`~swxsoc.swxdata.SWXData` is mutable so you can edit it, add another 
-measurement column or edit the metadata after the fact. Your variable metadata can be found 
-by querying the measurement column directly.
+The :py:class:`~swxsoc.swxdata.SWXData` is mutable so you can edit it, add another measurement column or edit the metadata after the fact. 
+Your variable metadata can be found by querying the measurement column directly.
 
-    >>> sw_data.timeseries['Bx'].meta.update(
+    >>> example_sw_data.timeseries['Bx'].meta.update(
     ...     {"CATDESC": "X component of the Magnetic field measured by HERMES"}
     ... )
-    >>> sw_data.timeseries['Bx'].meta # doctest: +SKIP
+    >>> example_sw_data.timeseries['Bx'].meta # doctest: +SKIP
+
+For multiple epoch variables, you have to addess measurements through the `.timeseries` dictionary, keyed by the epoch name: 
+
+    >>> sw_data.timeseries['Epoch']['diff_e_flux'].meta.update(
+    ...     {"CATDESC": "Differential Electron Flux measured by HERMES"}
+    ... )
+    >>> sw_data.timeseries['Epoch']['diff_e_flux'].meta # doctest: +SKIP
 
 The class does its best to fill in metadata fields if it can and leaves others blank that it 
 cannot. Those should be filled in manually. Be careful when editing metadata that was 
@@ -294,8 +361,12 @@ You can add the new measurements in one of two ways.
 
 The more explicit approach is to use :py:func:`~swxsoc.swxdata.SWXData.add_measurement` function::
 
-    >>> data = u.Quantity(np.arange(len(sw_data.timeseries['Bx'])), 'Gauss', dtype=np.uint16)
-    >>> sw_data.add_measurement(measure_name="By", data=data, meta={"CATDESC": "Test Metadata"})
+    >>> data = u.Quantity(np.arange(len(example_sw_data.timeseries['Bx'])), 'Gauss', dtype=np.uint16)
+    >>> example_sw_data.add_measurement(
+    ...     measure_name="By", 
+    ...     data=data, 
+    ...     meta={"CATDESC": "Y component of the Magnetic field measured by HERMES"}
+    ... )
     
 To add non-time-varying support data use the :py:func:`~swxsoc.swxdata.SWXData.add_support` function::
 
@@ -366,18 +437,16 @@ A template of the required metadata can be obtained using the
     >>> from collections import OrderedDict
     >>> from swxsoc.swxdata import SWXData
     >>> SWXData.global_attribute_template()
-    OrderedDict([('DOI', None),
-             ('Data_level', None),
+    OrderedDict([('Data_level', None),
              ('Data_version', None),
              ('Descriptor', None),
-             ('HTTP_LINK', None),
-             ('Instrument_mode', None),
+             ('Discipline', None),
              ('Instrument_type', None),
-             ('LINK_TEXT', None),
-             ('LINK_TITLE', None),
-             ('MODS', None),
+             ('Mission_group', None),
              ('PI_affiliation', None),
              ('PI_name', None),
+             ('Project', None), 
+             ('Source_name', None),
              ('TEXT', None)])
 
 
@@ -390,18 +459,16 @@ You can also pass arguments into the function to get a partially populated templ
     ...     data_level='l1',
     ...     version='0.1.0'
     ... )
-    OrderedDict([('DOI', None),
-             ('Data_level', 'L1>Level 1'),
+    OrderedDict([('Data_level', 'L1>Level 1'),
              ('Data_version', '0.1.0'),
              ('Descriptor', 'EEA>Electron Electrostatic Analyzer'),
-             ('HTTP_LINK', None),
-             ('Instrument_mode', None),
+             ('Discipline', None),
              ('Instrument_type', None),
-             ('LINK_TEXT', None),
-             ('LINK_TITLE', None),
-             ('MODS', None),
+             ('Mission_group', None),
              ('PI_affiliation', None),
              ('PI_name', None),
+             ('Project', None), 
+             ('Source_name', None),
              ('TEXT', None)])
 
 This can make the definition of global metadata easier since instrument teams or users only need 

@@ -7,6 +7,11 @@ general:
   # note that the extra '%'s are escape characters
   time_format: "%Y-%m-%d %H:%M:%S"
 
+  # Default Key to use for Time Series time data in CDF Files
+  # Additional Time keys can be used, however the following is treated
+  # as the default and primary time variable key
+  default_timeseries_key: Epoch
+
 selected_mission: swxsoc
 
 missions_data:

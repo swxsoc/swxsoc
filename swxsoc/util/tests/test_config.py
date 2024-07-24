@@ -32,3 +32,7 @@ def test_is_writable_dir(tmpdir, tmp_path):
     assert _is_writable_dir(tmpdir)
     # Checks a filepath instead of directory
     assert not _is_writable_dir(tmp_file)
+
+
+def test_print_config():
+    assert isinstance(swxsoc.print_config(swxsoc.config), str)

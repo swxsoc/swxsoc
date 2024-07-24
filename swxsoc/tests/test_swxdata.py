@@ -41,19 +41,19 @@ def get_bad_timeseries():
     return ts
 
 
-def get_test_timeseries():
+def get_test_timeseries(n=10):
     """
     Function to get test astropy.timeseries.TimeSeries to re-use in other tests
     """
     ts = TimeSeries()
 
     # Create an astropy.Time object
-    time = np.arange(10)
+    time = np.arange(n)
     time_col = Time(time, format="unix")
     ts["time"] = time_col
 
     # Add Measurement
-    quant = Quantity(value=random(size=(10)), unit="m", dtype=np.uint16)
+    quant = Quantity(value=random(size=(n)), unit="m", dtype=np.uint16)
     ts["measurement"] = quant
     ts["measurement"].meta = OrderedDict(
         {
@@ -78,7 +78,11 @@ def get_test_sw_data():
     ts["time"].meta = OrderedDict({"CATDESC": "Epoch Time", "VAR_TYPE": "support_data"})
 
     # Support Data / Non-Time Varying Data
-    support = {"support_counts": NDData(data=[1])}
+    support = {
+        "support_counts": NDData(
+            data=[1], meta={"CATDESC": "variable counts", "VAR_TYPE": "support_data"}
+        )
+    }
 
     # Spectra Data
     spectra = NDCollection(
@@ -252,10 +256,14 @@ def test_support_data():
 
     # Support as NDData
     support = {}
-    support["support_nddata"] = NDData(data=[1])
+    support_nddata = NDData(data=[1])
+    support_nddata.meta = {"VAR_TYPE": "support_data"}
+    support["support_nddata"] = support_nddata
 
     # Support as Quantity
-    support["support_quantity"] = Quantity(value=[1], unit="count")
+    support_quantity = Quantity(value=[1], unit="count")
+    support_quantity.meta = {"VAR_TYPE": "support_data"}
+    support["support_quantity"] = support_quantity
 
     # Create SWXData
     test_data = SWXData(ts, support=support, meta=input_attrs)
@@ -376,7 +384,7 @@ def test_default_properties():
     # data
     assert isinstance(test_data.data, dict)
     assert "timeseries" in test_data.data
-    assert isinstance(test_data.data["timeseries"], TimeSeries)
+    assert isinstance(test_data.data["timeseries"], dict)
     assert "support" in test_data.data
     assert isinstance(test_data.data["support"], dict)
     assert "spectra" in test_data.data
@@ -393,6 +401,53 @@ def test_default_properties():
 
     # __repr__
     assert isinstance(test_data.__repr__(), str)
+
+    # __getitem__
+    assert isinstance(test_data["Bx"], Quantity)
+    assert isinstance(test_data["support_counts"], NDData)
+    assert isinstance(test_data["test_spectra"], NDCube)
+    # Item does not exist
+    with pytest.raises(KeyError):
+        _ = test_data["bad_item"]
+
+
+def test_get_timeseres_epoch_key():
+    """
+    Function to test getting epoch key for different variable types.
+    """
+    # Initialize a CDF File Wrapper
+    test_data = get_test_sw_data()
+
+    # Quantity Data
+    q = Quantity(value=random((4)), dtype=np.uint16)
+    assert SWXData.get_timeseres_epoch_key(test_data.data["timeseries"], q) == "Epoch"
+
+    # NDData
+    d = NDData(data=[1, 2, 3, 4])
+    assert SWXData.get_timeseres_epoch_key(test_data.data["timeseries"], d) == "Epoch"
+
+    # NDCube
+    c = NDCube(
+        data=random(size=(4, 10, 10)),
+        wcs=WCS(naxis=2),
+        meta={"CATDESC": "Test Spectra Variable"},
+        unit="eV",
+    )
+    assert SWXData.get_timeseres_epoch_key(test_data.data["timeseries"], c) == "Epoch"
+
+    # Test Bad Data
+    with pytest.raises(ValueError):
+        q = Quantity(value=random((5)), dtype=np.uint16)
+        _ = SWXData.get_timeseres_epoch_key(test_data.data["timeseries"], q)
+
+    # Add sedond Epoch
+    ts = get_test_timeseries(n=4)
+    test_data.add_timeseries(epoch_key="Epoch2", timeseries=ts)
+
+    # Multiple Epochs
+    with pytest.raises(ValueError):
+        q = Quantity(value=random((4)), dtype=np.uint16)
+        _ = SWXData.get_timeseres_epoch_key(test_data.data["timeseries"], q)
 
 
 def test_sw_data_single_measurement():
@@ -484,6 +539,44 @@ def test_sw_data_add_measurement():
     # Test non-existent variable
     with pytest.raises(ValueError):
         test_data.remove("bad_variable")
+
+
+def test_heres_data_add_timeseries():
+    """
+    Function to Test Adding TimeSeries Data
+    """
+    # fmt: off
+    input_attrs = {
+        "Descriptor": "EEA>Electron Electrostatic Analyzer",
+        "Data_level": "l1>Level 1",
+        "Data_version": "v0.0.1",
+    }
+    # fmt: on
+
+    ts = get_test_timeseries()
+    # Initialize a CDF File Wrapper
+    test_data = SWXData(ts, meta=input_attrs)
+
+    # Add TS with Epoch that already exists
+    with pytest.raises(ValueError):
+        test_data.add_timeseries(epoch_key="Epoch", timeseries=ts)
+
+    # Add TS with Epoch that does not exist
+    test_data.add_timeseries(epoch_key="Epoch2", timeseries=ts)
+
+    # Assert new TS was added
+    assert len(test_data.timeseries.keys()) == 2
+    assert "Epoch2" in test_data.timeseries.keys()
+    # Assert the data is the same
+    assert (
+        test_data.timeseries["Epoch2"]["measurement"].shape == ts["measurement"].shape
+    )
+    assert test_data.timeseries["Epoch2"]["time"].shape == ts["time"].shape
+    # Asser the metadata is the same
+    assert (
+        test_data.timeseries["Epoch2"]["measurement"].meta["CATDESC"]
+        == ts["measurement"].meta["CATDESC"]
+    )
 
 
 def test_sw_data_add_support():
@@ -960,7 +1053,9 @@ def test_sw_data_idempotency():
 
     # Induce an Non-Record-Varying Variable
     test_data.add_support(
-        name="NRV_var", data=NDData(["Test NRV Data"]), meta={"CATDESC": "NRV Variable"}
+        name="NRV_var",
+        data=NDData(["Test NRV Data"]),
+        meta={"CATDESC": "NRV Variable", "VAR_TYPE": "metadata"},
     )
 
     # Induce a Variable with Bad UNITS
@@ -971,6 +1066,7 @@ def test_sw_data_idempotency():
             meta={
                 "UNITS": "Not A Unit",
                 "CATDESC": "Test Variable with Incoherent UNITS",
+                "VAR_TYPE": "support_data",
             },
         ),
     )

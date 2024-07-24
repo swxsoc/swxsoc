@@ -64,11 +64,14 @@ class CDFValidator(SWXDataValidator):
     Validator for CDF files.
     """
 
-    def __init__(self):
+    def __init__(self, schema: Union[SWXSchema, None] = None):
         super().__init__()
 
         # CDF Schema
-        self.schema = SWXSchema()
+        if not schema:
+            self.schema = SWXSchema()
+        else:
+            self.schema = schema
 
     def validate(self, file_path: Path) -> list[str]:
         """

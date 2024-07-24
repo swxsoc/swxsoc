@@ -24,6 +24,9 @@ USER = os.path.expanduser("~")
 
 
 def test_is_writable_dir(tmpdir, tmp_path):
+    """
+    Test the _is_writable_dir function.
+    """
     assert _is_writable_dir(tmpdir)
     tmp_file = tmpdir.join("hello.txt")
     # Have to write to the file otherwise its seen as a directory(?!)
@@ -34,5 +37,20 @@ def test_is_writable_dir(tmpdir, tmp_path):
     assert not _is_writable_dir(tmp_file)
 
 
-def test_print_config():
-    assert isinstance(swxsoc.print_config(swxsoc.config), str)
+def test_print_config(capsys):
+    """
+    Test the print_config function.
+    """
+    # Run the functio to print the config
+    swxsoc.print_config(swxsoc.config)
+    # Capture the output
+    captured = capsys.readouterr()
+    assert isinstance(captured.out, str)
+    # assert general section
+    assert "[general]" in captured.out
+    # assert mission data
+    assert "[missions_data]" in captured.out
+    # assert logger
+    assert "[logger]" in captured.out
+    # assert mission
+    assert "[mission]" in captured.out

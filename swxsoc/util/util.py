@@ -13,7 +13,12 @@ from astropy.time import Time
 import swxsoc
 
 
-__all__ = ["create_science_filename", "parse_science_filename", "VALID_DATA_LEVELS"]
+__all__ = [
+    "create_science_filename",
+    "parse_science_filename",
+    "get_latest_dependent_file",
+    "VALID_DATA_LEVELS",
+]
 
 TIME_FORMAT_L0 = "%Y%j-%H%M%S"
 TIME_FORMAT = "%Y%m%dT%H%M%S"

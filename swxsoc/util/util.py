@@ -351,7 +351,6 @@ def get_latest_dependent_file(
     end_time: str,
     mode: str = None,
     test: bool = None,
-    level_filter: str = None,
     version: str = None,
     descriptor: str = None,
     use_s3: bool = True,
@@ -373,8 +372,6 @@ def get_latest_dependent_file(
         The mode to filter by.
     test : bool, optional
         The test flag to filter by.
-    level_filter : str, optional
-        The level to filter by.
     version : str, optional
         The version to filter by.
     descriptor : str, optional
@@ -420,7 +417,6 @@ def get_latest_dependent_file(
                     instrument,
                     mode,
                     test,
-                    level_filter,
                     version,
                     descriptor,
                 ):

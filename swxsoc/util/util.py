@@ -3,6 +3,10 @@ This module provides general utility functions.
 """
 
 import os
+from pathlib import Path
+import boto3
+from dateutil.parser import parse as parse_date
+from dateutil.relativedelta import relativedelta
 
 from astropy.time import Time
 
@@ -202,3 +206,229 @@ def parse_science_filename(filepath: str) -> dict:
     result["version"] = filename_components[-1][1:]  # remove the v
 
     return result
+
+
+def filter_science_file(
+    science_file_dict: dict,
+    instrument: str = None,
+    mode: str = None,
+    test: bool = None,
+    level: str = None,
+    version: str = None,
+    descriptor: str = None,
+) -> bool:
+    """
+    Filters the science file based on provided criteria.
+
+    Parameters
+    ----------
+    science_file_dict : dict
+        A dictionary containing science file properties.
+    instrument : str, optional
+        The instrument name to filter by.
+    mode : str, optional
+        The mode to filter by.
+    test : bool, optional
+        The test flag to filter by.
+    level : str, optional
+        The data level to filter by.
+    version : str, optional
+        The version to filter by.
+    descriptor : str, optional
+        The descriptor to filter by.
+
+    Returns
+    -------
+    bool
+        True if the science file matches the criteria, False otherwise.
+    """
+    criteria = {
+        "instrument": instrument,
+        "mode": mode,
+        "test": test,
+        "level": level,
+        "version": version,
+        "descriptor": descriptor,
+    }
+    for key, value in criteria.items():
+        if value is not None and science_file_dict.get(key) != value:
+            return False
+    return True
+
+
+def list_files_in_s3(bucket_name: str, prefix: str) -> list:
+    """
+    Lists files in an S3 bucket with a specified prefix.
+
+    Parameters
+    ----------
+    bucket_name : str
+        The name of the S3 bucket.
+    prefix : str
+        The prefix to filter the files.
+
+    Returns
+    -------
+    list
+        A list of file keys.
+    """
+    s3 = boto3.client("s3")
+    paginator = s3.get_paginator("list_objects_v2")
+    pages = paginator.paginate(Bucket=bucket_name, Prefix=prefix)
+
+    return [
+        obj["Key"] for page in pages if "Contents" in page for obj in page["Contents"]
+    ]
+
+
+def download_file_from_s3(bucket_name: str, key: str, local_dir: str) -> Path:
+    """
+    Downloads a file from S3 to a local directory.
+
+    Parameters
+    ----------
+    bucket_name : str
+        The name of the S3 bucket.
+    key : str
+        The key of the file to download.
+    local_dir : str
+        The local directory to save the file.
+
+    Returns
+    -------
+    Path
+        The path to the downloaded file.
+    """
+    s3 = boto3.client("s3")
+    local_file = Path(local_dir) / Path(key).name
+    s3.download_file(bucket_name, key, str(local_file))
+    return local_file
+
+
+def list_files_in_spdf() -> list:
+    """Stub function for listing files in SPDF."""
+    return []
+
+
+def download_file_from_spdf(file_path: str, local_dir: str) -> Path:
+    """Stub function for downloading file from SPDF."""
+    return Path(file_path)
+
+
+def generate_prefixes(level: str, start_time: str, end_time: str) -> list:
+    """
+    Generates a list of prefixes based on the level and time range.
+
+    Parameters
+    ----------
+    level : str
+        The data level.
+    start_time : str
+        The start time in ISO format.
+    end_time : str
+        The end time in ISO format.
+
+    Returns
+    -------
+    list
+        A list of prefixes.
+    """
+    current_time = start_time
+    prefixes = []
+
+    while current_time <= end_time:
+        prefix = f"{level}/{current_time.year}/{current_time.month:02d}/"
+        prefixes.append(prefix)
+        current_time += relativedelta(months=1)
+
+    return prefixes
+
+
+def get_latest_dependent_file(
+    instrument: str,
+    level: str,
+    start_time: str,
+    end_time: str,
+    mode: str = None,
+    test: bool = None,
+    level_filter: str = None,
+    version: str = None,
+    descriptor: str = None,
+    use_s3: bool = True,
+) -> Path:
+    """
+    Retrieves the latest dependent file based on the provided criteria.
+
+    Parameters
+    ----------
+    instrument : str
+        The instrument name.
+    level : str
+        The data level.
+    start_time : str
+        The start time in ISO format.
+    end_time : str
+        The end time in ISO format.
+    mode : str, optional
+        The mode to filter by.
+    test : bool, optional
+        The test flag to filter by.
+    level_filter : str, optional
+        The level to filter by.
+    version : str, optional
+        The version to filter by.
+    descriptor : str, optional
+        The descriptor to filter by.
+    use_s3 : bool, optional
+        Whether to get file from S3 or fallback to SPDF (default is True).
+
+    Returns
+    -------
+    Path
+        The path to the latest dependent file, or None if no matching file is found.
+    """
+    start_time = parse_date(start_time)
+    end_time = parse_date(end_time)
+
+    bucket_prefix = "" if os.getenv("LAMBDA_ENVIRONMENT") == "PRODUCTION" else "dev-"
+    mission_name = swxsoc.config["mission"]["mission_name"]
+    bucket_name = (
+        f"{bucket_prefix}{mission_name}-{instrument}"
+        if instrument in swxsoc.config["mission"]["inst_names"]
+        else f"{bucket_prefix}{mission_name}-ancillary"
+    )
+
+    prefixes = generate_prefixes(level, start_time, end_time)
+    all_files = []
+
+    try:
+        for prefix in prefixes:
+            all_files.extend(list_files_in_s3(bucket_name, prefix))
+    except Exception:
+        use_s3 = False
+
+    all_files.sort(key=lambda x: parse_science_filename(x)["time"], reverse=True)
+
+    for file in all_files:
+        try:
+            science_file_dict = parse_science_filename(file)
+            file_time = science_file_dict["time"]
+
+            if start_time <= file_time <= end_time:
+                if filter_science_file(
+                    science_file_dict,
+                    instrument,
+                    mode,
+                    test,
+                    level_filter,
+                    version,
+                    descriptor,
+                ):
+                    if not use_s3:
+                        return download_file_from_spdf(file, "/tmp")
+                    else:
+                        return download_file_from_s3(bucket_name, file, "/tmp")
+        except ValueError:
+            continue
+
+    return None

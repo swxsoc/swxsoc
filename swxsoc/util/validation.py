@@ -9,7 +9,7 @@ from swxsoc.util.schema import SWXSchema
 __all__ = ["validate", "SWXDataValidator", "CDFValidator"]
 
 
-def validate(file_path: Path) -> list[str]:
+def validate(file_path: Path, schema: Union[SWXSchema, None] = None) -> list[str]:
     """
     Validate a data file such as a CDF.
 
@@ -17,6 +17,8 @@ def validate(file_path: Path) -> list[str]:
     ----------
     file_path : `pathlib.Path`
         A fully specified file path of the data file to validate.
+    schema: `SWXSchema`, optional
+        optional custom `SWXSchema` object to use for validation.
 
     Returns
     -------
@@ -28,7 +30,7 @@ def validate(file_path: Path) -> list[str]:
 
     # Create the appropriate validator object based on file type
     if file_extension == ".cdf":
-        validator = CDFValidator()
+        validator = CDFValidator(schema=schema)
     else:
         raise ValueError(f"Unsupported file type: {file_extension}")
 
@@ -39,7 +41,15 @@ def validate(file_path: Path) -> list[str]:
 class SWXDataValidator(ABC):
     """
     Abstract base class for heliophysics data validators.
+
+    Parameters
+    ----------
+    schema: `SWXSchema`, optional
+        optional custom `SWXSchema` object to use for validation.
     """
+
+    def __init__(self, schema: Union[SWXSchema, None] = None) -> None:
+        pass
 
     @abstractmethod
     def validate(self, file_path: Path) -> list[str]:
@@ -62,13 +72,21 @@ class SWXDataValidator(ABC):
 class CDFValidator(SWXDataValidator):
     """
     Validator for CDF files.
+
+    Parameters
+    ----------
+    schema: `SWXSchema`, optional
+        optional custom `SWXSchema` object to use for validation.
     """
 
-    def __init__(self):
+    def __init__(self, schema: Union[SWXSchema, None] = None):
         super().__init__()
 
         # CDF Schema
-        self.schema = SWXSchema()
+        if not schema:
+            self.schema = SWXSchema()
+        else:
+            self.schema = schema
 
     def validate(self, file_path: Path) -> list[str]:
         """

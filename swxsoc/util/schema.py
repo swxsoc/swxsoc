@@ -11,11 +11,14 @@ from copy import deepcopy
 from typing import Optional
 import math
 import yaml
+
 import numpy as np
 from astropy.table import Table
 from astropy.time import Time
 from astropy import units as u
 from ndcube import NDCube
+
+from sammi.schema import SWxSchema
 import swxsoc
 from swxsoc import log
 from swxsoc.util import util, const
@@ -27,7 +30,7 @@ DEFAULT_GLOBAL_CDF_ATTRS_SCHEMA_FILE = "swxsoc_default_global_cdf_attrs_schema.y
 DEFAULT_VARIABLE_CDF_ATTRS_SCHEMA_FILE = "swxsoc_default_variable_cdf_attrs_schema.yaml"
 
 
-class SWXSchema:
+class SWXSchema(SWxSchema):
     """
     Class representing a schema for data requirements and formatting. The SWxSOC Default Schema
     only includes attributes required for ISTP compliance. Additional mission-specific attributes
@@ -124,57 +127,38 @@ class SWXSchema:
         variable_schema_layers: Optional[list[str]] = None,
         use_defaults: Optional[bool] = True,
     ):
-        super().__init__()
 
-        # Data Validation, Compliance, Derived Attributes
-        if not use_defaults and (
-            global_schema_layers is None
-            or variable_schema_layers is None
-            or len(global_schema_layers) == 0
-            or len(variable_schema_layers) == 0
-        ):
-            raise ValueError(
-                "Not enough information to create schema. You must either use the defaults or provide alternative layers for both global and variable attribbute schemas."
-            )
+        # SWxSOC Default Global Schema
+        global_schema_path = str(
+            Path(swxsoc.__file__).parent / "data" / DEFAULT_GLOBAL_CDF_ATTRS_SCHEMA_FILE
+        )
+        # SWxSOC Default Variable Schema
+        variable_schema_path = str(
+            Path(swxsoc.__file__).parent
+            / "data"
+            / DEFAULT_VARIABLE_CDF_ATTRS_SCHEMA_FILE
+        )
 
-        # Construct the Global Attribute Schema
-        _global_attr_schema = {}
-        if use_defaults:
-            _def_global_attr_schema = self._load_default_global_attr_schema()
-            _global_attr_schema = self._merge(
-                base_layer=_global_attr_schema, new_layer=_def_global_attr_schema
-            )
-        if global_schema_layers is not None:
-            for schema_layer_path in global_schema_layers:
-                _global_attr_layer = self._load_yaml_data(
-                    yaml_file_path=schema_layer_path
-                )
-                _global_attr_schema = self._merge(
-                    base_layer=_global_attr_schema, new_layer=_global_attr_layer
-                )
-        # Set Final Member
-        self._global_attr_schema = _global_attr_schema
+        # Seed Layers with Default
+        if not use_defaults:
+            _global_schema_layers = []
+            _variable_schema_layers = []
+        else:
+            _global_schema_layers = [global_schema_path]
+            _variable_schema_layers = [variable_schema_path]
 
-        # Data Validation and Compliance for Variable Data
-        _variable_attr_schema = {}
-        if use_defaults:
-            _def_variable_attr_schema = self._load_default_variable_attr_schema()
-            _variable_attr_schema = self._merge(
-                base_layer=_variable_attr_schema, new_layer=_def_variable_attr_schema
-            )
-        if variable_schema_layers is not None:
-            for schema_layer_path in variable_schema_layers:
-                _variable_attr_layer = self._load_yaml_data(
-                    yaml_file_path=schema_layer_path
-                )
-                _variable_attr_schema = self._merge(
-                    base_layer=_variable_attr_schema, new_layer=_variable_attr_layer
-                )
-        # Set the Final Member
-        self._variable_attr_schema = _variable_attr_schema
+        # Extend Custom Layers
+        if global_schema_layers is not None and len(global_schema_layers) > 0:
+            _global_schema_layers.extend(global_schema_layers)
+        if variable_schema_layers is not None and len(variable_schema_layers) > 0:
+            _variable_schema_layers.extend(variable_schema_layers)
 
-        # Load Default Global Attributes
-        self._default_global_attributes = self._load_default_attributes()
+        # Call SAMMI Initialization to populate Schema
+        super().__init__(
+            global_schema_layers=_global_schema_layers,
+            variable_schema_layers=_variable_schema_layers,
+            use_defaults=use_defaults,
+        )
 
         self.cdftypenames = {
             const.CDF_BYTE.value: "CDF_BYTE",
@@ -231,69 +215,6 @@ class SWXSchema:
             ("CRVAL", "crval", 1),
             ("CDELT", "cdelt", 1),
         ]
-
-    @property
-    def global_attribute_schema(self):
-        """(`dict`) Schema for variable attributes of the file."""
-        return self._global_attr_schema
-
-    @property
-    def variable_attribute_schema(self):
-        """(`dict`) Schema for variable attributes of the file."""
-        return self._variable_attr_schema
-
-    @property
-    def default_global_attributes(self):
-        """(`dict`) Default Global Attributes applied for all SWxSOC Data Files"""
-        return self._default_global_attributes
-
-    def _load_default_global_attr_schema(self) -> dict:
-        # The Default Schema file is contained in the `swxsoc/data` directory
-        default_schema_path = str(
-            Path(swxsoc.__file__).parent / "data" / DEFAULT_GLOBAL_CDF_ATTRS_SCHEMA_FILE
-        )
-        # Load the Schema
-        return self._load_yaml_data(yaml_file_path=default_schema_path)
-
-    def _load_default_variable_attr_schema(self) -> dict:
-        # The Default Schema file is contained in the `swxsoc/data` directory
-        default_schema_path = str(
-            Path(swxsoc.__file__).parent
-            / "data"
-            / DEFAULT_VARIABLE_CDF_ATTRS_SCHEMA_FILE
-        )
-        # Load the Schema
-        return self._load_yaml_data(yaml_file_path=default_schema_path)
-
-    def _load_default_attributes(self) -> dict:
-        # Use the Existing Global Schema
-        global_schema = self.global_attribute_schema
-        return {
-            attr_name: info["default"]
-            for attr_name, info in global_schema.items()
-            if info["default"] is not None
-        }
-
-    def _load_yaml_data(self, yaml_file_path: str) -> dict:
-        """
-        Function to load data from a Yaml file.
-
-        Parameters
-        ----------
-        yaml_file_path: `str`
-            Path to schem file to be used for CDF formatting.
-
-        """
-        assert isinstance(yaml_file_path, str)
-        assert Path(yaml_file_path).exists()
-        # Load the Yaml file to Dict
-        yaml_data = {}
-        with open(yaml_file_path, "r") as f:
-            try:
-                yaml_data = yaml.safe_load(f)
-            except yaml.YAMLError as exc:
-                log.critical(exc)
-        return yaml_data
 
     def global_attribute_template(self) -> OrderedDict:
         """

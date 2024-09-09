@@ -399,11 +399,6 @@ class SWXSOCClient(BaseClient):
 
     For more information on the sunpy BaseClient, see: https://docs.sunpy.org/en/stable/generated/api/sunpy.net.base_client.BaseClient.html
 
-
-    Attributes
-    ----------
-    size_column : str
-        The name of the column representing the size of files.
     """
 
     size_column = "size"

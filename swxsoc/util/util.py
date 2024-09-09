@@ -10,6 +10,7 @@ import boto3
 from botocore.exceptions import NoCredentialsError
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+from parfive import Downloader
 import sunpy.util.net
 import sunpy.time
 import sunpy.net.attrs as a
@@ -394,7 +395,10 @@ def apply_development_bucket(wlk, attr, params):
 
 class SWXSOCClient(BaseClient):
     """
-    Client for interacting with SWXSOC data.
+    Client for interacting with SWXSOC data. This client provides search and fetch functionality for SWXSOC data and is based on the sunpy BaseClient for FIDO.
+    
+    For more information on the sunpy BaseClient, see: https://docs.sunpy.org/en/stable/generated/api/sunpy.net.base_client.BaseClient.html
+
 
     Attributes
     ----------
@@ -404,7 +408,7 @@ class SWXSOCClient(BaseClient):
 
     size_column = "size"
 
-    def search(self, query):
+    def search(self, query=None):
         """
         Searches for data based on the given query.
 
@@ -418,6 +422,9 @@ class SWXSOCClient(BaseClient):
         QueryResponseTable
             A table containing the search results.
         """
+        if query is None:
+            query = AttrAnd([])
+        
         queries = walker.create(query)
         swxsoc.log.info(f"Searching with {queries}")
 
@@ -448,7 +455,9 @@ class SWXSOCClient(BaseClient):
     @convert_row_to_table
     def fetch(self, query_results, *, path, downloader, **kwargs):
         """
-        Fetches the files based on query results and saves them to the specified path.
+        Fetches the files based on query results and queues them up to be downloaded to the specified path by your downloader.
+        
+        Note: The downloader must be an instance of parfive.Downloader
 
         Parameters
         ----------
@@ -457,8 +466,12 @@ class SWXSOCClient(BaseClient):
         path : str
             The directory path where files should be saved.
         downloader : Downloader
-            The downloader instance used for fetching files.
+            The parfive downloader instance used for fetching files.
         """
+        
+        if not isinstance(downloader, Downloader):
+            raise ValueError("Downloader must be an instance of parfive.Downloader")
+        
         for row in query_results:
             swxsoc.log.info(f"Fetching {row['key']}")
             if path is None or path == ".":

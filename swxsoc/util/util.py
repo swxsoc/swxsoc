@@ -4,10 +4,7 @@ This module provides general utility functions.
 
 import os
 
-# Set the environment variable
-os.environ["SWXSOC_MISSION"] = "padre"
-
-from astropy.time import Time as AstropyTime
+from astropy.time import Time
 import astropy.units as u
 import boto3
 from botocore.exceptions import NoCredentialsError
@@ -27,7 +24,7 @@ __all__ = [
     "parse_science_filename",
     "SWXSOCClient",
     "VALID_DATA_LEVELS",
-    "Time",
+    "SearchTime",
     "Level",
     "Instrument",
     "DevelopmentBucket",
@@ -187,9 +184,7 @@ def parse_science_filename(filepath: str) -> dict:
             v: k for k, v in swxsoc.config["mission"]["inst_to_targetname"].items()
         }
 
-        result["time"] = AstropyTime.strptime(
-            filename_components[3 + offset], TIME_FORMAT_L0
-        )
+        result["time"] = Time.strptime(filename_components[3 + offset], TIME_FORMAT_L0)
 
     elif file_ext == swxsoc.config["mission"]["file_extension"]:
         if filename_components[1] not in swxsoc.config["mission"]["inst_shortnames"]:
@@ -202,7 +197,7 @@ def parse_science_filename(filepath: str) -> dict:
             v: k for k, v in swxsoc.config["mission"]["inst_to_shortname"].items()
         }
 
-        result["time"] = AstropyTime.strptime(filename_components[-2], TIME_FORMAT)
+        result["time"] = Time.strptime(filename_components[-2], TIME_FORMAT)
 
         # mode and descriptor are optional so need to figure out if one or both or none is included
         if filename_components[2][0:2] not in VALID_DATA_LEVELS:
@@ -237,7 +232,7 @@ walker = AttrWalker()
 
 
 # Map sunpy attributes to SWXSOC attributes for easy access
-class Time(a.Time):
+class SearchTime(a.Time):
     """
     Attribute for specifying the time range for the search.
 
@@ -329,7 +324,7 @@ def create_and(wlk, tree):
     return [result]
 
 
-@walker.add_applier(Time)
+@walker.add_applier(SearchTime)
 def apply_time(wlk, attr, params):
     """
     Applies 'a.Time' attribute to the parameters.
@@ -429,6 +424,9 @@ class SWXSOCClient(BaseClient):
         results = []
         for query_parameters in queries:
             results.extend(self._make_search(query_parameters))
+
+        if results == []:
+            return QueryResponseTable(names=[], rows=[], client=self)
 
         names = [
             "instrument",
@@ -547,7 +545,7 @@ class SWXSOCClient(BaseClient):
             True if the client can handle the query, otherwise False.
         """
         query_attrs = set(type(x) for x in query)
-        supported_attrs = {a.Time, a.Level}
+        supported_attrs = {SearchTime, Level, Instrument, DevelopmentBucket}
         return supported_attrs.issuperset(query_attrs)
 
     @classmethod

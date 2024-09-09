@@ -396,7 +396,7 @@ def apply_development_bucket(wlk, attr, params):
 class SWXSOCClient(BaseClient):
     """
     Client for interacting with SWXSOC data. This client provides search and fetch functionality for SWXSOC data and is based on the sunpy BaseClient for FIDO.
-    
+
     For more information on the sunpy BaseClient, see: https://docs.sunpy.org/en/stable/generated/api/sunpy.net.base_client.BaseClient.html
 
 
@@ -424,7 +424,7 @@ class SWXSOCClient(BaseClient):
         """
         if query is None:
             query = AttrAnd([])
-        
+
         queries = walker.create(query)
         swxsoc.log.info(f"Searching with {queries}")
 
@@ -456,7 +456,7 @@ class SWXSOCClient(BaseClient):
     def fetch(self, query_results, *, path, downloader, **kwargs):
         """
         Fetches the files based on query results and queues them up to be downloaded to the specified path by your downloader.
-        
+
         Note: The downloader must be an instance of parfive.Downloader
 
         Parameters
@@ -468,10 +468,10 @@ class SWXSOCClient(BaseClient):
         downloader : Downloader
             The parfive downloader instance used for fetching files.
         """
-        
+
         if not isinstance(downloader, Downloader):
             raise ValueError("Downloader must be an instance of parfive.Downloader")
-        
+
         for row in query_results:
             swxsoc.log.info(f"Fetching {row['key']}")
             if path is None or path == ".":

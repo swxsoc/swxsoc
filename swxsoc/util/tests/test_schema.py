@@ -127,7 +127,7 @@ def test_global_attributes():
 
     # Create SWXData
     td = SWXData(timeseries=ts, meta=template)
-    assert isinstance(td.meta, OrderedDict)
+    assert isinstance(td.meta, dict)
 
 
 def test_check_well_formed():

@@ -805,7 +805,10 @@ class SWXSchema:
         return global_attributes
 
     def derive_measurement_attributes(
-        self, data, var_name: str, guess_types: Optional[list[int]] = None
+        self,
+        data,
+        var_name: str,
+        guess_types: Optional[list[int]] = None,
     ) -> OrderedDict:
         """
         Function to derive metadata for the given measurement.
@@ -907,12 +910,15 @@ class SWXSchema:
                 derivation_fn = getattr(self, attr_schema["derivation_fn"])
                 # Derive the Metadata Attribute using the configured function
                 measurement_attributes[attr_name] = derivation_fn(
-                    var_name, var_data, guess_types[0]
+                    var_name,
+                    var_data,
+                    guess_types[0],
+                    timeseries_dict=data.data["timeseries"],
                 )
 
         return measurement_attributes
 
-    def _get_num_dimensions(self, var_name, var_data, guess_type):
+    def _get_num_dimensions(self, var_name, var_data, guess_type, **kwargs):
         """
         Function to get the number of dimensions of a measurement.
         Currently this is just implemented for NDCube measurement objects,
@@ -926,19 +932,31 @@ class SWXSchema:
     #                             VARIABLE METADATA DERIVATIONS
     # =============================================================================================
 
-    def _get_depend(self, var_name, var_data, guess_type):
-        return "Epoch"
+    def _get_depend(self, var_name, var_data, guess_type, **kwargs):
+        # Find the TimeSeries Epoch for this Record-Varying Variable
+        from swxsoc.swxdata import SWXData
 
-    def _get_display_type(self, var_name, var_data, guess_type):
+        if "timeseries_dict" in kwargs:
+            timeseries_dict = kwargs["timeseries_dict"]
+
+            epoch_key = SWXData.get_timeseres_epoch_key(
+                timeseries_dict, var_data, var_data.meta
+            )
+        else:
+            epoch_key = swxsoc.config["general"]["default_timeseries_key"]
+
+        return epoch_key
+
+    def _get_display_type(self, var_name, var_data, guess_type, **kwargs):
         return "time_series"
 
-    def _get_fieldnam(self, var_name, var_data, guess_type):
+    def _get_fieldnam(self, var_name, var_data, guess_type, **kwargs):
         if var_name != "time":
             return deepcopy(var_name)
         else:
             return "Epoch"
 
-    def _get_fillval(self, var_name, var_data, guess_type):
+    def _get_fillval(self, var_name, var_data, guess_type, **kwargs):
         # Get the Variable Data
         if guess_type == const.CDF_TIME_TT2000.value:
             return Time("9999-12-31T23:59:59.999999", format="isot")
@@ -973,7 +991,7 @@ class SWXSchema:
         value = fillvals[cdf_type]
         return value
 
-    def _get_format(self, var_name, var_data, cdftype):
+    def _get_format(self, var_name, var_data, cdftype, **kwargs):
         """
         Format can be specified using either Fortran or C format codes.
         For instance, "F10.3" indicates that the data should be displayed across 10 characters
@@ -1109,17 +1127,17 @@ class SWXSchema:
             )
         return fmt
 
-    def _get_lablaxis(self, var_name, var_data, guess_type):
+    def _get_lablaxis(self, var_name, var_data, guess_type, **kwargs):
         return f"{var_name} [{self._get_units(var_name, var_data, guess_type)}]"
 
-    def _get_reference_position(self, var_name, var_data, guess_type):
+    def _get_reference_position(self, var_name, var_data, guess_type, **kwargs):
         if guess_type == const.CDF_TIME_TT2000.value:
             return "rotating Earth geoid"
         else:
             msg = f"Reference Position for Time type ({guess_type}) not found."
             raise TypeError(msg)
 
-    def _get_resolution(self, var_name, var_data, guess_type):
+    def _get_resolution(self, var_name, var_data, guess_type, **kwargs):
         if len(var_data) < 2:
             raise ValueError(
                 f"Can not derive Time Resolution, need 2 samples, found {var_data}."
@@ -1130,7 +1148,7 @@ class SWXSchema:
         delta_seconds = delta.to_value("s")
         return f"{delta_seconds}s"
 
-    def _get_si_conversion(self, var_name, var_data, guess_type):
+    def _get_si_conversion(self, var_name, var_data, guess_type, **kwargs):
         if var_name == "time":
             conversion_rate = u.ns.to(u.s)
             si_conversion = f"{conversion_rate:e}>{u.s}"
@@ -1146,19 +1164,19 @@ class SWXSchema:
                 si_conversion = " > "
         return si_conversion
 
-    def _get_time_base(self, var_name, var_data, guess_type):
+    def _get_time_base(self, var_name, var_data, guess_type, **kwargs):
         if guess_type == const.CDF_TIME_TT2000.value:
             return "J2000"
         else:
             raise TypeError(f"Time Base for Time type ({guess_type}) not found.")
 
-    def _get_time_scale(self, var_name, var_data, guess_type):
+    def _get_time_scale(self, var_name, var_data, guess_type, **kwargs):
         if guess_type == const.CDF_TIME_TT2000.value:
             return "Terrestrial Time (TT)"
         else:
             raise TypeError(f"Time Scale for Time type ({guess_type}) not found.")
 
-    def _get_units(self, var_name, var_data, guess_type):
+    def _get_units(self, var_name, var_data, guess_type, **kwargs):
         unit = ""
         # Get the Unit from the TimeSeries Quantity if it exists
         if var_name == "time" and guess_type == const.CDF_TIME_TT2000.value:
@@ -1172,17 +1190,17 @@ class SWXSchema:
             unit = var_data.meta["UNITS"]
         return unit
 
-    def _get_validmin(self, var_name, var_data, guess_type):
+    def _get_validmin(self, var_name, var_data, guess_type, **kwargs):
         # Get the Min Value
         minval, _ = self._get_minmax(guess_type)
         return minval
 
-    def _get_validmax(self, var_name, var_data, guess_type):
+    def _get_validmax(self, var_name, var_data, guess_type, **kwargs):
         # Get the Max Value
         _, maxval = self._get_minmax(guess_type)
         return maxval
 
-    def _get_var_type(self, var_name, var_data, guess_type):
+    def _get_var_type(self, var_name, var_data, guess_type, **kwargs):
         attr_name = "VAR_TYPE"
         if (attr_name not in var_data.meta) or (not var_data.meta[attr_name]):
             var_type = "data"
@@ -1194,7 +1212,7 @@ class SWXSchema:
     #                             SPECTRA METADATA DERIVATIONS
     # =============================================================================================
 
-    def _get_wcs_naxis(self, var_name, var_data, guess_type):
+    def _get_wcs_naxis(self, var_name, var_data, guess_type, **kwargs):
         """
         Function to get the number of axes within a spectra WCS member
         """
@@ -1205,7 +1223,7 @@ class SWXSchema:
             attr_value = var_data.meta[attr_name]
         return int(attr_value)
 
-    def _get_wcs_timeref(self, var_name, var_data, guess_type):
+    def _get_wcs_timeref(self, var_name, var_data, guess_type, **kwargs):
         """
         Function to get the reference time within a spectra WCS member
         """
@@ -1216,7 +1234,7 @@ class SWXSchema:
             attr_value = var_data.meta[attr_name]
         return attr_value
 
-    def _get_wcs_timeunit(self, var_name, var_data, guess_type):
+    def _get_wcs_timeunit(self, var_name, var_data, guess_type, **kwargs):
         """
         Function to get the time units within a spectra WCS member
         """
@@ -1227,7 +1245,7 @@ class SWXSchema:
             attr_value = var_data.meta[attr_name]
         return attr_value
 
-    def _get_wcs_timedel(self, var_name, var_data, guess_type):
+    def _get_wcs_timedel(self, var_name, var_data, guess_type, **kwargs):
         """
         Function to get the time delta (between points) within a spectra WCS member
         """

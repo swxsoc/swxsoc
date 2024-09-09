@@ -201,10 +201,13 @@ def print_config(config):
 
     print("\nCONFIGURATION:")
     for section, settings in config.items():
-        print(f"  [{section}]")
-        for option, value in settings.items():
-            print(f"  {option} = {value}")
-        print("")
+        if isinstance(settings, dict):  # Nested configuration
+            print(f"  [{section}]")
+            for option, value in settings.items():
+                print(f"  {option} = {value}")
+            print("")
+        else:  # Not a nested configuration
+            print(f"  {section} = {settings}")
 
 
 def _find_config_files():

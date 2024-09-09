@@ -3,12 +3,21 @@ This module provides general utility functions.
 """
 
 import os
-from pathlib import Path
-import boto3
-from dateutil.parser import parse as parse_date
-from dateutil.relativedelta import relativedelta
 
-from astropy.time import Time
+# Set the environment variable
+os.environ["SWXSOC_MISSION"] = "padre"
+
+from astropy.time import Time as AstropyTime
+import astropy.units as u
+import boto3
+from botocore.exceptions import NoCredentialsError
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+import sunpy.util.net
+import sunpy.time
+import sunpy.net.attrs as a
+from sunpy.net.attr import AttrWalker, AttrAnd, AttrOr, SimpleAttr
+from sunpy.net.base_client import BaseClient, QueryResponseTable, convert_row_to_table
 
 import swxsoc
 
@@ -16,8 +25,12 @@ import swxsoc
 __all__ = [
     "create_science_filename",
     "parse_science_filename",
-    "get_latest_dependent_file",
+    "SWXSOCClient",
     "VALID_DATA_LEVELS",
+    "Time",
+    "Level",
+    "Instrument",
+    "DevelopmentBucket",
 ]
 
 TIME_FORMAT_L0 = "%Y%j-%H%M%S"
@@ -174,7 +187,9 @@ def parse_science_filename(filepath: str) -> dict:
             v: k for k, v in swxsoc.config["mission"]["inst_to_targetname"].items()
         }
 
-        result["time"] = Time.strptime(filename_components[3 + offset], TIME_FORMAT_L0)
+        result["time"] = AstropyTime.strptime(
+            filename_components[3 + offset], TIME_FORMAT_L0
+        )
 
     elif file_ext == swxsoc.config["mission"]["file_extension"]:
         if filename_components[1] not in swxsoc.config["mission"]["inst_shortnames"]:
@@ -187,7 +202,7 @@ def parse_science_filename(filepath: str) -> dict:
             v: k for k, v in swxsoc.config["mission"]["inst_to_shortname"].items()
         }
 
-        result["time"] = Time.strptime(filename_components[-2], TIME_FORMAT)
+        result["time"] = AstropyTime.strptime(filename_components[-2], TIME_FORMAT)
 
         # mode and descriptor are optional so need to figure out if one or both or none is included
         if filename_components[2][0:2] not in VALID_DATA_LEVELS:
@@ -213,223 +228,492 @@ def parse_science_filename(filepath: str) -> dict:
     return result
 
 
-def filter_science_file(
-    science_file_dict: dict,
-    instrument: str = None,
-    mode: str = None,
-    test: bool = None,
-    level: str = None,
-    version: str = None,
-    descriptor: str = None,
-) -> bool:
+# ================================================================================================
+#                                  SWXSOC FIDO CLIENT
+# ================================================================================================
+
+# Initialize the attribute walker
+walker = AttrWalker()
+
+
+# Map sunpy attributes to SWXSOC attributes for easy access
+class Time(a.Time):
     """
-    Filters the science file based on provided criteria.
+    Attribute for specifying the time range for the search.
+
+    Attributes
+    ----------
+    start : `str`
+        The start time in ISO format.
+    end : `str`
+        The end time in ISO format.
+    """
+
+
+class Level(a.Level):
+    """
+    Attribute for specifying the data level for the search.
+
+    Attributes
+    ----------
+    value : str
+        The data level value.
+    """
+
+
+class Instrument(a.Instrument):
+    """
+    Attribute for specifying the instrument for the search.
+
+    Attributes
+    ----------
+    value : str
+        The instrument value.
+    """
+
+
+class DevelopmentBucket(SimpleAttr):
+    """
+    Attribute for specifying whether to search in the DevelopmentBucket for testing purposes.
+
+    Attributes
+    ----------
+    value : bool
+        Whether to use the DevelopmentBucket. Defaults to False.
+    """
+
+
+@walker.add_creator(AttrOr)
+def create_or(wlk, tree):
+    """
+    Creates an 'AttrOr' object from the provided tree of attributes.
 
     Parameters
     ----------
-    science_file_dict : dict
-        A dictionary containing science file properties.
-    instrument : str, optional
-        The instrument name to filter by.
-    mode : str, optional
-        The mode to filter by.
-    test : bool, optional
-        The test flag to filter by.
-    level : str, optional
-        The data level to filter by.
-    version : str, optional
-        The version to filter by.
-    descriptor : str, optional
-        The descriptor to filter by.
-
-    Returns
-    -------
-    bool
-        True if the science file matches the criteria, False otherwise.
-    """
-    criteria = {
-        "instrument": instrument,
-        "mode": mode,
-        "test": test,
-        "level": level,
-        "version": version,
-        "descriptor": descriptor,
-    }
-    for key, value in criteria.items():
-        if value is not None and science_file_dict.get(key) != value:
-            return False
-    return True
-
-
-def list_files_in_s3(bucket_name: str, prefix: str) -> list:
-    """
-    Lists files in an S3 bucket with a specified prefix.
-
-    Parameters
-    ----------
-    bucket_name : str
-        The name of the S3 bucket.
-    prefix : str
-        The prefix to filter the files.
+    wlk : AttrWalker
+        The AttrWalker instance used for creating the attributes.
+    tree : AttrOr
+        The 'AttrOr' tree structure.
 
     Returns
     -------
     list
-        A list of file keys.
+        A list of created attributes.
     """
-    s3 = boto3.client("s3")
-    paginator = s3.get_paginator("list_objects_v2")
-    pages = paginator.paginate(Bucket=bucket_name, Prefix=prefix)
-
-    return [
-        obj["Key"] for page in pages if "Contents" in page for obj in page["Contents"]
-    ]
+    results = []
+    for sub in tree.attrs:
+        results.append(wlk.create(sub))
+    return results
 
 
-def download_file_from_s3(bucket_name: str, key: str, local_dir: str) -> Path:
+@walker.add_creator(AttrAnd)
+def create_and(wlk, tree):
     """
-    Downloads a file from S3 to a local directory.
+    Creates an 'AttrAnd' object from the provided tree of attributes.
 
     Parameters
     ----------
-    bucket_name : str
-        The name of the S3 bucket.
-    key : str
-        The key of the file to download.
-    local_dir : str
-        The local directory to save the file.
-
-    Returns
-    -------
-    Path
-        The path to the downloaded file.
-    """
-    s3 = boto3.client("s3")
-    local_file = Path(local_dir) / Path(key).name
-    s3.download_file(bucket_name, key, str(local_file))
-    return local_file
-
-
-def list_files_in_spdf() -> list:
-    """Stub function for listing files in SPDF."""
-    return []
-
-
-def download_file_from_spdf(file_path: str, local_dir: str) -> Path:
-    """Stub function for downloading file from SPDF."""
-    return Path(file_path)
-
-
-def generate_prefixes(level: str, start_time: str, end_time: str) -> list:
-    """
-    Generates a list of prefixes based on the level and time range.
-
-    Parameters
-    ----------
-    level : str
-        The data level.
-    start_time : str
-        The start time in ISO format.
-    end_time : str
-        The end time in ISO format.
+    wlk : AttrWalker
+        The AttrWalker instance used for creating the attributes.
+    tree : AttrAnd
+        The 'AttrAnd' tree structure.
 
     Returns
     -------
     list
-        A list of prefixes.
+        A list containing a single dictionary of attributes.
     """
-    current_time = start_time
-    prefixes = []
-
-    while current_time <= end_time:
-        prefix = f"{level}/{current_time.year}/{current_time.month:02d}/"
-        prefixes.append(prefix)
-        current_time += relativedelta(months=1)
-
-    return prefixes
+    result = {}
+    for sub in tree.attrs:
+        wlk.apply(sub, result)
+    return [result]
 
 
-def get_latest_dependent_file(
-    instrument: str,
-    level: str,
-    start_time: str,
-    end_time: str,
-    mode: str = None,
-    test: bool = None,
-    version: str = None,
-    descriptor: str = None,
-    use_s3: bool = True,
-) -> Path:
+@walker.add_applier(Time)
+def apply_time(wlk, attr, params):
     """
-    Retrieves the latest dependent file based on the provided criteria.
+    Applies 'a.Time' attribute to the parameters.
 
     Parameters
     ----------
-    instrument : str
-        The instrument name.
-    level : str
-        The data level.
-    start_time : str
-        The start time in ISO format.
-    end_time : str
-        The end time in ISO format.
-    mode : str, optional
-        The mode to filter by.
-    test : bool, optional
-        The test flag to filter by.
-    version : str, optional
-        The version to filter by.
-    descriptor : str, optional
-        The descriptor to filter by.
-    use_s3 : bool, optional
-        Whether to get file from S3 or fallback to SPDF (default is True).
-
-    Returns
-    -------
-    Path
-        The path to the latest dependent file, or None if no matching file is found.
+    wlk : AttrWalker
+        The AttrWalker instance used for applying the attributes.
+    attr : a.Time
+        The 'a.Time' attribute to be applied.
+    params : dict
+        The parameters dictionary to be updated.
     """
-    start_time = parse_date(start_time)
-    end_time = parse_date(end_time)
+    params.update({"startTime": attr.start.isot, "endTime": attr.end.isot})
 
-    bucket_prefix = "" if os.getenv("LAMBDA_ENVIRONMENT") == "PRODUCTION" else "dev-"
-    mission_name = swxsoc.config["mission"]["mission_name"]
-    bucket_name = (
-        f"{bucket_prefix}{mission_name}-{instrument}"
-        if instrument in swxsoc.config["mission"]["inst_names"]
-        else f"{bucket_prefix}{mission_name}-ancillary"
-    )
 
-    prefixes = generate_prefixes(level, start_time, end_time)
-    all_files = []
+@walker.add_applier(Level)
+def apply_level(wlk, attr, params):
+    """
+    Applies 'a.Level' attribute to the parameters.
 
-    try:
-        for prefix in prefixes:
-            all_files.extend(list_files_in_s3(bucket_name, prefix))
-    except Exception:
-        use_s3 = False
+    Parameters
+    ----------
+    wlk : AttrWalker
+        The AttrWalker instance used for applying the attributes.
+    attr : a.Level
+        The 'a.Level' attribute to be applied.
+    params : dict
+        The parameters dictionary to be updated.
+    """
+    params.update({"level": attr.value.lower()})
 
-    all_files.sort(key=lambda x: parse_science_filename(x)["time"], reverse=True)
 
-    for file in all_files:
+@walker.add_applier(Instrument)
+def apply_instrument(wlk, attr, params):
+    """
+    Applies 'a.Instrument' attribute to the parameters.
+
+    Parameters
+    ----------
+    wlk : AttrWalker
+        The AttrWalker instance used for applying the attributes.
+    attr : a.Instrument
+        The 'a.Instrument' attribute to be applied.
+    params : dict
+        The parameters dictionary to be updated.
+    """
+    params.update({"instrument": attr.value.upper()})
+
+
+@walker.add_applier(DevelopmentBucket)
+def apply_development_bucket(wlk, attr, params):
+    """
+    Applies 'DevelopmentBucket' attribute to the parameters.
+
+    Parameters
+    ----------
+    wlk : AttrWalker
+        The AttrWalker instance used for applying the attributes.
+    attr : DevelopmentBucket
+        The 'DevelopmentBucket' attribute to be applied.
+    params : dict
+        The parameters dictionary to be updated.
+    """
+    params.update({"use_development_bucket": attr.value})
+
+
+class SWXSOCClient(BaseClient):
+    """
+    Client for interacting with SWXSOC data.
+
+    Attributes
+    ----------
+    size_column : str
+        The name of the column representing the size of files.
+    """
+
+    size_column = "size"
+
+    def search(self, query):
+        """
+        Searches for data based on the given query.
+
+        Parameters
+        ----------
+        query : AttrAnd
+            The query object specifying search criteria.
+
+        Returns
+        -------
+        QueryResponseTable
+            A table containing the search results.
+        """
+        queries = walker.create(query)
+        swxsoc.log.info(f"Searching with {queries}")
+
+        results = []
+        for query_parameters in queries:
+            results.extend(self._make_search(query_parameters))
+
+        names = [
+            "instrument",
+            "mode",
+            "test",
+            "time",
+            "level",
+            "version",
+            "descriptor",
+            "key",
+            "size",
+            "bucket",
+            "etag",
+            "storage_class",
+            "last_modified",
+        ]
+        return QueryResponseTable(names=names, rows=results, client=self)
+
+    @convert_row_to_table
+    def fetch(self, query_results, *, path, downloader, **kwargs):
+        """
+        Fetches the files based on query results and saves them to the specified path.
+
+        Parameters
+        ----------
+        query_results : list
+            The results of the search query.
+        path : str
+            The directory path where files should be saved.
+        downloader : Downloader
+            The downloader instance used for fetching files.
+        """
+        for row in query_results:
+            swxsoc.log.info(f"Fetching {row['key']}")
+            if path is None or path == ".":
+                path = os.getcwd()
+
+            if os.path.exists(path) and not os.path.isdir(path):
+                raise ValueError(f"Path {path} is not a directory")
+
+            filepath = self._make_filename(path, row)
+
+            presigned_url = self.generate_presigned_url(row["bucket"], row["key"])
+            url = (
+                presigned_url
+                if presigned_url is not None
+                else f'https://{row["bucket"]}.s3.amazonaws.com/{row["key"]}'
+            )
+
+            downloader.enqueue_file(url, filename=filepath)
+
+    @classmethod
+    def _make_filename(cls, path, row):
+        """
+        Creates a filename based on the provided path and row data.
+
+        Parameters
+        ----------
+        path : str
+            The directory path.
+        row : dict
+            The row data containing the file key.
+
+        Returns
+        -------
+        str
+            The full file path.
+        """
+        return os.path.join(path, row["key"].split("/")[-1])
+
+    @staticmethod
+    def generate_presigned_url(bucket_name, object_key, expiration=3600):
+        """
+        Generates a presigned URL for accessing an object in S3.
+
+        Parameters
+        ----------
+        bucket_name : str
+            The name of the S3 bucket.
+        object_key : str
+            The key of the S3 object.
+        expiration : int, optional
+            The expiration time in seconds for the presigned URL. Default is 3600 seconds.
+
+        Returns
+        -------
+        str or None
+            The presigned URL if successful, otherwise None.
+        """
         try:
-            science_file_dict = parse_science_filename(file)
-            file_time = science_file_dict["time"]
+            s3_client = boto3.client("s3")
+            response = s3_client.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": bucket_name, "Key": object_key},
+                ExpiresIn=expiration,
+            )
+        except NoCredentialsError:
+            print("Credentials not available")
+            return None
 
-            if start_time <= file_time <= end_time:
-                if filter_science_file(
-                    science_file_dict,
-                    instrument,
-                    mode,
-                    test,
-                    version,
-                    descriptor,
-                ):
-                    if not use_s3:
-                        return download_file_from_spdf(file, "/tmp")
-                    else:
-                        return download_file_from_s3(bucket_name, file, "/tmp")
-        except ValueError:
-            continue
+        return response
 
-    return None
+    @classmethod
+    def _can_handle_query(cls, *query):
+        """
+        Determines if the client can handle the given query based on its attributes.
+
+        Parameters
+        ----------
+        query : tuple
+            The query attributes to check.
+
+        Returns
+        -------
+        bool
+            True if the client can handle the query, otherwise False.
+        """
+        query_attrs = set(type(x) for x in query)
+        supported_attrs = {a.Time, a.Level}
+        return supported_attrs.issuperset(query_attrs)
+
+    @classmethod
+    def _make_search(cls, query):
+        """
+        Performs a search based on the provided query parameters.
+
+        Parameters
+        ----------
+        query : dict
+            The query parameters including instrument, levels, time range, and development bucket flag.
+
+        Returns
+        -------
+        list
+            A list of rows containing the search results.
+        """
+        instrument = query.get("instrument")
+        levels = query.get("level")
+        start_time = query.get("startTime")
+        end_time = query.get("endTime")
+        use_development_bucket = query.get("use_development_bucket")
+
+        if levels is not None and not isinstance(levels, list):
+            levels = [levels]
+
+        if levels is not None and len(levels) > 0:
+            for level in levels:
+                if level not in VALID_DATA_LEVELS:
+                    raise ValueError(f"Invalid data level: {level}")
+        else:
+            levels = VALID_DATA_LEVELS
+
+        if start_time is None:
+            start_time = "2000-01-01"
+
+        if end_time is None:
+            end_time = datetime.now().isoformat()
+
+        instrument_buckets = {
+            f"{swxsoc.config['mission']['inst_to_targetname'][inst]}": (
+                f"{'dev-' if use_development_bucket else ''}"
+                f"{swxsoc.config['mission']['mission_name']}-{inst}"
+            )
+            for inst in swxsoc.config["mission"]["inst_names"]
+        }
+
+        swxsoc.log.debug(f"Mapping of instruments to S3 buckets: {instrument_buckets}")
+
+        if instrument is None or instrument not in instrument_buckets:
+            swxsoc.log.info(
+                f"No instrument specified or invalid instrument. Searching all instruments."
+            )
+            instrument_bucket_to_search = instrument_buckets.values()
+        else:
+            swxsoc.log.info(f"Searching for instrument: {instrument}")
+            instrument_bucket_to_search = [instrument_buckets[instrument]]
+
+        swxsoc.log.debug(f"Searching in buckets: {instrument_bucket_to_search}")
+
+        files_in_s3 = cls.list_files_in_s3(instrument_bucket_to_search)
+
+        if levels is not None or start_time is not None or end_time is not None:
+            swxsoc.log.info(
+                f"Searching for files with level {levels} between {start_time} and {end_time}"
+            )
+
+            prefixes = cls.generate_prefixes(levels, start_time, end_time)
+
+            files_in_s3 = [
+                f
+                for f in files_in_s3
+                if any(f["Key"].startswith(prefix) for prefix in prefixes)
+            ]
+        else:
+            swxsoc.log.info(f"Searching for all files")
+
+        swxsoc.log.info(f"Found {len(files_in_s3)} files in S3")
+
+        rows = []
+        for s3_object in files_in_s3:
+            swxsoc.log.debug(f"Processing S3 object: {s3_object}")
+
+            info = parse_science_filename(s3_object["Key"])
+            row = [
+                info.get("instrument", None),
+                info.get("mode", None),
+                info.get("test", False),
+                info.get("time", None),
+                info.get("level", None),
+                info.get("version", None),
+                info.get("descriptor", None),
+                s3_object["Key"],
+                s3_object["Size"] * u.byte,
+                s3_object["Bucket"],
+                s3_object["ETag"],
+                s3_object["StorageClass"],
+                s3_object["LastModified"],
+            ]
+            rows.append(row)
+
+        return rows
+
+    @staticmethod
+    def list_files_in_s3(bucket_names: list) -> list:
+        """
+        Lists all files in the specified S3 buckets.
+
+        Parameters
+        ----------
+        bucket_names : list
+            A list of S3 bucket names.
+
+        Returns
+        -------
+        list
+            A list of dictionaries containing metadata about each S3 object.
+        """
+        content = []
+        s3 = boto3.client("s3")
+        paginator = s3.get_paginator("list_objects_v2")
+
+        for bucket_name in bucket_names:
+            pages = paginator.paginate(Bucket=bucket_name)
+            for page in pages:
+                for obj in page.get("Contents", []):
+                    metadata = {
+                        "Key": obj["Key"],
+                        "LastModified": sunpy.time.parse_time(obj["LastModified"]),
+                        "Size": obj["Size"],
+                        "ETag": obj["ETag"],
+                        "StorageClass": obj.get("StorageClass", "STANDARD"),
+                        "Bucket": bucket_name,
+                    }
+                    content.append(metadata)
+
+        return content
+
+    @staticmethod
+    def generate_prefixes(levels: list, start_time: str, end_time: str) -> list:
+        """
+        Generates a list of prefixes based on the level and time range.
+
+        Parameters
+        ----------
+        levels : list
+            A list of data levels.
+        start_time : str
+            The start time in ISO format.
+        end_time : str
+            The end time in ISO format.
+
+        Returns
+        -------
+        list
+            A list of prefixes.
+        """
+        current_time = datetime.fromisoformat(start_time)
+        end_time = datetime.fromisoformat(end_time)
+        prefixes = []
+
+        while current_time <= end_time:
+            for level in levels:
+                prefix = f"{level}/{current_time.year}/{current_time.month:02d}/"
+                prefixes.append(prefix)
+            current_time += relativedelta(months=1)
+            swxsoc.log.debug(f"Generated prefix: {prefix}")
+
+        return prefixes

@@ -7,7 +7,9 @@ import os
 from astropy.time import Time
 import astropy.units as u
 import boto3
-from botocore.exceptions import NoCredentialsError
+from botocore.exceptions import NoCredentialsError, ClientError
+from botocore import UNSIGNED
+from botocore.client import Config
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from parfive import Downloader
@@ -660,7 +662,7 @@ class SWXSOCClient(BaseClient):
     @staticmethod
     def list_files_in_s3(bucket_names: list) -> list:
         """
-        Lists all files in the specified S3 buckets.
+        Lists all files in the specified S3 buckets. If access is denied, it retries with an unsigned request.
 
         Parameters
         ----------
@@ -677,18 +679,54 @@ class SWXSOCClient(BaseClient):
         paginator = s3.get_paginator("list_objects_v2")
 
         for bucket_name in bucket_names:
-            pages = paginator.paginate(Bucket=bucket_name)
-            for page in pages:
-                for obj in page.get("Contents", []):
-                    metadata = {
-                        "Key": obj["Key"],
-                        "LastModified": sunpy.time.parse_time(obj["LastModified"]),
-                        "Size": obj["Size"],
-                        "ETag": obj["ETag"],
-                        "StorageClass": obj.get("StorageClass", "STANDARD"),
-                        "Bucket": bucket_name,
-                    }
-                    content.append(metadata)
+            try:
+                # Try with authenticated client
+                pages = paginator.paginate(Bucket=bucket_name)
+                for page in pages:
+                    for obj in page.get("Contents", []):
+                        metadata = {
+                            "Key": obj["Key"],
+                            "LastModified": sunpy.time.parse_time(obj["LastModified"]),
+                            "Size": obj["Size"],
+                            "ETag": obj["ETag"],
+                            "StorageClass": obj.get("StorageClass", "STANDARD"),
+                            "Bucket": bucket_name,
+                        }
+                        content.append(metadata)
+            except ClientError as e:
+                error_code = e.response["Error"]["Code"]
+                if error_code == "AccessDenied":
+                    swxsoc.log.warning(
+                        f"Access denied to bucket {bucket_name}. Trying unsigned request."
+                    )
+                    # Retry with an unsigned (anonymous) client
+                    try:
+                        unsigned_s3 = boto3.client(
+                            "s3", config=Config(signature_version=UNSIGNED)
+                        )
+                        unsigned_paginator = unsigned_s3.get_paginator(
+                            "list_objects_v2"
+                        )
+                        pages = unsigned_paginator.paginate(Bucket=bucket_name)
+                        for page in pages:
+                            for obj in page.get("Contents", []):
+                                metadata = {
+                                    "Key": obj["Key"],
+                                    "LastModified": sunpy.time.parse_time(
+                                        obj["LastModified"]
+                                    ),
+                                    "Size": obj["Size"],
+                                    "ETag": obj["ETag"],
+                                    "StorageClass": obj.get("StorageClass", "STANDARD"),
+                                    "Bucket": bucket_name,
+                                }
+                                content.append(metadata)
+                    except ClientError as retry_error:
+                        raise Exception(
+                            f"Unsigned request failed for bucket {bucket_name} (Ensure you have the correct IAM permissions, or are on the VPN)"
+                        )
+                else:
+                    raise Exception(f"Error accessing bucket {bucket_name}: {e}")
 
         return content
 

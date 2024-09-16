@@ -46,6 +46,12 @@ To search for data based on multiple attributes such as instrument, level, and t
     )
     # Search for data
     results = fido_client.search(query)
+    print(results)
+    >>> instrument mode  test           time          level version ...   size       bucket                     etag                storage_class    last_modified   
+    >>>                                                            ...   byte                                                                                       
+    >>> ---------- ---- ----- ----------------------- ----- ------- ... ------- ---------------- ---------------------------------- ------------- -------------------
+    >>> meddea None False 2024-03-27T13:46:16.000    l0       1 ...  4648.0 dev-padre-meddea "8fca00048426ec8a114750a4de80c161"      STANDARD 2024-08-09 17:12:09
+    >>> meddea None  True 2024-03-27T13:46:16.000    l1   0.1.0 ... 25920.0 dev-padre-meddea "4b9c15fc55e8d05dd9b8414e146c51c3"      STANDARD 2024-08-09 17:12:24
 
 Example 2: Search by a single Attribute
 ----------------------------------------
@@ -59,8 +65,19 @@ To search for data based on a single attribute such as instrument::
     fido_client = util.SWXSOCClient()
 
     # Test search with a query for specific instrument
-    query = AttrAnd([Instrument("eea")])
+    query = AttrAnd([Instrument("meddea")])
     results = fido_client.search(query)
+    print(results)
+    >>> instrument mode  test           time          level version ...   size      bucket                   etag                storage_class    last_modified   
+    >>>                                                             ...   byte                                                                                    
+    >>> ---------- ---- ----- ----------------------- ----- ------- ... -------- ------------ ---------------------------------- ------------- -------------------
+    >>> meddea None False 2012-04-29T00:00:00.000    l0       1 ... 219672.0 padre-meddea "c1f165f22d8d4190323894a4df26cda4"      STANDARD 2024-07-10 18:17:34
+    >>> meddea None False 2023-04-30T00:00:00.000    l0       1 ... 219672.0 padre-meddea "c1f165f22d8d4190323894a4df26cda4"      STANDARD 2024-07-01 15:07:52
+    >>> meddea None False 2012-04-29T00:00:00.000    l1   0.0.1 ...      0.0 padre-meddea "d41d8cd98f00b204e9800998ecf8427e"      STANDARD 2024-07-10 18:17:58
+    >>> meddea None False 2023-04-30T00:00:00.000    l1   0.0.1 ...      0.0 padre-meddea "d41d8cd98f00b204e9800998ecf8427e"      STANDARD 2024-07-01 15:08:01
+    >>> meddea None False 2012-04-29T00:00:00.000    ql   0.0.1 ...      0.0 padre-meddea "d41d8cd98f00b204e9800998ecf8427e"      STANDARD 2024-07-10 18:18:01
+    >>> meddea None False 2023-04-30T00:00:00.000    ql   0.0.1 ...      0.0 padre-meddea "d41d8cd98f00b204e9800998ecf8427e"      STANDARD 2024-07-01 15:08:05
+
 
 Example 3: Search all data
 --------------------------
@@ -75,7 +92,22 @@ To search for all data::
 
     # Test search with a query for all data
     results = fido_client.search()
-
+    print(results)
+    >>> instrument mode  test           time          level version ...   size      bucket                   etag                storage_class    last_modified   
+    >>>                                                             ...   byte                                                                                    
+    >>> ---------- ---- ----- ----------------------- ----- ------- ... -------- ------------ ---------------------------------- ------------- -------------------
+    >>> meddea None False 2012-04-29T00:00:00.000    l0       1 ... 219672.0 padre-meddea "c1f165f22d8d4190323894a4df26cda4"      STANDARD 2024-07-10 18:17:34
+    >>> meddea None False 2023-04-30T00:00:00.000    l0       1 ... 219672.0 padre-meddea "c1f165f22d8d4190323894a4df26cda4"      STANDARD 2024-07-01 15:07:52
+    >>> meddea None False 2012-04-29T00:00:00.000    l1   0.0.1 ...      0.0 padre-meddea "d41d8cd98f00b204e9800998ecf8427e"      STANDARD 2024-07-10 18:17:58
+    >>> meddea None False 2023-04-30T00:00:00.000    l1   0.0.1 ...      0.0 padre-meddea "d41d8cd98f00b204e9800998ecf8427e"      STANDARD 2024-07-01 15:08:01
+    >>> meddea None False 2012-04-29T00:00:00.000    ql   0.0.1 ...      0.0 padre-meddea "d41d8cd98f00b204e9800998ecf8427e"      STANDARD 2024-07-10 18:18:01
+    >>> meddea None False 2023-04-30T00:00:00.000    ql   0.0.1 ...      0.0 padre-meddea "d41d8cd98f00b204e9800998ecf8427e"      STANDARD 2024-07-01 15:08:05
+    >>> sharp  None False 2012-04-29T00:00:00.000    l0       1 ... 219672.0 padre-sharp  "c1f165f22d8d4190323894a4df26cda4"      STANDARD 2024-07-10 18:17:34
+    >>> sharp  None False 2023-04-30T00:00:00.000    l0       1 ... 219672.0 padre-sharp  "c1f165f22d8d4190323894a4df26cda4"      STANDARD 2024-07-01 15:07:52
+    >>> sharp  None False 2012-04-29T00:00:00.000    l1   0.0.1 ...      0.0 padre-sharp  "d41d8cd98f00b204e9800998ecf8427e"      STANDARD 2024-07-10 18:17:58
+    >>> sharp  None False 2023-04-30T00:00:00.000    l1   0.0.1 ...      0.0 padre-sharp  "d41d8cd98f00b204e9800998ecf8427e"      STANDARD 2024-07-01 15:08:01
+    >>> sharp  None False 2012-04-29T00:00:00.000    ql   0.0.1 ...      0.0 padre-sharp  "d41d8cd98f00b204e9800998ecf8427e"      STANDARD 2024-07-10 18:18:01
+    >>> sharp  None False 2023-04-30T00:00:00.000    ql   0.0.1 ...      0.0 padre-sharp  "d41d8cd98f00b204e9800998ecf8427e"      STANDARD 2024-07-01 15:08:05
 
 Downloading Data
 ================
@@ -115,3 +147,4 @@ Below is an example demonstrating how to download data using the `~swxsoc.util.u
 
     # Start the download
     dl.download()
+    >>> Files Downloaded: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:00<00:00,  2.59file/s]

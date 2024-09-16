@@ -510,7 +510,8 @@ class SWXSOCClient(BaseClient):
     @staticmethod
     def generate_presigned_url(bucket_name, object_key, expiration=3600):
         """
-        Generates a presigned URL for accessing an object in S3.
+        Generates a presigned URL for accessing an object in S3. If credentials are not available
+        or access is denied, attempts an unsigned request for public access.
 
         Parameters
         ----------
@@ -524,20 +525,44 @@ class SWXSOCClient(BaseClient):
         Returns
         -------
         str or None
-            The presigned URL if successful, otherwise None.
+            The presigned URL if successful, or a direct unsigned URL if public access is allowed.
+            Otherwise, returns None.
         """
         try:
+            # Attempt to generate a presigned URL with credentials
             s3_client = boto3.client("s3")
+
+            # Try to list one object to check if credentials are available
+            s3_client.list_objects_v2(Bucket=bucket_name, MaxKeys=1)
+
             response = s3_client.generate_presigned_url(
                 "get_object",
                 Params={"Bucket": bucket_name, "Key": object_key},
                 ExpiresIn=expiration,
             )
-        except NoCredentialsError:
-            print("Credentials not available")
-            return None
+            return response
 
-        return response
+        except NoCredentialsError:
+            swxsoc.log.warning("Credentials not available. Trying unsigned access.")
+        except ClientError as e:
+            error_code = e.response["Error"]["Code"]
+            if error_code == "AccessDenied":
+                swxsoc.log.warning(
+                    f"Access denied to {bucket_name}/{object_key}. Trying unsigned access."
+                )
+            else:
+                swxsoc.log.warning(f"Error generating presigned URL: {e}")
+                return None
+
+        # If credentials are missing or access is denied, try unsigned access
+        try:
+            # Attempt to access the object with an unsigned request (public access)
+            swxsoc.log.info(f"Attempting unsigned access to {bucket_name}/{object_key}")
+            url = f"https://{bucket_name}.s3.amazonaws.com/{object_key}"
+            return url
+        except ClientError as unsigned_error:
+            print(f"Unsigned access failed: {unsigned_error}")
+            return None
 
     @classmethod
     def _can_handle_query(cls, *query):

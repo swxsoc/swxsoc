@@ -22,7 +22,7 @@ To record dimensions in Timestream, you need to call the `~swxsoc.util.util.reco
 
 Example Usage
 -------------
-.. code-block:: python
+.. code-block::
 
     from swxsoc.util.util import record_dimension_timestream
 

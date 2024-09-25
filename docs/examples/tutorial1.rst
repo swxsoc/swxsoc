@@ -7,6 +7,7 @@ This module provides an example for creating a CDF File using the `~swxsoc.swxda
 class. This class is an abstraction of underlying data structures to make the handling of
 measurement data easier when reading and writing CDF data.
 
+    >>> from pathlib import Path
     >>> from collections import OrderedDict
     >>> import numpy as np
     >>> import astropy.units as u
@@ -38,7 +39,7 @@ measurement data easier when reading and writing CDF data.
     >>>
     >>> # Create support data or non-time-varying (time invariant) data
     >>> support_data = {
-    ...     "data_mask": NDData(data=np.eye(100, 100, dtype=np.uint16))
+    ...     "data_mask": NDData(data=np.eye(100, 100, dtype=np.uint16), meta={"CATDESC": "Data Mask", "VAR_TYPE": "metadata"})
     ... }
     >>> 
     >>> # Create high-dimensional data leveraging the API of NDCube
@@ -47,7 +48,7 @@ measurement data easier when reading and writing CDF data.
     ...         (
     ...             "example_spectra",
     ...             NDCube(
-    ...                 data=np.random.random(size=(4, 10)),
+    ...                 data=np.random.random(size=(1000, 10)),
     ...                 wcs=WCS(naxis=2),
     ...                 meta={"CATDESC": "Example Spectra Variable"},
     ...                 unit="eV",
@@ -140,7 +141,8 @@ measurement data easier when reading and writing CDF data.
     >>> DRYRUN=True
     >>> if DRYRUN:
     ...     with tempfile.TemporaryDirectory() as tmpdirname:
-    ...         cdf_file_path = example_data.save(output_path=tmpdirname)
+    ...         tmp_path = Path(tmpdirname)
+    ...         cdf_file_path = example_data.save(output_path=tmp_path)
     ... else:
     ...     cdf_file_path = example_data.save(output_path="./", overwrite=True)
 

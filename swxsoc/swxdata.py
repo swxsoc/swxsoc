@@ -16,7 +16,6 @@ from astropy import units as u
 import ndcube
 from ndcube import NDCube, NDCollection
 import swxsoc
-from swxsoc.util.io import CDFHandler
 from swxsoc.util.schema import SWXSchema
 from swxsoc.util.exceptions import warn_user
 from swxsoc.util.util import VALID_DATA_LEVELS
@@ -30,15 +29,15 @@ class SWXData:
 
     Parameters
     ----------
-    timeseries :  `astropy.timeseries.TimeSeries`
-        The time series of data. Columns must be `~astropy.units.Quantity` arrays.
+    timeseries :  `Union[astropy.timeseries.TimeSeries, Dict[str, astropy.timeseries.TimeSeries]]`
+        The time-series data. This can be a single `astropy.timeseries.TimeSeries` object or a dictionary of `str` to `astropy.timeseries.TimeSeries` objects. If a dictionary, one key must be named 'epoch', the primary time axis. If non-index/time columns are included in any of the TimeSeries objects, they must be `~astropy.units.Quantity` arrays.
     support : `Optional[dict[Union[astropy.units.Quantity, astropy.nddata.NDData]]]`
         Support data arrays which do not vary with time (i.e. Non-Record-Varying data).
     spectra : `Optional[ndcube.NDCollection]`
         One or more `ndcube.NDCube` objects containing spectral or higher-dimensional
         timeseries data.
     meta : `Optional[dict]`
-        The metadata describing the time series in an ISTP-compliant format.
+        The metadata describing the data in an ISTP-compliant format.
 
     Examples
     --------
@@ -68,7 +67,7 @@ class SWXData:
     ... )
     >>> # Create a Support Structure
     >>> support_data = {
-    ...     "data_mask": NDData(data=np.eye(100, 100, dtype=np.uint16))
+    ...     "data_mask": NDData(data=np.eye(100, 100, dtype=np.uint16), meta={"CATDESC": "Data Mask", "VAR_TYPE": "metadata"})
     ... }
     >>> # Create Global Metadata Attributes
     >>> input_attrs = SWXData.global_attribute_template("eea", "l1", "1.0.0")
@@ -80,7 +79,7 @@ class SWXData:
     ValueError: If the number of columns is less than 2 or the required 'time' column is missing.
     TypeError: If any column, excluding 'time', is not an `astropy.units.Quantity` object with units.
     ValueError: If the elements of a `TimeSeries` column are multidimensional
-    TypeError: If any `supoport` data elements are not type `astropy.nddata.NDData`
+    TypeError: If any `support` data elements are not type `astropy.nddata.NDData` or `astropy.units.Quantity`.
     TypeError: If `spectra` is not an `NDCollection` object.
 
     References
@@ -95,7 +94,9 @@ class SWXData:
 
     def __init__(
         self,
-        timeseries: astropy.timeseries.TimeSeries,
+        timeseries: Union[
+            astropy.timeseries.TimeSeries, dict[str, astropy.timeseries.TimeSeries]
+        ],
         support: Optional[
             dict[Union[astropy.units.Quantity, astropy.nddata.NDData]]
         ] = None,
@@ -107,44 +108,31 @@ class SWXData:
         # ================================================
 
         # Verify TimeSeries compliance
-        if not isinstance(timeseries, TimeSeries):
-            raise TypeError(
-                "timeseries must be a `astropy.timeseries.TimeSeries` object."
-            )
-
-        if len(timeseries) == 0:
-            raise ValueError(
-                "timeseries cannot be empty, must include at least a 'time' column with valid times"
-            )
-
-        # Check individual Columns
-        for colname in timeseries.columns:
-            # Verify that all Measurements are `Quantity`
-            if colname != "time" and not isinstance(timeseries[colname], u.Quantity):
-                raise TypeError(
-                    f"Column '{colname}' must be an astropy.units.Quantity object"
-                )
-            # Verify that the Column is only a single dimension
-            if len(timeseries[colname].shape) > 1:  # If there is more than 1 Dimension
-                raise ValueError(
-                    f"Column '{colname}' must be a one-dimensional measurement. Split additional dimensions into unique measurenents."
-                )
+        if isinstance(timeseries, dict):
+            for key, value in timeseries.items():
+                self._validate_timeseries(value)
+        else:
+            self._validate_timeseries(timeseries)
 
         # Global Metadata Attributes are compiled from two places. You can pass in
         # global metadata throug the `meta` parameter or through the `TimeSeries.meta`
         # attribute.
-        _meta = {}
+        self._meta = {}
         if meta is not None and isinstance(meta, dict):
-            _meta.update(meta)
-        if timeseries.meta is not None and isinstance(timeseries.meta, dict):
-            _meta.update(timeseries.meta)
+            self._meta.update(meta)
+        if (
+            isinstance(timeseries, TimeSeries)
+            and timeseries.meta is not None
+            and isinstance(timeseries.meta, dict)
+        ):
+            self._meta.update(timeseries.meta)
 
         # Check Global Metadata Requirements - Require Descriptor, Data_level, Data_Version
-        if "Descriptor" not in _meta or _meta["Descriptor"] is None:
+        if "Descriptor" not in self._meta or self._meta["Descriptor"] is None:
             raise ValueError("'Descriptor' global meta attribute is required.")
-        if "Data_level" not in _meta or _meta["Data_level"] is None:
+        if "Data_level" not in self._meta or self._meta["Data_level"] is None:
             raise ValueError("'Data_level' global meta attribute is required.")
-        if "Data_version" not in _meta or _meta["Data_version"] is None:
+        if "Data_version" not in self._meta or self._meta["Data_version"] is None:
             raise ValueError("'Data_version' global meta attribute is required.")
 
         # Check NRV Data
@@ -167,24 +155,27 @@ class SWXData:
         #         CREATE DATA STRUCTURES
         # ================================================
 
-        # Copy the TimeSeries
-        self._timeseries = TimeSeries(timeseries, copy=True)
+        self._default_timeseries_key = swxsoc.config["general"][
+            "default_timeseries_key"
+        ]
 
-        # Add Input Metadata
-        if meta is not None and isinstance(meta, dict):
-            self._timeseries.meta.update(meta)
-
-        # Add any Metadata from the original TimeSeries
-        self._timeseries["time"].meta = OrderedDict()
-        if hasattr(timeseries["time"], "meta"):
-            self._timeseries["time"].meta.update(timeseries["time"].meta)
-
-        # Add TimeSeries Measurement Metadata
-        for col in self._timeseries.columns:
-            if col != "time":
-                self._timeseries[col].meta = self.measurement_attribute_template()
-                if hasattr(timeseries[col], "meta"):
-                    self._timeseries[col].meta.update(timeseries[col].meta)
+        if isinstance(timeseries, dict):
+            self._timeseries = {}
+            for key, value in timeseries.items():
+                # Copy the TimeSeries
+                self._timeseries[key] = TimeSeries(value, copy=True)
+                # Add any Metadata from the original TimeSeries
+                self._update_timeseries_measurement_meta(
+                    timeseries=value, epoch_key=key
+                )
+        elif isinstance(timeseries, TimeSeries):
+            self._timeseries = {
+                self._default_timeseries_key: TimeSeries(timeseries, copy=True)
+            }
+            self._update_timeseries_measurement_meta(
+                timeseries=timeseries,
+                epoch_key=self._default_timeseries_key,
+            )
 
         # Copy the Non-Record Varying Data
         if support:
@@ -194,10 +185,9 @@ class SWXData:
 
         # Add Support Metadata
         for key in self._support:
+            self._support[key].meta = self.measurement_attribute_template()
             if hasattr(support[key], "meta"):
                 self._support[key].meta.update(support[key].meta)
-            else:
-                self._support[key].meta = self.measurement_attribute_template()
 
         # Copy the High-Dimensional Spectra
         if spectra:
@@ -216,9 +206,13 @@ class SWXData:
     @property
     def timeseries(self):
         """
-        (`astropy.timeseries.TimeSeries`) A `TimeSeries` representing one or more measurements as a function of time.
+        (`astropy.timeseries.TimeSeries` or `dict`) A `TimeSeries` representing one or more measurements as a function of time.
+        If there are multiple `TimeSeries`, a dictionary is returned.
         """
-        return self._timeseries
+        if len(self._timeseries) > 1:
+            return {key: value for key, value in self._timeseries.items()}
+        else:
+            return self._timeseries[self._default_timeseries_key]
 
     @property
     def support(self):
@@ -237,27 +231,27 @@ class SWXData:
     @property
     def data(self):
         """
-        (`dict`) A `dict` containing each of `timeseries` and `support`.
+        (`dict`) A `dict` containing each of `timeseries`, `spectra` and `support`.
         """
         return {
-            "timeseries": self.timeseries,
-            "spectra": self.spectra,
-            "support": self.support,
+            "timeseries": self._timeseries,
+            "spectra": self._spectra,
+            "support": self._support,
         }
 
     @property
     def meta(self):
         """
-        (`collections.OrderedDict`) Global metadata associated with the measurement data.
+        (`dict`) Global metadata associated with the measurement data.
         """
-        return self._timeseries.meta
+        return self._meta
 
     @property
     def time(self):
         """
         (`astropy.time.Time`) The times of the measurements.
         """
-        t = Time(self._timeseries.time)
+        t = Time(self._timeseries[self._default_timeseries_key].time)
         # Set time format to enable plotting with astropy.visualisation.time_support()
         t.format = "iso"
         return t
@@ -267,7 +261,7 @@ class SWXData:
         """
         (`tuple`) The start and end times of the times.
         """
-        return (self._timeseries.time.min(), self._timeseries.time.max())
+        return (self.time.min(), self.time.max())
 
     def __repr__(self):
         """
@@ -282,12 +276,14 @@ class SWXData:
         str_repr = f"SWXData() Object:\n"
         # Global Attributes/Metedata
         str_repr += f"Global Attrs:\n"
-        for attr_name, attr_value in self._timeseries.meta.items():
+        for attr_name, attr_value in self._meta.items():
             str_repr += f"\t{attr_name}: {attr_value}\n"
         # TimeSeries Data
         str_repr += f"TimeSeries Data:\n"
-        for var_name in self._timeseries.colnames:
-            str_repr += f"\t{var_name}\n"
+        for epoch_key, ts in self._timeseries.items():
+            str_repr += f"\tTimeSeries: {epoch_key}\n"
+            for var_name in ts.colnames:
+                str_repr += f"\t\t{var_name}\n"
         # Support Data
         str_repr += f"Support Data:\n"
         for var_name in self._support.keys():
@@ -297,6 +293,34 @@ class SWXData:
         for var_name in self._spectra.keys():
             str_repr += f"\t{var_name}\n"
         return str_repr
+
+    def __getitem__(self, var_name):
+        """
+        Get the data for a specific variable.
+
+        Parameters
+        ----------
+        var_name : `str`
+            The name of the variable to retrieve.
+
+        Returns
+        -------
+        `astropy.units.Quantity` or `astropy.nddata.NDData` or `ndcube.NDCube`
+            The data for the variable.
+
+        Raises
+        ------
+        KeyError: If the variable name is not found in the `SWXData` object.
+        """
+        for epoch_key, ts in self._timeseries.items():
+            if var_name in ts.columns:
+                return ts[var_name]
+        if var_name in self.support:
+            return self.support[var_name]
+        if var_name in self.spectra:
+            return self.spectra[var_name]
+        else:
+            raise KeyError(f"Variable {var_name} not found in SWxData object.")
 
     @staticmethod
     def global_attribute_template(
@@ -366,6 +390,115 @@ class SWXData:
         """
         return SWXSchema().measurement_attribute_template()
 
+    @staticmethod
+    def get_timeseres_epoch_key(timeseries, var_data, var_meta: dict = None):
+        """
+        Function to determine the TimeSeries Epoch for a Record-Varying Variable.
+
+        Parameters
+        ----------
+        timeseries : `dict[str, astropy.timeseries.TimeSeries]`
+            A dictionary of `str` to `astropy.timeseries.TimeSeries` objects. Each `TimeSeries` object represents a different epoch.
+        var_data : `astropy.units.Quantity`
+            The variable data that we want to find the epoch for.
+        var_meta : `dict`, optional
+            The metadata associated with the variable data.
+        """
+
+        # Find the TimeSeries Epoch for this Record-Varying Variable
+        if var_meta is not None and "DEPEND_0" in var_meta:
+            epoch_key = var_meta["DEPEND_0"]
+        else:
+            # Check which epoch key to use
+            potential_epoch_keys = []
+            for key, ts in timeseries.items():
+                if hasattr(var_data, "shape"):
+                    if len(ts.time) == var_data.shape[0]:
+                        potential_epoch_keys.append(key)
+                elif hasattr(var_data, "data"):
+                    if len(ts.time) == len(var_data.data):
+                        potential_epoch_keys.append(key)
+            if len(potential_epoch_keys) == 0:
+                raise ValueError("No TimeSeries have the same length as the new data.")
+            elif len(potential_epoch_keys) > 1:
+                raise ValueError(
+                    "Multiple TimeSeries have the same length as the new data."
+                )
+            epoch_key = potential_epoch_keys[0]
+        return epoch_key
+
+    def _validate_timeseries(self, timeseries: astropy.timeseries.TimeSeries):
+        """
+        Validate a timeseries.
+
+        Parameters
+        ----------
+        timeseries : astropy.timeseries.TimeSeries
+            The timeseries to validate.
+
+        Raises
+        ------
+        TypeError
+            If the timeseries is not a `astropy.timeseries.TimeSeries` object or a dictionary of `str` to `astropy.timeseries.TimeSeries` objects.
+            If any column in the timeseries (other than 'time') is not an `astropy.units.Quantity` object.
+        ValueError
+            If the timeseries is empty.
+            If any column in the timeseries is not a one-dimensional measurement.
+        """
+        if not isinstance(timeseries, astropy.timeseries.TimeSeries):
+            raise TypeError(
+                "timeseries must be a `astropy.timeseries.TimeSeries` object or a dictionary of `str` to `astropy.timeseries.TimeSeries` objects."
+            )
+        if (
+            isinstance(timeseries, astropy.timeseries.TimeSeries)
+            and len(timeseries) == 0
+        ):
+            raise ValueError(
+                "timeseries cannot be empty, must include at least a 'time' column with valid times"
+            )
+        for colname in timeseries.columns:
+            # Verify that all Measurements are `Quantity`
+            if colname != "time" and not isinstance(timeseries[colname], u.Quantity):
+                raise TypeError(
+                    f"Column '{colname}' must be an astropy.units.Quantity object"
+                )
+            # Verify that the Column is only a single dimension
+            if len(timeseries[colname].shape) > 1:  # If there is more than 1 Dimension
+                raise ValueError(
+                    f"Column '{colname}' must be a one-dimensional measurement. Split additional dimensions into unique measurements."
+                )
+
+    def _update_timeseries_measurement_meta(
+        self, timeseries: TimeSeries, epoch_key: str
+    ):
+        """
+        Update the metadata for a specific timeseries in the collection.
+
+        This method updates the metadata for both the time attribute and the measurements
+        in the timeseries. If the time attribute or a measurement has a `meta` attribute,
+        its contents are added to the corresponding attribute in the stored timeseries.
+
+        Parameters
+        ----------
+        timeseries : `astropy.timeseries.TimeSeries`
+            The timeseries whose metadata is to be updated. This timeseries should already
+            be part of the collection.
+        epoch_key : str
+            The key identifying the timeseries in the collection.
+        """
+        # Time Attributes
+        self._timeseries[epoch_key]["time"].meta = OrderedDict()
+        if hasattr(timeseries["time"], "meta"):
+            self._timeseries[epoch_key]["time"].meta.update(timeseries["time"].meta)
+        # Measurement Attributes
+        for col in timeseries.columns:
+            if col != "time":
+                self._timeseries[epoch_key][
+                    col
+                ].meta = self.measurement_attribute_template()
+                if hasattr(timeseries[col], "meta"):
+                    self._timeseries[epoch_key][col].meta.update(timeseries[col].meta)
+
     def _derive_metadata(self):
         """
         Funtion to derive global and measurement metadata based on a SWXSchema
@@ -376,44 +509,63 @@ class SWXData:
             self._update_global_attribute(attr_name, attr_value)
 
         # Global Attributes
-        for attr_name, attr_value in self.schema.derive_global_attributes(
-            self._timeseries
-        ).items():
+        for attr_name, attr_value in self.schema.derive_global_attributes(self).items():
             self._update_global_attribute(attr_name, attr_value)
 
-        # Measurement Attributes
-        for data_structure in [self.timeseries, self.support, self.spectra]:
-            for col in data_structure.keys():
+        for epoch_key, ts in self._timeseries.items():
+            # Time Measurement Attributes
+            for col in ts.columns:
                 for attr_name, attr_value in self.schema.derive_measurement_attributes(
-                    data_structure, col
+                    self, col
                 ).items():
                     self._update_measurement_attribute(
-                        data_structure=data_structure,
+                        data_structure=ts,
                         var_name=col,
                         attr_name=attr_name,
                         attr_value=attr_value,
                     )
 
+        # Support/ Non-Record-Varying Data
+        for col in self._support:
+            for attr_name, attr_value in self.schema.derive_measurement_attributes(
+                self, col
+            ).items():
+                self._update_measurement_attribute(
+                    data_structure=self._support,
+                    var_name=col,
+                    attr_name=attr_name,
+                    attr_value=attr_value,
+                )
+
+        # Spectra/ High-Dimensional Data
+        for col in self._spectra:
+            for attr_name, attr_value in self.schema.derive_measurement_attributes(
+                self, col
+            ).items():
+                self._update_measurement_attribute(
+                    data_structure=self._spectra,
+                    var_name=col,
+                    attr_name=attr_name,
+                    attr_value=attr_value,
+                )
+
     def _update_global_attribute(self, attr_name, attr_value):
         # If the attribute is set, check if we want to overwrite it
-        if (
-            attr_name in self._timeseries.meta
-            and self._timeseries.meta[attr_name] is not None
-        ):
+        if attr_name in self._meta and self._meta[attr_name] is not None:
             # We want to overwrite if:
             #   1) The actual value is not the derived value
             #   2) The schema marks this attribute to be overwriten
             if (
-                self._timeseries.meta[attr_name] != attr_value
+                self._meta[attr_name] != attr_value
                 and self.schema.global_attribute_schema[attr_name]["overwrite"]
             ):
                 warn_user(
-                    f"Overriding Global Attribute {attr_name} : {self._timeseries.meta[attr_name]} -> {attr_value}"
+                    f"Overriding Global Attribute {attr_name} : {self._meta[attr_name]} -> {attr_value}"
                 )
-                self._timeseries.meta[attr_name] = attr_value
+                self._meta[attr_name] = attr_value
         # If the attribute is not set, set it
         else:
-            self._timeseries.meta[attr_name] = attr_value
+            self._meta[attr_name] = attr_value
 
     def _update_measurement_attribute(
         self, data_structure, var_name, attr_name, attr_value
@@ -466,16 +618,46 @@ class SWXData:
                 f"Column '{measure_name}' must be a one-dimensional measurement. Split additional dimensions into unique measurenents."
             )
 
-        self._timeseries[measure_name] = data
+            # Find the TimeSeries Epoch for this Record-Varying Variable
+        epoch_key = SWXData.get_timeseres_epoch_key(self._timeseries, data, meta)
+
+        # Add the new measurement
+        self._timeseries[epoch_key][measure_name] = data
         # Add any Metadata from the original Quantity
-        self._timeseries[measure_name].meta = self.measurement_attribute_template()
+        self._timeseries[epoch_key][
+            measure_name
+        ].meta = self.measurement_attribute_template()
         if hasattr(data, "meta"):
-            self._timeseries[measure_name].meta.update(data.meta)
+            self._timeseries[epoch_key][measure_name].meta.update(data.meta)
         if meta:
-            self._timeseries[measure_name].meta.update(meta)
+            self._timeseries[epoch_key][measure_name].meta.update(meta)
 
         # Derive Metadata Attributes for the Measurement
         self._derive_metadata()
+
+    def add_timeseries(self, epoch_key: str, timeseries: TimeSeries):
+        """
+        Add a new TimeSeries object to the collection of epochs.
+
+        Parameters
+        ----------
+        epoch_key: `str`
+            The key to identify the new TimeSeries.
+        timeseries: `astropy.timeseries.TimeSeries`
+            The time-series data to add.
+        """
+        self._validate_timeseries(timeseries)
+
+        # Check the epoch is not already used
+        if epoch_key in self._timeseries:
+            raise ValueError(f"Epoch key {epoch_key} is already in use.")
+        else:
+            # Add the TimeSeries
+            self._timeseries[epoch_key] = TimeSeries(timeseries, copy=True)
+            # Updata the Metadata
+            self._update_timeseries_measurement_meta(
+                timeseries=timeseries, epoch_key=epoch_key
+            )
 
     def add_support(
         self,
@@ -569,13 +751,22 @@ class SWXData:
         measure_name: `str`
             Name of the variable to remove.
         """
-        if measure_name in self._timeseries.columns:
-            self._timeseries.remove_column(measure_name)
-        elif measure_name in self._support:
+        found = False
+        # Check TimeSeries
+        for epoch_key, ts in self._timeseries.items():
+            if measure_name in ts.columns:
+                self._timeseries[epoch_key].remove_column(measure_name)
+                found = True
+        # Check Support
+        if measure_name in self._support:
             self._support.pop(measure_name)
+            found = True
+        # Check Spectra
         elif measure_name in self._spectra:
             self._spectra.pop(measure_name)
-        else:
+            found = True
+        # Otherwise Raise and Error
+        if not found:
             raise ValueError(f"Data for Measurement {measure_name} not found.")
 
     def plot(self, axes=None, columns=None, subplots=True, **plot_args):
@@ -686,50 +877,39 @@ class SWXData:
             The data to be appended (rows) as a `TimeSeries` object.
         """
         # Verify TimeSeries compliance
-        if not isinstance(timeseries, TimeSeries):
-            raise TypeError("Data must be a TimeSeries object.")
-        if len(timeseries.columns) < 2:
-            raise ValueError("Data must have at least 2 columns")
-        if len(self.timeseries.columns) != len(timeseries.columns):
-            raise ValueError(
-                (
-                    f"Shape of curent TimeSeries ({len(self.timeseries.columns)}) does not match",
-                    f"shape of data to add ({len(timeseries.columns)}).",
-                )
-            )
+        self._validate_timeseries(timeseries)
 
-        # Check individual Columns
-        for colname in self.timeseries.columns:
-            if colname != "time" and not isinstance(
-                self.timeseries[colname], u.Quantity
-            ):
-                raise TypeError(
-                    f"Column '{colname}' must be an astropy.Quantity object"
-                )
+        # Check which epoch key to use
+        selected_epoch_key = SWXData.get_timeseres_epoch_key(
+            self._timeseries, timeseries.time
+        )
 
         # Save Metadata since it is not carried over with vstack
         metadata_holder = {
-            col: self.timeseries[col].meta for col in self.timeseries.columns
+            col: self._timeseries[selected_epoch_key][col].meta
+            for col in self._timeseries[selected_epoch_key].columns
         }
 
         # Vertically Stack the TimeSeries
-        self._timeseries = vstack([self._timeseries, timeseries])
+        self._timeseries[selected_epoch_key] = vstack(
+            [self._timeseries[selected_epoch_key], timeseries]
+        )
 
         # Add Metadata back to the Stacked TimeSeries
-        for col in self.timeseries.columns:
-            self.timeseries[col].meta = metadata_holder[col]
+        for col in self._timeseries[selected_epoch_key].columns:
+            self._timeseries[selected_epoch_key][col].meta = metadata_holder[col]
 
         # Re-Derive Metadata
         self._derive_metadata()
 
-    def save(self, output_path: str = None, overwrite: bool = False):
+    def save(self, output_path: Path = None, overwrite: bool = False):
         """
         Save the data to a CDF file.
 
         Parameters
         ----------
-        output_path : `str`, optional
-            A string path to the directory where file is to be saved.
+        output_path : `pathlib.Path`, optional
+            A fully specified path to the directory where the file is to be saved.
             If not provided, saves to the current directory.
         overwrite : `bool`
             If set, overwrites existing file of the same name.
@@ -738,24 +918,26 @@ class SWXData:
         path : `str`
             A path to the saved file.
         """
+        from swxsoc.util.io import CDFHandler
+
         handler = CDFHandler()
         if not output_path:
-            output_path = str(Path.cwd())
+            output_path = Path.cwd()
         if overwrite:
-            cdf_file_path = Path(output_path) / (self.meta["Logical_file_id"] + ".cdf")
+            cdf_file_path = output_path / (self.meta["Logical_file_id"] + ".cdf")
             if cdf_file_path.exists():
                 cdf_file_path.unlink()
         return handler.save_data(data=self, file_path=output_path)
 
     @classmethod
-    def load(cls, file_path: str):
+    def load(cls, file_path: Path):
         """
         Load data from a file.
 
         Parameters
         ----------
-        file_path : `str`
-            A fully specificed file path.
+        file_path : `pathlib.Path`
+            A fully specified file path of the data file to load.
 
         Returns
         -------
@@ -767,8 +949,10 @@ class SWXData:
         ValueError: If the file type is not recognized as a file type that can be loaded.
 
         """
+        from swxsoc.util.io import CDFHandler
+
         # Determine the file type
-        file_extension = Path(file_path).suffix
+        file_extension = file_path.suffix
 
         # Create the appropriate handler object based on file type
         if file_extension == ".cdf":
@@ -777,5 +961,5 @@ class SWXData:
             raise ValueError(f"Unsupported file type: {file_extension}")
 
         # Load data using the handler and return a SWXData object
-        timeseries, support, spectra = handler.load_data(file_path)
-        return cls(timeseries=timeseries, support=support, spectra=spectra)
+        timeseries, support, spectra, meta = handler.load_data(file_path)
+        return cls(timeseries=timeseries, support=support, spectra=spectra, meta=meta)

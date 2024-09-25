@@ -7,17 +7,18 @@ Record Measures and Dimensions in Timestream
 This module provides functionality to record measures with dimensions in an AWS Timestream database. You can log various metrics and associate them with specific instruments and dimensions for effective data analysis.
 
 Prerequisites
-============
-Before using the `record_dimension_timestream` function, ensure that the following prerequisites are met:
+=============
+Before using the `~swxsoc.util.util.record_dimension_timestream` function, ensure that the following prerequisites are met:
 
 - You have access to an AWS account with Timestream enabled and configured.
+
 .. note::
-    If you are using the `record_dimension_timestream` function within the cloud processing pipeline, you do not need to worry about this prerequisite.
+    If you are using the `~swxsoc.util.util.record_dimension_timestream` function within the cloud processing pipeline, you do not need to worry about this prerequisite.
 
 
 Using the `record_dimension_timestream` Function
 ==================================================
-To record dimensions in Timestream, you need to call the `record_dimension_timestream` function with the appropriate parameters. Below is an example of how to use this function.
+To record dimensions in Timestream, you need to call the `~swxsoc.util.util.record_dimension_timestream` function with the appropriate parameters. Below is an example of how to use this function.
 
 Example Usage
 -------------
@@ -52,7 +53,7 @@ Example Usage
 
 Parameters
 ==========
-The `record_dimension_timestream` function accepts the following parameters:
+The `~swxsoc.util.util.record_dimension_timestream` function accepts the following parameters:
 
 - **dimensions** (list): A list of dimensions to record. Each dimension should be a dictionary with `Name` and `Value` keys.
 - **instrument_name** (str, optional): The name of the instrument being logged. Defaults to `None`.
@@ -60,4 +61,3 @@ The `record_dimension_timestream` function accepts the following parameters:
 - **measure_value** (any, optional): The value of the measure being recorded. If not provided, defaults to the current UTC timestamp.
 - **measure_value_type** (str): The type of the measure value (e.g., `"DOUBLE"`, `"BIGINT"`). Defaults to `"DOUBLE"`.
 - **timestamp** (str, optional): The timestamp for the record in milliseconds. Defaults to the current time in milliseconds if not provided.
-

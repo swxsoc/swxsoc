@@ -30,9 +30,10 @@ dependencies = [
   'astropy>=5.3.3',
   'numpy>=1.18.0',
   'sunpy>=5.0.1',
-  'spacepy>=0.4.1',
+  'spacepy>=0.6.0',
   'ndcube>=2.2.0',
   'pyyaml>=5.3.1',
+  'boto3==1.35.26'
 ]
 
 [project.optional-dependencies]
@@ -43,7 +44,8 @@ dev = [
   'pytest-cov==4.1.0',
   'black==24.1.1',
   'flake8==7.0.0',
-  'coverage[toml]==7.4.1'
+  'coverage[toml]==7.4.1',
+  'moto[all]==5.0.15'
 ]
 
 docs = [

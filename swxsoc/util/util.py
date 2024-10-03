@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import time
 
 from astropy.time import Time
+from astropy.timeseries import TimeSeries
 import boto3
 
 import swxsoc
@@ -212,6 +213,69 @@ def parse_science_filename(filepath: str) -> dict:
     return result
 
 
+def record_timeseries(ts: TimeSeries, instrument_name: str = None) -> None:
+    """Given a timeseries, record the data into the AWS timestream for viewing on a dashboard such as Grafana."""
+    timestream_client = boto3.client("timestream-write", region_name="us-east-1")
+
+    # Get mission name from environment or default to 'hermes'
+    mission_name = swxsoc.config["mission"]["mission_name"]
+    mission_prefix = f"{mission_name}_" if mission_name != "hermes" else ""
+    if "INSTRUME" not in ts.meta:  # FITS header standard keyword
+        instrument_name = instrument_name.lower()
+    else:
+        instrument_name = ts.meta["INSTRUME"].lower()
+
+    database_name = f"{mission_prefix}_sdc_aws_logs"
+    table_name = f"{mission_prefix}_measures_table"
+
+    if os.getenv("LAMBDA_ENVIRONMENT") != "PRODUCTION":
+        database_name = f"dev-{database_name}"
+        table_name = f"dev-{table_name}"
+
+    dimensions = [
+        {"Name": "mission", "Value": mission_name},
+        {"Name": "instrument", "Value": instrument_name},
+        {"Name": "source", "Value": os.getenv("LAMBDA_ENVIRONMENT")},
+    ]
+
+    common_attributes = {
+        "Dimensions": dimensions,
+        "MeasureValueType": "DOUBLE",
+        "Time": [
+            str(this_t) for this_t in ts.time
+        ],  # TODO is this needed? may be slow for large timeseries
+    }
+
+    col_names = ts.colnames.remove("time")
+
+    records = []
+    for this_col in col_names:
+        records.append({"MeasureName": this_col, "MeasureValue": list(ts[this_col])})
+
+    try:
+        result = timestream_client.write_records(
+            DatabaseName=database_name,
+            TableName=table_name,
+            Records=records,
+            CommonAttributes=common_attributes,
+        )
+        swxsoc.log.info(
+            f"Successfully wrote record {records} to Timestream: {database_name}/{table_name}, writeRecords Status: {result['ResponseMetadata']['HTTPStatusCode']}"
+        )
+    except timestream_client.exceptions.RejectedRecordsException as err:
+        swxsoc.log.error(f"Failed to write to records to Timestream: {err}")
+        for rr in err.response["RejectedRecords"]:
+            swxsoc.log.info(
+                "Rejected Index " + str(rr["RecordIndex"]) + ": " + rr["Reason"]
+            )
+            if "ExistingVersion" in rr:
+                swxsoc.log.info(
+                    "Rejected record existing version: ", rr["ExistingVersion"]
+                )
+    except Exception as err:
+        swxsoc.log.error(f"Failed to write to Timestream: {err}")
+
+
 def record_dimension_timestream(
     dimensions: list,
     instrument_name: str = None,
@@ -268,8 +332,8 @@ def record_dimension_timestream(
         mission_prefix = f"{mission_name}_" if mission_name != "hermes" else ""
 
         # Define database and table names based on mission and environment
-        database_name = f"{mission_prefix}sdc_aws_logs"
-        table_name = f"{mission_prefix}measures_table"
+        database_name = f"{mission_prefix}_sdc_aws_logs"
+        table_name = f"{mission_prefix}_measures_table"
 
         if os.getenv("LAMBDA_ENVIRONMENT") != "PRODUCTION":
             database_name = f"dev-{database_name}"

@@ -18,6 +18,7 @@ import swxsoc
 __all__ = [
     "create_science_filename",
     "parse_science_filename",
+    "record_timeseries",
     "_record_dimension_timestream",
     "VALID_DATA_LEVELS",
 ]
@@ -215,15 +216,19 @@ def parse_science_filename(filepath: str) -> dict:
     return result
 
 
-def record_timeseries(ts: TimeSeries, instrument_name: str = "") -> None:
-    """Record a timeseries of measurements to an `AWS timestream <https://docs.aws.amazon.com/timestream/>`_ for viewing on a dashboard such as Grafana.
+def record_timeseries(
+    ts: TimeSeries, ts_name: str = None, instrument_name: str = ""
+) -> None:
+    """
+    Record a timeseries of measurements to AWS Timestream for viewing on a dashboard like Grafana.
 
-    .. warning::
-        This function requires AWS credentials with permission to write to the AWS timestream database.
+    This function requires AWS credentials with permission to write to the AWS Timestream database.
 
     :param ts: A timeseries with column data to record.
     :type ts: TimeSeries
-    :param instrument_name: Optional. If not provided uses ts.meta['INSTRUME']
+    :param ts_name: The name of the timeseries to record.
+    :type ts_name: str
+    :param instrument_name: Optional. If not provided, uses ts.meta['INSTRUME']
     :type instrument_name: str
     :return: None
     """
@@ -231,14 +236,17 @@ def record_timeseries(ts: TimeSeries, instrument_name: str = "") -> None:
 
     # Get mission name from environment or default to 'hermes'
     mission_name = swxsoc.config["mission"]["mission_name"]
-    mission_prefix = f"{mission_name}_" if mission_name != "hermes" else ""
-    if "INSTRUME" not in ts.meta:  # FITS header standard keyword
-        instrument_name = instrument_name.lower()
-    else:
-        instrument_name = ts.meta["INSTRUME"].lower()
+    instrument_name = (
+        instrument_name.lower()
+        if "INSTRUME" not in ts.meta
+        else ts.meta["INSTRUME"].lower()
+    )
 
-    database_name = f"{mission_prefix}_sdc_aws_logs"
-    table_name = f"{mission_prefix}_measures_table"
+    if ts_name is None or ts_name == "":
+        ts_name = ts.meta.get("name", "measurement_group")
+
+    database_name = f"{mission_name}_sdc_aws_logs"
+    table_name = f"{mission_name}_measures_table"
 
     if os.getenv("LAMBDA_ENVIRONMENT") != "PRODUCTION":
         database_name = f"dev-{database_name}"
@@ -247,57 +255,58 @@ def record_timeseries(ts: TimeSeries, instrument_name: str = "") -> None:
     dimensions = [
         {"Name": "mission", "Value": mission_name},
         {"Name": "instrument", "Value": instrument_name},
-        {"Name": "source", "Value": os.getenv("LAMBDA_ENVIRONMENT")},
+        {"Name": "source", "Value": os.getenv("LAMBDA_ENVIRONMENT", "DEVELOPMENT")},
     ]
 
-    common_attributes = {
-        "Dimensions": dimensions,
-        "MeasureValueType": "DOUBLE",  # TODO add support for bool
-        "Time": [
-            str(this_t) for this_t in ts.time
-        ],  # TODO is this needed? may be slow for large timeseries
-        #  set the version to the current time so that a later call will overwrite with a larger version number
-        "Version": int(round(time.time() * 1000)),
-    }
-
-    col_names = ts.colnames.remove("time")  # only iterate over non-time columns
-
     records = []
-    for this_col in col_names:
-        if isinstance(ts[this_col], u.Quantity):
-            records.append(
+    for i, time_point in enumerate(ts.time):
+        measure_record = {
+            "Time": str(int(time_point.to_datetime().timestamp() * 1000)),
+            "Dimensions": dimensions,
+            "MeasureName": ts_name,
+            "MeasureValueType": "MULTI",
+            "MeasureValues": [],
+        }
+
+        for this_col in ts.colnames:
+            if this_col == "time":
+                continue
+
+            # Handle both Quantity and regular values
+            if isinstance(ts[this_col], u.Quantity):
+                measure_unit = ts[this_col].unit
+                value = ts[this_col].value[i]
+            else:
+                measure_unit = ""
+                value = ts[this_col][i]
+
+            measure_record["MeasureValues"].append(
                 {
-                    "MeasureName": f"{this_col}_{ts[this_col].unit}",
-                    "MeasureValue": list(ts[this_col].value),
+                    "Name": f"{this_col}_{measure_unit}" if measure_unit else this_col,
+                    "Value": str(value),
+                    "Type": "DOUBLE" if isinstance(value, (int, float)) else "VARCHAR",
                 }
             )
-        else:
-            records.append(
-                {
-                    "MeasureName": f"{this_col}",
-                    "MeasureValue": list(ts[this_col]),
-                }
-            )
+
+        records.append(measure_record)
 
     try:
         result = timestream_client.write_records(
             DatabaseName=database_name,
             TableName=table_name,
             Records=records,
-            CommonAttributes=common_attributes,
         )
         swxsoc.log.info(
-            f"Successfully wrote record {records} to Timestream: {database_name}/{table_name}, writeRecords Status: {result['ResponseMetadata']['HTTPStatusCode']}"
+            f"Successfully wrote {len(records)} records to Timestream: {database_name}/{table_name}, "
+            f"writeRecords Status: {result['ResponseMetadata']['HTTPStatusCode']}"
         )
     except timestream_client.exceptions.RejectedRecordsException as err:
-        swxsoc.log.error(f"Failed to write to records to Timestream: {err}")
+        swxsoc.log.error(f"Failed to write records to Timestream: {err}")
         for rr in err.response["RejectedRecords"]:
-            swxsoc.log.info(
-                "Rejected Index " + str(rr["RecordIndex"]) + ": " + rr["Reason"]
-            )
-            if "ExistingVersion" in rr:  # this error should never occur since version is always set larger
+            swxsoc.log.info(f"Rejected Index {rr['RecordIndex']}: {rr['Reason']}")
+            if "ExistingVersion" in rr:
                 swxsoc.log.info(
-                    "Rejected record existing version: ", rr["ExistingVersion"]
+                    f"Rejected record existing version: {rr['ExistingVersion']}"
                 )
     except Exception as err:
         swxsoc.log.error(f"Failed to write to Timestream: {err}")
@@ -359,11 +368,10 @@ def _record_dimension_timestream(
     try:
         # Get mission name from environment or default to 'hermes'
         mission_name = swxsoc.config["mission"]["mission_name"]
-        mission_prefix = f"{mission_name}_" if mission_name != "hermes" else ""
 
         # Define database and table names based on mission and environment
-        database_name = f"{mission_prefix}_sdc_aws_logs"
-        table_name = f"{mission_prefix}_measures_table"
+        database_name = f"{mission_name}_sdc_aws_logs"
+        table_name = f"{mission_name}_measures_table"
 
         if os.getenv("LAMBDA_ENVIRONMENT") != "PRODUCTION":
             database_name = f"dev-{database_name}"

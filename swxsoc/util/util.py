@@ -8,6 +8,8 @@ import time
 
 from astropy.time import Time
 from astropy.timeseries import TimeSeries
+import astropy.units as u
+
 import boto3
 
 import swxsoc
@@ -16,7 +18,7 @@ import swxsoc
 __all__ = [
     "create_science_filename",
     "parse_science_filename",
-    "record_dimension_timestream",
+    "_record_dimension_timestream",
     "VALID_DATA_LEVELS",
 ]
 
@@ -213,8 +215,18 @@ def parse_science_filename(filepath: str) -> dict:
     return result
 
 
-def record_timeseries(ts: TimeSeries, instrument_name: str = None) -> None:
-    """Given a timeseries, record the data into the AWS timestream for viewing on a dashboard such as Grafana."""
+def record_timeseries(ts: TimeSeries, instrument_name: str = "") -> None:
+    """Record a timeseries of measurements to an `AWS timestream <https://docs.aws.amazon.com/timestream/>`_ for viewing on a dashboard such as Grafana.
+
+    .. warning::
+        This function requires AWS credentials with permission to write to the AWS timestream database.
+
+    :param ts: A timeseries with column data to record.
+    :type ts: TimeSeries
+    :param instrument_name: Optional. If not provided uses ts.meta['INSTRUME']
+    :type instrument_name: str
+    :return: None
+    """
     timestream_client = boto3.client("timestream-write", region_name="us-east-1")
 
     # Get mission name from environment or default to 'hermes'
@@ -240,17 +252,32 @@ def record_timeseries(ts: TimeSeries, instrument_name: str = None) -> None:
 
     common_attributes = {
         "Dimensions": dimensions,
-        "MeasureValueType": "DOUBLE",
+        "MeasureValueType": "DOUBLE",  # TODO add support for bool
         "Time": [
             str(this_t) for this_t in ts.time
         ],  # TODO is this needed? may be slow for large timeseries
+        #  set the version to the current time so that a later call will overwrite with a larger version number
+        "Version": int(round(time.time() * 1000)),
     }
 
-    col_names = ts.colnames.remove("time")
+    col_names = ts.colnames.remove("time")  # only iterate over non-time columns
 
     records = []
     for this_col in col_names:
-        records.append({"MeasureName": this_col, "MeasureValue": list(ts[this_col])})
+        if isinstance(ts[this_col], u.Quantity):
+            records.append(
+                {
+                    "MeasureName": f"{this_col}_{ts[this_col].unit}",
+                    "MeasureValue": list(ts[this_col].value),
+                }
+            )
+        else:
+            records.append(
+                {
+                    "MeasureName": f"{this_col}",
+                    "MeasureValue": list(ts[this_col]),
+                }
+            )
 
     try:
         result = timestream_client.write_records(
@@ -268,7 +295,7 @@ def record_timeseries(ts: TimeSeries, instrument_name: str = None) -> None:
             swxsoc.log.info(
                 "Rejected Index " + str(rr["RecordIndex"]) + ": " + rr["Reason"]
             )
-            if "ExistingVersion" in rr:
+            if "ExistingVersion" in rr:  # this error should never occur since version is always set larger
                 swxsoc.log.info(
                     "Rejected record existing version: ", rr["ExistingVersion"]
                 )
@@ -276,7 +303,7 @@ def record_timeseries(ts: TimeSeries, instrument_name: str = None) -> None:
         swxsoc.log.error(f"Failed to write to Timestream: {err}")
 
 
-def record_dimension_timestream(
+def _record_dimension_timestream(
     dimensions: list,
     instrument_name: str = None,
     measure_name: str = "timestamp",
@@ -285,7 +312,10 @@ def record_dimension_timestream(
     timestamp: str = None,
 ) -> None:
     """
-    Record metric dimensions to AWS Timestream.
+    Record a single measurement to an `AWS timestream <https://docs.aws.amazon.com/timestream/>`_ for viewing on a dashboard such as Grafana.
+
+    .. warning::
+        This function requires AWS credentials with permission to write to the AWS timestream database.
 
     :param dimensions: A list of dimensions to record. Each dimension should be a dictionary with 'Name' and 'Value' keys.
     :type dimensions: list[dict]

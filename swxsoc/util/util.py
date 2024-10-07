@@ -3,9 +3,12 @@ This module provides general utility functions.
 """
 
 import os
+from datetime import datetime, timezone
+import time
 
 from astropy.time import Time
 import astropy.units as u
+from astropy.timeseries import TimeSeries
 import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
 from botocore import UNSIGNED
@@ -19,6 +22,7 @@ import sunpy.net.attrs as a
 from sunpy.net.attr import AttrWalker, AttrAnd, AttrOr, SimpleAttr
 from sunpy.net.base_client import BaseClient, QueryResponseTable, convert_row_to_table
 
+
 import swxsoc
 
 
@@ -31,6 +35,9 @@ __all__ = [
     "Level",
     "Instrument",
     "DevelopmentBucket",
+    "record_timeseries",
+    "_record_dimension_timestream",
+    "VALID_DATA_LEVELS",
 ]
 
 TIME_FORMAT_L0 = "%Y%j-%H%M%S"
@@ -786,3 +793,186 @@ class SWXSOCClient(BaseClient):
             swxsoc.log.debug(f"Generated prefix: {prefix}")
 
         return prefixes
+
+
+def record_timeseries(
+    ts: TimeSeries, ts_name: str = None, instrument_name: str = ""
+) -> None:
+    """
+    Record a timeseries of measurements to AWS Timestream for viewing on a dashboard like Grafana.
+
+    This function requires AWS credentials with permission to write to the AWS Timestream database.
+
+    :param ts: A timeseries with column data to record.
+    :type ts: TimeSeries
+    :param ts_name: The name of the timeseries to record.
+    :type ts_name: str
+    :param instrument_name: Optional. If not provided, uses ts.meta['INSTRUME']
+    :type instrument_name: str
+    :return: None
+    """
+    timestream_client = boto3.client("timestream-write", region_name="us-east-1")
+
+    # Get mission name from environment or default to 'hermes'
+    mission_name = swxsoc.config["mission"]["mission_name"]
+    instrument_name = (
+        instrument_name.lower()
+        if "INSTRUME" not in ts.meta
+        else ts.meta["INSTRUME"].lower()
+    )
+
+    if ts_name is None or ts_name == "":
+        ts_name = ts.meta.get("name", "measurement_group")
+
+    database_name = f"{mission_name}_sdc_aws_logs"
+    table_name = f"{mission_name}_measures_table"
+
+    if os.getenv("LAMBDA_ENVIRONMENT") != "PRODUCTION":
+        database_name = f"dev-{database_name}"
+        table_name = f"dev-{table_name}"
+
+    dimensions = [
+        {"Name": "mission", "Value": mission_name},
+        {"Name": "instrument", "Value": instrument_name},
+        {"Name": "source", "Value": os.getenv("LAMBDA_ENVIRONMENT", "DEVELOPMENT")},
+    ]
+
+    records = []
+    for i, time_point in enumerate(ts.time):
+        measure_record = {
+            "Time": str(int(time_point.to_datetime().timestamp() * 1000)),
+            "Dimensions": dimensions,
+            "MeasureName": ts_name,
+            "MeasureValueType": "MULTI",
+            "MeasureValues": [],
+        }
+
+        for this_col in ts.colnames:
+            if this_col == "time":
+                continue
+
+            # Handle both Quantity and regular values
+            if isinstance(ts[this_col], u.Quantity):
+                measure_unit = ts[this_col].unit
+                value = ts[this_col].value[i]
+            else:
+                measure_unit = ""
+                value = ts[this_col][i]
+
+            measure_record["MeasureValues"].append(
+                {
+                    "Name": f"{this_col}_{measure_unit}" if measure_unit else this_col,
+                    "Value": str(value),
+                    "Type": "DOUBLE" if isinstance(value, (int, float)) else "VARCHAR",
+                }
+            )
+
+        records.append(measure_record)
+
+    try:
+        result = timestream_client.write_records(
+            DatabaseName=database_name,
+            TableName=table_name,
+            Records=records,
+        )
+        swxsoc.log.info(
+            f"Successfully wrote {len(records)} records to Timestream: {database_name}/{table_name}, "
+            f"writeRecords Status: {result['ResponseMetadata']['HTTPStatusCode']}"
+        )
+    except timestream_client.exceptions.RejectedRecordsException as err:
+        swxsoc.log.error(f"Failed to write records to Timestream: {err}")
+        for rr in err.response["RejectedRecords"]:
+            swxsoc.log.info(f"Rejected Index {rr['RecordIndex']}: {rr['Reason']}")
+            if "ExistingVersion" in rr:
+                swxsoc.log.info(
+                    f"Rejected record existing version: {rr['ExistingVersion']}"
+                )
+    except Exception as err:
+        swxsoc.log.error(f"Failed to write to Timestream: {err}")
+
+
+def _record_dimension_timestream(
+    dimensions: list,
+    instrument_name: str = None,
+    measure_name: str = "timestamp",
+    measure_value: any = None,
+    measure_value_type: str = "DOUBLE",
+    timestamp: str = None,
+) -> None:
+    """
+    Record a single measurement to an `AWS timestream <https://docs.aws.amazon.com/timestream/>`_ for viewing on a dashboard such as Grafana.
+
+    .. warning::
+        This function requires AWS credentials with permission to write to the AWS timestream database.
+
+    :param dimensions: A list of dimensions to record. Each dimension should be a dictionary with 'Name' and 'Value' keys.
+    :type dimensions: list[dict]
+    :param instrument_name: Optional. Name of the instrument to add as a dimension. Defaults to None.
+    :type instrument_name: str, optional
+    :param measure_name: The name of the measure being recorded. Defaults to "timestamp".
+    :type measure_name: str
+    :param measure_value: The value of the measure being recorded. Defaults to the current UTC timestamp if not provided.
+    :type measure_value: any, optional
+    :param measure_value_type: The type of the measure value (e.g., "DOUBLE", "BIGINT"). Defaults to "DOUBLE".
+    :type measure_value_type: str
+    :param timestamp: The timestamp for the record in milliseconds. Defaults to the current time if not provided.
+    :type timestamp: str, optional
+    :return: None
+    """
+    timestream_client = boto3.client("timestream-write", region_name="us-east-1")
+
+    # Use current time in milliseconds if no timestamp is provided
+    if not timestamp:
+        timestamp = int(time.time() * 1000)
+
+    # Default measure_value to current UTC timestamp if not provided
+    utc_now = datetime.now(timezone.utc)
+    if measure_value is None:
+        measure_value = str(utc_now.timestamp())
+
+    swxsoc.log.info(f"Using timestamp: {timestamp}")
+
+    # Lowercase instrument name for consistency if provided
+    if instrument_name:
+        instrument_name = instrument_name.lower()
+
+    # Add instrument_name as a dimension if provided
+    if instrument_name and instrument_name in swxsoc.config["mission"]["inst_names"]:
+        dimensions.append({"Name": "InstrumentName", "Value": instrument_name})
+    else:
+        swxsoc.log.info(
+            "No valid instrument name provided. Skipping instrument dimension."
+        )
+
+    try:
+        # Get mission name from environment or default to 'hermes'
+        mission_name = swxsoc.config["mission"]["mission_name"]
+
+        # Define database and table names based on mission and environment
+        database_name = f"{mission_name}_sdc_aws_logs"
+        table_name = f"{mission_name}_measures_table"
+
+        if os.getenv("LAMBDA_ENVIRONMENT") != "PRODUCTION":
+            database_name = f"dev-{database_name}"
+            table_name = f"dev-{table_name}"
+
+        record = {
+            "Time": str(timestamp),
+            "Dimensions": dimensions,
+            "MeasureName": measure_name,
+            "MeasureValue": str(measure_value),
+            "MeasureValueType": measure_value_type,
+        }
+
+        # Write records to Timestream
+        timestream_client.write_records(
+            DatabaseName=database_name,
+            TableName=table_name,
+            Records=[record],
+        )
+        swxsoc.log.info(
+            f"Successfully wrote record {record} to Timestream: {database_name}/{table_name}"
+        )
+
+    except Exception as e:
+        swxsoc.log.error(f"Failed to write to Timestream: {e}")

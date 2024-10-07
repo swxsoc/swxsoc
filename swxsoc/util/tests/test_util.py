@@ -9,7 +9,10 @@ import boto3
 from pathlib import Path
 import parfive
 
+from astropy import units as u
+from astropy.timeseries import TimeSeries
 from astropy.time import Time
+
 import swxsoc
 from swxsoc.util import util
 

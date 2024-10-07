@@ -1,3 +1,8 @@
+"""
+This code is based on that provided by SunPy and AstroPy see
+    licenses/SUNPY.rst and licenses/ASTROPY.rst
+"""
+
 import os
 import sys
 import logging
@@ -6,9 +11,7 @@ from astropy.logger import AstropyLogger
 
 from swxsoc.util.exceptions import SWXWarning
 
-"""This code is based on that provided by SunPy and AstroPy see
-    licenses/SUNPY.rst and licenses/ASTROPY.rst
-"""
+__all__ = ["MyLogger", "_init_log", "_config_to_loggerConf"]
 
 
 class MyLogger(AstropyLogger):

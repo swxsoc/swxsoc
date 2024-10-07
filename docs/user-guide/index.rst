@@ -12,6 +12,7 @@ For more details checkout the :ref:`reference`.
 
    Brief Tour <tour>
    reading_writing_data
+   recording_to_timestream
    schema_information_guide
    cdf_format_guide
    customization

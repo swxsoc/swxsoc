@@ -295,7 +295,7 @@ def record_timeseries(
     # Process records in batches of 100 to avoid exceeding the Timestream API limit
     batch_size = 100
     for start in range(0, len(records), batch_size):
-        chunk = records[start : start + batch_size]
+        chunk = records[start : start + batch_size]  # noqa: E203
         try:
             result = timestream_client.write_records(
                 DatabaseName=database_name,

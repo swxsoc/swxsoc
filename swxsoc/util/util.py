@@ -254,9 +254,11 @@ def record_timeseries(
 
     dimensions = [
         {"Name": "mission", "Value": mission_name},
-        {"Name": "instrument", "Value": instrument_name},
         {"Name": "source", "Value": os.getenv("LAMBDA_ENVIRONMENT", "DEVELOPMENT")},
     ]
+
+    if instrument_name != "":
+        dimensions.append({"Name": "instrument", "Value": instrument_name})
 
     records = []
     for i, time_point in enumerate(ts.time):
@@ -290,26 +292,30 @@ def record_timeseries(
 
         records.append(measure_record)
 
-    try:
-        result = timestream_client.write_records(
-            DatabaseName=database_name,
-            TableName=table_name,
-            Records=records,
-        )
-        swxsoc.log.info(
-            f"Successfully wrote {len(records)} records to Timestream: {database_name}/{table_name}, "
-            f"writeRecords Status: {result['ResponseMetadata']['HTTPStatusCode']}"
-        )
-    except timestream_client.exceptions.RejectedRecordsException as err:
-        swxsoc.log.error(f"Failed to write records to Timestream: {err}")
-        for rr in err.response["RejectedRecords"]:
-            swxsoc.log.info(f"Rejected Index {rr['RecordIndex']}: {rr['Reason']}")
-            if "ExistingVersion" in rr:
-                swxsoc.log.info(
-                    f"Rejected record existing version: {rr['ExistingVersion']}"
-                )
-    except Exception as err:
-        swxsoc.log.error(f"Failed to write to Timestream: {err}")
+    # Process records in batches of 100 to avoid exceeding the Timestream API limit
+    batch_size = 100
+    for start in range(0, len(records), batch_size):
+        chunk = records[start : start + batch_size]
+        try:
+            result = timestream_client.write_records(
+                DatabaseName=database_name,
+                TableName=table_name,
+                Records=chunk,
+            )
+            swxsoc.log.info(
+                f"Successfully wrote {len(chunk)} records to Timestream: {database_name}/{table_name}, "
+                f"writeRecords Status: {result['ResponseMetadata']['HTTPStatusCode']}"
+            )
+        except timestream_client.exceptions.RejectedRecordsException as err:
+            swxsoc.log.error(f"Failed to write records to Timestream: {err}")
+            for rr in err.response["RejectedRecords"]:
+                swxsoc.log.info(f"Rejected Index {rr['RecordIndex']}: {rr['Reason']}")
+                if "ExistingVersion" in rr:
+                    swxsoc.log.info(
+                        f"Rejected record existing version: {rr['ExistingVersion']}"
+                    )
+        except Exception as err:
+            swxsoc.log.error(f"Failed to write to Timestream: {err}")
 
 
 def _record_dimension_timestream(

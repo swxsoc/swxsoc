@@ -293,7 +293,7 @@ def record_timeseries(
         records.append(measure_record)
 
     # Process records in batches of 100 to avoid exceeding the Timestream API limit
-    batch_size = 100
+    batch_size = 99
     for start in range(0, len(records), batch_size):
         chunk = records[start : start + batch_size]
         try:
@@ -303,7 +303,7 @@ def record_timeseries(
                 Records=chunk,
             )
             swxsoc.log.info(
-                f"Successfully wrote {len(chunk)} records to Timestream: {database_name}/{table_name}, "
+                f"Successfully wrote {len(chunk)} {ts_name} records to Timestream: {database_name}/{table_name}, "
                 f"writeRecords Status: {result['ResponseMetadata']['HTTPStatusCode']}"
             )
         except timestream_client.exceptions.RejectedRecordsException as err:

@@ -1,3 +1,11 @@
+Acknowledgement:
+  description: >
+    Text string at PI disposal allowing for information on expected acknowledgment if data is citable.
+    Example: "Cite McComas et al (2016),doi:10.1007/s11214-014-0059-1"
+  default: null
+  required: false # Recommended in ISTP Guide
+  derived: false
+  overwrite: false
 CDF_Lib_version:
   description: > 
     Version of the CDF Binaries library used to generate the CDF File
@@ -5,19 +13,6 @@ CDF_Lib_version:
   derived: true
   derivation_fn: _get_cdf_lib_version
   required: false
-  validate: false
-  overwrite: false
-DOI:
-  description: > 
-    DOI is a persistent Unique Digital Identifier with the form
-    https://doi.org/<PREFIX>/<SUFFIX> with the <PREFIX> identifying the DOI
-    registration authority and the <SUFFIX> identifying the dataset. The DOI should point to
-    a landing page for additional information about the dataset. DOIs are typically created by
-    the SPASE naming authority or archive.
-  default: null
-  derived: false
-  required: false # NOT Required in ISTP Guide (Recommended)
-  validate: true
   overwrite: false
 Data_level:
   description: >
@@ -32,7 +27,6 @@ Data_level:
   default: null
   derived: false
   required: true 
-  validate: true
   overwrite: true
 Data_product_descriptor:
   description: > 
@@ -42,7 +36,6 @@ Data_product_descriptor:
   default: null
   derived: false
   required: false # NOT Required in ISTP Guide (Derived)
-  validate: false
   overwrite: true
 Data_type:
   description: >
@@ -52,8 +45,7 @@ Data_type:
   default: null
   derived: true
   derivation_fn: _get_data_type
-  required: false # NOT Required in ISTP Guide (Derived)
-  validate: true
+  required: true
   overwrite: true
 Data_version:
   description: >
@@ -61,7 +53,6 @@ Data_version:
   default: null
   derived: false
   required: true
-  validate: true
   overwrite: false
 Descriptor:
   description: >
@@ -75,7 +66,6 @@ Descriptor:
   default: null
   derived: false
   required: true
-  validate: true
   overwrite: false
 Discipline:
   description: >
@@ -84,7 +74,17 @@ Discipline:
   default: null
   derived: false
   required: true
-  validate: true
+  overwrite: false
+DOI:
+  description: > 
+    DOI is a persistent Unique Digital Identifier with the form
+    https://doi.org/<PREFIX>/<SUFFIX> with the <PREFIX> identifying the DOI
+    registration authority and the <SUFFIX> identifying the dataset. The DOI should point to
+    a landing page for additional information about the dataset. DOIs are typically created by
+    the SPASE naming authority or archive.
+  default: null
+  derived: false
+  required: false # NOT Required in ISTP Guide (Recommended)
   overwrite: false
 File_naming_convention:
   description: >
@@ -93,16 +93,21 @@ File_naming_convention:
   default: scId_instrumentId_mode_dataLevel_optionalDataProductDescriptor_startTime_vX.Y.Z.ext
   derived: false
   required: false
-  validate: false
+  overwrite: false
+Generated_by:
+  description: >
+    This attribute allows for the generating data center/group to be identified.
+  default: null
+  required: false # Recommended in ISTP Guide
+  derived: false
   overwrite: false
 Generation_date:
   description: >
     Date stamps the creation of the file using the syntax yyyymmdd, e.g., "
   default: null
+  required: false # NOT Required in ISTP Guide (Recommended)
   derived: true
   derivation_fn: _get_generation_date
-  required: false # NOT Required in ISTP Guide (Recommended)
-  validate: false
   overwrite: true
 HTTP_LINK:
   description: >
@@ -113,7 +118,6 @@ HTTP_LINK:
   default: null
   derived: false
   required: false # NOT Required in ISTP Guide (Recommended)
-  validate: false
   overwrite: false
 Instrument_mode:
   description: > 
@@ -121,50 +125,6 @@ Instrument_mode:
   default: null
   derived: false
   required: false # NOT Required in ISTP Guide (Derived)
-  validate: false
-  overwrite: false
-LINK_TEXT:
-  description: >
-    The 'HTTP_LINK', 'LINK_TEXT', and 'LINK_TITLE' attributes store the URL with a
-    description of this dataset at the HERMES SDC. The use of HTTP_LINK attribute requires
-    the existence and equal number of corresponding LINK_TEXT and LINK_TITLE attributes. 
-    If text is not needed for these attributes, use an empty string "".
-  default: null
-  derived: false
-  required: false # NOT Required in ISTP Guide (Recommended)
-  validate: false
-  overwrite: false
-LINK_TITLE:
-  description: >
-    The 'HTTP_LINK', 'LINK_TEXT', and 'LINK_TITLE' attributes store the URL with a
-    description of this dataset at the HERMES SDC. The use of HTTP_LINK attribute requires
-    the existence and equal number of corresponding LINK_TEXT and LINK_TITLE attributes. 
-    If text is not needed for these attributes, use an empty string "".
-  default: null
-  derived: false
-  required: false # NOT Required in ISTP Guide (Recommended)
-  validate: false
-  overwrite: false
-MODS:
-  description: > 
-    This attribute is an SPDF standard global attribute, which is used to denote the history of
-    modifications made to the CDF data set. The MODS attribute should contain a
-    description of all significant changes to the data set, essentially capturing a log of high-
-    level release notes. This attribute can have as many entries as necessary and should be
-    updated if the Interface Number ("X") of the version number changes.
-  default: null
-  derived: false
-  required: false # NOT Required in ISTP Guide (Recommended)
-  validate: false
-  overwrite: false
-SWxSOC_version:
-  description: >
-    Version of `swxsoc` originally used to generate the given CDF File
-  default: null
-  derived: true
-  derivation_fn: _get_swxsoc_version
-  required: false # NOT Required in ISTP Guide (Derived)
-  validate: false
   overwrite: false
 Instrument_type:
   description: > 
@@ -177,7 +137,26 @@ Instrument_type:
   default: null
   derived: false
   required: true
-  validate: true
+  overwrite: false
+LINK_TEXT:
+  description: >
+    The 'HTTP_LINK', 'LINK_TEXT', and 'LINK_TITLE' attributes store the URL with a
+    description of this dataset at the HERMES SDC. The use of HTTP_LINK attribute requires
+    the existence and equal number of corresponding LINK_TEXT and LINK_TITLE attributes. 
+    If text is not needed for these attributes, use an empty string "".
+  default: null
+  derived: false
+  required: false # NOT Required in ISTP Guide (Recommended)
+  overwrite: false
+LINK_TITLE:
+  description: >
+    The 'HTTP_LINK', 'LINK_TEXT', and 'LINK_TITLE' attributes store the URL with a
+    description of this dataset at the HERMES SDC. The use of HTTP_LINK attribute requires
+    the existence and equal number of corresponding LINK_TEXT and LINK_TITLE attributes. 
+    If text is not needed for these attributes, use an empty string "".
+  default: null
+  derived: false
+  required: false # NOT Required in ISTP Guide (Recommended)
   overwrite: false
 Logical_file_id:
   description: >
@@ -188,7 +167,6 @@ Logical_file_id:
   derived: true
   derivation_fn: _get_logical_file_id
   required: true
-  validate: true
   overwrite: true
 Logical_source:
   description: > 
@@ -203,7 +181,6 @@ Logical_source:
   derived: true
   derivation_fn: _get_logical_source
   required: true
-  validate: true
   overwrite: true
 Logical_source_description:
   description: >
@@ -214,7 +191,6 @@ Logical_source_description:
   derived: true
   derivation_fn: _get_logical_source_description
   required: true
-  validate: true
   overwrite: true
 Mission_group:
   description: >
@@ -223,7 +199,26 @@ Mission_group:
   default: null
   derived: false
   required: true
-  validate: true
+  overwrite: false
+MODS:
+  description: > 
+    This attribute is an SPDF standard global attribute, which is used to denote the history of
+    modifications made to the CDF data set. The MODS attribute should contain a
+    description of all significant changes to the data set, essentially capturing a log of high-
+    level release notes. This attribute can have as many entries as necessary and should be
+    updated if the Interface Number ("X") of the version number changes.
+  default: null
+  derived: false
+  required: false # NOT Required in ISTP Guide (Recommended)
+  overwrite: false
+Parents:
+  description: >
+    This attribute lists the parent CDF(S) for files of derived and merged data sets.
+    Subsequent entry values are used for multiple parents.
+    The syntax for a CDF parent would be e.g. "CDF>logical_file_id".
+  default: null
+  required: false # Optional in ISTP Guide
+  derived: false
   overwrite: false
 PI_affiliation:
   description: >
@@ -231,7 +226,6 @@ PI_affiliation:
   default: null
   derived: false
   required: true
-  validate: true
   overwrite: false
 PI_name:
   description: >
@@ -239,7 +233,6 @@ PI_name:
   default: null
   derived: false
   required: true
-  validate: true
   overwrite: false
 Project:
   description: >
@@ -252,7 +245,29 @@ Project:
   default: null
   derived: false
   required: true
-  validate: true
+  overwrite: false
+Rules_of_use:
+  description: >
+    Text containing information on, {\it e.g.} citability and PI access restrictions.
+    This may point to a World Wide Web page specifying the rules of use.
+  default: null
+  required: false # Recommended in ISTP Guide
+  derived: false
+  overwrite: false
+Skeleton_version:
+  description: >
+    This is a text attribute containing the skeleton file version number.
+    This is a required attribute for Cluster, but for IACG purposes it exists if experimenters want to track it.
+  default: null
+  required: false # Optional in ISTP Guide
+  derived: false
+  overwrite: false
+Software_version:
+  description: >
+    This is a required attribute for Cluster, but for IACG purposes it exists if experimenters want to track it.
+  default: null
+  required: false # Optional in ISTP Guide
+  derived: false
   overwrite: false
 Source_name:
   description: >
@@ -263,7 +278,13 @@ Source_name:
   default: null
   derived: false
   required: true
-  validate: true
+  overwrite: false
+spase_DatasetResourceID:
+  description: >
+    Unique dataset identifier assigned by SPASE, of the form spase://<NAMING_AUTHORITY>/<UNIQUE_ID>, where <UNIQUE_ID> is the ID assigned to the SPASE resource record for the dataset in the SPASE system by a SPASE <NAMING_AUTHORITY>. The SPASE resource record provides metadata about the dataset, including pointers to locations holding the data.
+  default: null
+  required: false # Recommended in ISTP Guide
+  derived: false
   overwrite: false
 Start_time:
   description: >
@@ -271,7 +292,14 @@ Start_time:
   default: null
   derived: false
   required: false # NOT Required in ISTP Guide (Derived)
-  validate: false
+  overwrite: false
+SWxSOC_version:
+  description: >
+    Version of `swxsoc` originally used to generate the given CDF File
+  default: null
+  derived: true
+  derivation_fn: _get_swxsoc_version
+  required: false # NOT Required in ISTP Guide (Derived)
   overwrite: false
 TEXT:
   description: >
@@ -285,5 +313,31 @@ TEXT:
   default: null
   derived: false
   required: true
-  validate: true
+  overwrite: false
+Time_resolution:
+  description: >
+    This attribute identifies the time resolution of the data in the CDF file.
+    The time resolution is given in seconds.
+    For example, "3 seconds" for 3-second resolution data.
+  default: null
+  required: false # Recommended in ISTP Guide
+  derived: false
+  overwrite: false
+TITLE:
+  description: >
+    This attribute is an NSSDC standard global attribute which is a title for the data set, e.g., " Geotail EPIC Key Parameters".
+  default: null
+  required: false # Optional in ISTP Guide
+  derived: false
+  overwrite: false
+Validate:
+  description: >
+    Details to be specified.
+    This attribute is written by software for automatic validation of features such as the structure of the CDF file on a simple pass/fail criterion.
+    The software will test that all expected attributes are present and, where possible, have reasonable values.
+    The syntax is likely to be of the form "test>result>where-done>date".
+    It is not the same as data validation.
+  default: null
+  required: false # Optional in ISTP Guide
+  derived: false
   overwrite: false

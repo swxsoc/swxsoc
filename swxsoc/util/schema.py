@@ -18,7 +18,7 @@ from astropy.time import Time
 from astropy import units as u
 from ndcube import NDCube
 
-from sammi.schema import SWxSchema
+from sammi.cdf_attribute_manager import CdfAttributeManager
 import swxsoc
 from swxsoc import log
 from swxsoc.util import util, const
@@ -30,7 +30,7 @@ DEFAULT_GLOBAL_CDF_ATTRS_SCHEMA_FILE = "swxsoc_default_global_cdf_attrs_schema.y
 DEFAULT_VARIABLE_CDF_ATTRS_SCHEMA_FILE = "swxsoc_default_variable_cdf_attrs_schema.yaml"
 
 
-class SWXSchema(SWxSchema):
+class SWXSchema(CdfAttributeManager):
     """
     Class representing a schema for data requirements and formatting. The SWxSOC Default Schema
     only includes attributes required for ISTP compliance. Additional mission-specific attributes
@@ -53,7 +53,6 @@ class SWXSchema(SWxSchema):
             derived: <bool> # Whether or not the attribute's value can be derived using a python function
             derivation_fn: <string> # The name of a Python function to derive the value. Must be a function member of the schema class and match the signature below.
             required: <bool> # Whether the attribute is required
-            validate: <bool> # Whether the attribute should be validated by the Validation module
             overwrite: <bool> # Whether an existing value for the attribute should be overwritten if a different value is derived.
 
     The signature for all functions to derive global attributes should follow the format below.
@@ -79,7 +78,6 @@ class SWXSchema(SWxSchema):
                 derived: <bool> # Whether or not the attribute's value can be derived using a python function
                 derivation_fn: <string> # The name of a Python function to derive the value. Must be a function member of the schema class and match the signature below.
                 required: <bool> # Whether the attribute is required
-                validate: <bool> # Whether the attribute should be validated by the Validation module
                 overwrite: <bool> # Whether an existing value for the attribute should be overwritten if a different value is derived.
                 valid_values: <list> # A list of valid values that the attribute can take. The value of the attribute is checked against the `valid_values` in the Validation module.
                 alternate: <string> An additional attribute name that can be treated as an alternative of the given attribute.
@@ -216,6 +214,18 @@ class SWXSchema(SWxSchema):
             ("CDELT", "cdelt", 1),
         ]
 
+    @property
+    def default_global_attributes(self) -> dict:
+        """
+        Function to load the default global attributes from the SWxSOC schema.
+
+        Returns
+        -------
+        default_global_attributes: `dict`
+            A dictionary of default global attributes.
+        """
+        return self._global_attributes
+
     def global_attribute_template(self) -> OrderedDict:
         """
         Function to generate a template of required global attributes
@@ -227,12 +237,11 @@ class SWXSchema(SWxSchema):
             A template for required global attributes that must be provided.
         """
         template = OrderedDict()
-        default_global_attributes = self._load_default_attributes()
         for attr_name, attr_schema in self.global_attribute_schema.items():
             if (
                 attr_schema["required"]
                 and not attr_schema["derived"]
-                and attr_name not in default_global_attributes
+                and attr_name not in self.default_global_attributes
             ):
                 template[attr_name] = None
         return template
@@ -266,9 +275,6 @@ class SWXSchema(SWxSchema):
         - derived: (`bool`) Whether the attibute can be derived by the SWxSOC
             :py:class:`~swxsoc.util.schema.SWXSchema` class
         - required: (`bool`) Whether the attribute is required by SWxSOC standards
-        - validate: (`bool`) Whether the attribute is included in the
-            :py:func:`~swxsoc.util.validation.validate` checks (Note, not all attributes that
-            are required are validated)
         - overwrite: (`bool`) Whether the :py:class:`~swxsoc.util.schema.SWXSchema`
             attribute derivations will overwrite an existing attribute value with an updated
             attribute value from the derivation process.
@@ -390,35 +396,6 @@ class SWXSchema(SWxSchema):
             )
 
         return info
-
-    def _merge(self, base_layer: dict, new_layer: dict, path: list = None):
-        # If we are at the top of the recursion, and we don't have a path, create a new one
-        if not path:
-            path = []
-        # for each key in the base layer
-        for key in new_layer:
-            # If its a shared key
-            if key in base_layer:
-                # If both are dictionaries
-                if isinstance(base_layer[key], dict) and isinstance(
-                    new_layer[key], dict
-                ):
-                    # Merge the two nested dictionaries together
-                    self._merge(base_layer[key], new_layer[key], path + [str(key)])
-                # If both are lists
-                if isinstance(base_layer[key], list) and isinstance(
-                    new_layer[key], list
-                ):
-                    # Extend the list of the base layer by the new layer
-                    base_layer[key].extend(new_layer[key])
-                # If they are not lists or dicts (scalars)
-                elif base_layer[key] != new_layer[key]:
-                    # We've reached a conflict, may want to overwrite the base with the new layer.
-                    base_layer[key] = new_layer[key]
-            # If its not a shared key
-            else:
-                base_layer[key] = new_layer[key]
-        return base_layer
 
     @staticmethod
     def _check_well_formed(data):

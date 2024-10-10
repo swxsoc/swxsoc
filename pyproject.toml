@@ -27,7 +27,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Physics",
 ]
 dependencies = [
-  'sammi-cdf @ git+https://github.com/alrobbertz/sammi@fix_merge',
+  'sammi-cdf>=0.1.2',
   'astropy>=5.3.3',
   'numpy>=1.18.0',
   'sunpy>=5.0.1',

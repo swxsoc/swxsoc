@@ -129,7 +129,7 @@ def test_missing_variable_attrs():
         )
         assert (
             "Variable: measurement Attribute 'DISPLAY_TYPE' not one of valid options.",
-            "Was bad_type, expected one of time_series time_series>noerrorbars spectrogram stack_plot image",
+            "Was bad_type, expected one of time_series time_series>noerrorbars spectrogram stack_plot image no_plot",
         ) in result
 
 

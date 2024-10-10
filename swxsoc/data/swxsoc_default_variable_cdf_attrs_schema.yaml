@@ -100,6 +100,135 @@ attribute_key:
     overwrite: false
     valid_values: null
     alternate: null
+  CDELTi:
+    description: > 
+      This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
+      high-dimensional or spectral CDF data variables. This metadata attribte should be 
+      used for the i'th dimension (1-based) and reapeated for all WCSAXES dimensions. 
+      The value field shall contain a floating point number 
+      giving the partial derivative of the coordinate specified by the CTYPEi 
+      keywords with respect to the pixel index, evaluated at the reference 
+      point CRPIXi, in units of the coordinate specified by  the CTYPEi 
+      keyword.
+    derived: true
+    derivation_fn: _get_cdelti
+    iterable: true
+    required: false   # NOT Required in CDF Guide
+    overwrite: false
+    valid_values: null
+    alternate: null
+  CNAMEi:
+    description: > 
+      This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
+      high-dimensional or spectral CDF data variables. This metadata attribte should be 
+      used for the i'th dimension (1-based) and reapeated for all WCSAXES dimensions. 
+      The value shall contain a charachter string represnting the name of the i'th axis.
+      The name is used for comment/documentation purposes only and is not used as a part
+      of the i'th axis coordinate transformations.
+    derived: true
+    derivation_fn: _get_cnamei
+    iterable: true
+    required: false   # NOT Required in CDF Guide
+    overwrite: false
+    valid_values: null
+    alternate: null
+  COORDINATE_SYSTEM:
+    description: >
+      All variables for which the values are dependent on the system of coordinates are
+      strongly recommended to have this attribute. This includes both full vectors, tensors, etc.
+      or individual values, e.g. of an angle with respect to some axis. The attribute is a text
+      string which takes the form: "XXX[>optional long name]"
+    required: false
+    derived: false
+    overwrite: false
+    valid_values: null
+    alternate: null
+  CTYPEi:
+    description: > 
+      This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
+      high-dimensional or spectral CDF data variables. This metadata attribte should be 
+      used for the i'th dimension (1-based) and reapeated for all WCSAXES dimensions. 
+      The value field shall contain a character string, giving
+      the name of the coordinate represented by axis i.
+    derived: true
+    derivation_fn: _get_ctypei
+    iterable: true
+    required: false   # NOT Required in CDF Guide
+    overwrite: false
+    valid_values: null
+    alternate: null
+  CUNITi:
+    description: > 
+      This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
+      high-dimensional or spectral CDF data variables. This metadata attribte should be 
+      used for the i'th dimension (1-based) and reapeated for all WCSAXES dimensions. 
+      The value shall be the units along axis i, compatible with CTYPEi to be used for
+      scaling and coordinate transformations along the i'th axis. 
+    derived: true
+    derivation_fn: _get_cuniti
+    iterable: true
+    required: false   # NOT Required in CDF Guide
+    overwrite: false
+    valid_values: null
+    alternate: null
+  CRPIXi:
+    description: > 
+      This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
+      high-dimensional or spectral CDF data variables. This metadata attribte should be 
+      used for the i'th dimension (1-based) and reapeated for all WCSAXES dimensions. 
+      The value field shall contain a floating point number, 
+      identifying the location of a reference point along axis i, in units of
+      the axis index.  This value is based upon a counter that runs from 1 to
+      NAXISn with an increment of 1 per pixel.  The reference point value
+      need not be that for the center of a pixel nor lie within the actual
+      data array.  Use comments to indicate the location of the index point
+      relative to the pixel.
+    derived: true
+    derivation_fn: _get_crpixi
+    iterable: true
+    required: false   # NOT Required in CDF Guide
+    overwrite: false
+    valid_values: null
+    alternate: null
+  CRVALi:
+    description: > 
+      This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
+      high-dimensional or spectral CDF data variables. This metadata attribte should be 
+      used for the i'th dimension (1-based) and reapeated for all WCSAXES dimensions. 
+      The value field shall contain a floating point number,
+      giving the value of the coordinate specified by the CTYPEn keyword at
+      the reference point CRPIXi.
+    derived: true
+    derivation_fn: _get_crvali
+    iterable: true
+    required: false   # NOT Required in CDF Guide
+    overwrite: false
+    valid_values: null
+    alternate: null
+  DELTA_PLUS_VAR:
+    description: >
+      included to point to a variable (or variables) which stores the uncertainty in (or range of) the original variable's value.
+      The uncertainty (or range) is stored as a (+/-) on the value of the original variable.
+      For many variables in ISTP, the original variable will be at the center of the interval so that only one value (or one set of values) of uncertainty (or range) will need to be defined.
+      In this case, DELTA_PLUS_VAR, and DELTA_MINUS_VAR will point to the same variable.
+      The value of the attribute must be a variable in the same CDF data set.
+    required: false # Optional in ISTP Guide
+    derived: false
+    overwrite: false
+    valid_values: null
+    alternate: null
+  DELTA_MINUS_VAR:
+    description: >
+      included to point to a variable (or variables) which stores the uncertainty in (or range of) the original variable's value.
+      The uncertainty (or range) is stored as a (+/-) on the value of the original variable.
+      For many variables in ISTP, the original variable will be at the center of the interval so that only one value (or one set of values) of uncertainty (or range) will need to be defined.
+      In this case, DELTA_PLUS_VAR, and DELTA_MINUS_VAR will point to the same variable.
+      The value of the attribute must be a variable in the same CDF data set.
+    required: false # Optional in ISTP Guide
+    derived: false
+    overwrite: false
+    valid_values: null
+    alternate: null
   DEPEND_0:
     description: >
       Explicitly ties a data variable to the time variable on which it depends. All variables
@@ -123,6 +252,15 @@ attribute_key:
     overwrite: false
     valid_values: null
     alternate: null
+  DICT_KEY:
+    description: >
+      comes from a data dictionary keyword list and describes the variable to which it is attached.
+      The ISTP standard dictionary keyword list is described in ISTP Dictionary Keywords.
+    required: false # Optional in ISTP Guide
+    derived: false
+    overwrite: false
+    valid_values: null
+    alternate: null
   DISPLAY_TYPE:
     description: >
       This tells automated software, such as CDAWeb, how the data should be displayed.
@@ -136,6 +274,7 @@ attribute_key:
       spectrogram
       stack_plot
       image
+      no_plot
     alternate: null
   FIELDNAM:
     description: >
@@ -204,6 +343,148 @@ attribute_key:
     overwrite: false
     valid_values: null
     alternate: LABLAXIS
+  LIMITS_WARN_MIN:
+    description: >
+      Values which define the limits where damage is likely to occur for values outside these values (often referred to as red limits).
+      Visualization software can use these attributes for indicating limits on plots or other warnings.
+      The values data type must match the data type of the variable.
+    required: false # Optional in ISTP Guide
+    derived: false
+    overwrite: false
+    valid_values: null
+    alternate: null
+  LIMITS_WARN_MAX:
+    description: >
+      Values which define the limits where damage is likely to occur for values outside these values (often referred to as red limits).
+      Visualization software can use these attributes for indicating limits on plots or other warnings.
+      The values data type must match the data type of the variable.
+    required: false # Optional in ISTP Guide
+    derived: false
+    overwrite: false
+    valid_values: null
+    alternate: null
+  LIMITS_NOMINAL_MIN:
+    description: >
+      Values which define the range of nominal operations and where values outside the range of these values should be flagged as warnings (often referred to as yellow limits).
+      Visualization software can use these attributes for indicating limits on plots or other warnings.
+      The range of LIMITS_NOMINAL_MIN and LIMITS_NOMINAL_MAX fall within the range of LIMITS_WARN_MIN and LIMITS_WARN_MAX.
+      Yellow limits are often set a certain percentage away from the red limits to give the operator a chance to respond before the red limits are reached. The values data type must match the data type of the variable.
+    required: false # Optional in ISTP Guide
+    derived: false
+    overwrite: false
+    valid_values: null
+    alternate: null
+  LIMITS_NOMINAL_MAX:
+    description: >
+      Values which define the range of nominal operations and where values outside the range of these values should be flagged as warnings (often referred to as yellow limits).
+      Visualization software can use these attributes for indicating limits on plots or other warnings.
+      The range of LIMITS_NOMINAL_MIN and LIMITS_NOMINAL_MAX fall within the range of LIMITS_WARN_MIN and LIMITS_WARN_MAX.
+      Yellow limits are often set a certain percentage away from the red limits to give the operator a chance to respond before the red limits are reached.
+      The values data type must match the data type of the variable.
+    required: false # Optional in ISTP Guide
+    derived: false
+    overwrite: false
+    valid_values: null
+    alternate: null
+  MJDREF:
+    description: > 
+      This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
+      high-dimensional or spectral CDF data variables. The value shall contain a floating
+      point number representing the reference time position of the time stamps along the 
+      0'th axis of the measurement.
+    derived: true
+    derivation_fn: _get_wcs_timeref
+    required: false   # NOT Required in CDF Guide
+    overwrite: false
+    valid_values: null
+    alternate: null
+  MONOTON:
+    description: >
+      Indicates whether the variable is monotonically increasing or monotonically decreasing.
+      Use of MONOTON is strongly recommended for the Epoch time variable, and can significantly increase the performance speed on retrieval of data.
+      Valid values: INCREASE, DECREASE.
+    required: false # Optional in ISTP Guide
+    derived: false
+    overwrite: false
+    valid_values:
+      INCREASE
+      DECREASE
+    alternate: null
+  OPERATOR_TYPE:
+    description: >
+      This has been introduced to describe HERMES quaternions (see Section 5.2 below). It
+      has allowed values "UNIT_QUATERNION" or "ROTATION_MATRIX" although other
+      values could be added. Unit quaternions correspond to pure spatial rotations.
+    required: false
+    derived: false
+    overwrite: false
+    valid_values: null
+    alternate: null
+  REPRESENTATION_i:
+    description: >
+      This strongly recommended attribute holds the way vector or tensor variables are held,
+      e.g., as Cartesian or polar forms, and their sequence order in the dimension i in which
+      they are held. Cartesians are indicated by x,y,z; polar coordinates by r (magnitude), t
+      (theta - from z-axis), p (phi - longitude or azimuth around z-axis from x axis), l (lambda
+      = latitude). Examples follow.
+    required: false
+    derived: false
+    overwrite: false
+    valid_values: null
+    alternate: null
+  SCALEMIN:
+    description: >
+      are values which can be based on the actual values of data found in the CDF data set or on the probable uses of the data, {\em e.g.}, plotting multiple files at the same scale.
+      Visualization software can use these attributes as defaults for plotting.
+      The values must match the data type of the variable.
+    required: false # Optional in ISTP Guide
+    derived: false
+    overwrite: false
+    valid_values: null
+    alternate: null
+  SCALEMAX:
+    description: >
+      are values which can be based on the actual values of data found in the CDF data set or on the probable uses of the data, {\em e.g.}, plotting multiple files at the same scale.
+      Visualization software can use these attributes as defaults for plotting.
+      The values must match the data type of the variable.
+    required: false # Optional in ISTP Guide
+    derived: false
+    overwrite: false
+    valid_values: null
+    alternate: null
+  SCALETYP:
+    description: >
+      is a text string which describes the type of scaling that should be used for the variable.
+      The value of this attribute can be used with application software.
+      Examples are listed below:
+      - linear
+      - log
+    required: false # Optional in ISTP Guide
+    derived: false
+    overwrite: false
+    valid_values: null
+    alternate: null
+  SCAL_PTR:
+    description: >
+      The value of this field is a variable which stores the character string that represents the desired scaling type for the associated data.
+      The allowed values are linear and log.
+      The value of the attribute must be a variable in the same CDF data set.
+    required: false # Optional in ISTP Guide
+    derived: false
+    overwrite: false
+    valid_values: null
+    alternate: null
+  sig_digits:
+    description: >
+      This attribute provides the number of significant digits or other measure of data accuracy in a TBD manner.
+      It is to allow compression software to optimise the number of digits to retain, and users to assess the accuracy of products.
+      This operation is subject to the deliberations of the 'network traffic report' Task Group, DS-CFC-TN-0001, on compression algorithms and implementation.
+      Restrictions on data compression may also influence the format and choice of data type used by the CDF generation software.
+    required: false # Recommended in ISTP Guide
+    derived: false
+    overwrite: false
+    valid_values: null
+    alternate: null
   SI_CONVERSION:
     description: >
       The conversion factor to SI units. This is the factor that the variable must be multiplied
@@ -217,6 +498,45 @@ attribute_key:
     derived: true
     derivation_fn: _get_si_conversion
     required: false  # NOT Required in ISTP Guide
+    overwrite: false
+    valid_values: null
+    alternate: null
+  TENSOR_ORDER:
+    description: >
+      All variables which hold physical vectors, tensors, etc., or sub-parts thereof, are strongly
+      recommended to have their tensorial properties held by this numerical value. Vectors
+      have TENSOR_ORDER=1, pressure tensors have TENSOR_ORDER=2, etc. Variables
+      which hold single components or sub-parts of a vector or tensor, e.g., the x-component of
+      velocity or the three diagonal elements of a tensor, use this attribute to establish the
+      underlying object from which they are extracted. TENSOR_ORDER is a number, usually
+      held as a CDF_INT4, rather than a character string.
+    required: false
+    derived: false
+    overwrite: false
+    valid_values: null
+    alternate: null
+  TIMEDEL:
+    description: > 
+      This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
+      high-dimensional or spectral CDF data variables. The value shall contain a floating
+      point number representing the resolution of the time stamps along the 0'th axis of 
+      the measurement. The TIMEDEL should match the CRDELi along the time axis of the 
+      measurement.
+    derived: true
+    derivation_fn: _get_wcs_timedel
+    required: false   # NOT Required in CDF Guide
+    overwrite: false
+    valid_values: null
+    alternate: null
+  TIMEUNIT:
+    description: > 
+      This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
+      high-dimensional or spectral CDF data variables. The value shall contain a character
+      string giving the units of the time stamps along the 0'th axis of the measurement. 
+      The TIMEUNIT should match the CUNITi along the time axis of the measurement
+    derived: true
+    derivation_fn: _get_wcs_timeunit
+    required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null
     alternate: null
@@ -264,6 +584,15 @@ attribute_key:
     overwrite: false
     valid_values: null
     alternate: null
+  VAR_NOTES:
+    description: >
+      A text string that provides additional information about the variable.
+      This information can include the source of the data, the method of calculation, or any other information that is relevant to the variable.
+    required: false # Optional in ISTP Guide
+    derived: false
+    overwrite: false
+    valid_values: null
+    alternate: null
   VAR_TYPE:
     description: >
       Used in CDAWeb to indicate if the data should be used directly by users. 
@@ -277,7 +606,35 @@ attribute_key:
         metadata
         ignore_data
     alternate: null
-  # ===== SPECTRA-ONLY VARIABLE ATTRIBUTES =====
+  VARIABLE_PURPOSE:
+    description: >
+      are a list of tags/keywords separated by commas that indicate probable uses of the variable and its function.
+      Software can use these attributes to find the primary variables in the dataset, find variables with a common function, indicate variables suitable for specific purposes such as summary plots or educational displays, etc.
+      Tags could indicate a common geophysical quantity to enable matching several variables of the same kind.
+      For instance, all magnetic field variables could be tagged with VARIABLE_PURPOSE="Magnetic_Field" even though they have different coordinate systems or cadences.
+      Software could use this tag to identify variables with a common theme for easier distinguishing between groups of variables and selecting between them.
+      The values are always in a character string.
+      Suggested tags/keywords include:
+      - "PRIMARY_VAR": one of the primary variables in the dataset
+      - "EDUCATION": one of the variables suitable for displaying in an educational context
+      - "SUMMARY": one the variables to display on automatic summary plots
+      - "CARTESIAN", "ANGULAR": distinguish variables by coordinate system
+      - "Magnetic_Field", "Electric_Field", etc.: common instrument tag to relate similar variables
+    required: false # Optional in ISTP Guide
+    derived: false
+    overwrite: false
+    valid_values: null
+    alternate: null
+  V_PARENT:
+    description: >
+      identifies the "attached" variable which stores the parent variable(s) of a derived variable.
+      The "attached" variable can be dimensional and sized to hold as many parents as necessary.
+      The syntax of each entry would be: logical_file_id>variable_name.
+    required: false # Optional in ISTP Guide
+    derived: false
+    overwrite: false
+    valid_values: null
+    alternate: null
   WCSAXES:
     description: > 
       This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
@@ -287,137 +644,6 @@ attribute_key:
       data array.
     derived: true
     derivation_fn: _get_wcs_naxis
-    required: false   # NOT Required in CDF Guide
-    overwrite: false
-    valid_values: null
-    alternate: null
-  MJDREF:
-    description: > 
-      This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
-      high-dimensional or spectral CDF data variables. The value shall contain a floating
-      point number representing the reference time position of the time stamps along the 
-      0'th axis of the measurement.
-    derived: true
-    derivation_fn: _get_wcs_timeref
-    required: false   # NOT Required in CDF Guide
-    overwrite: false
-    valid_values: null
-    alternate: null
-  TIMEUNIT:
-    description: > 
-      This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
-      high-dimensional or spectral CDF data variables. The value shall contain a character
-      string giving the units of the time stamps along the 0'th axis of the measurement. 
-      The TIMEUNIT should match the CUNITi along the time axis of the measurement
-    derived: true
-    derivation_fn: _get_wcs_timeunit
-    required: false   # NOT Required in CDF Guide
-    overwrite: false
-    valid_values: null
-    alternate: null
-  TIMEDEL:
-    description: > 
-      This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
-      high-dimensional or spectral CDF data variables. The value shall contain a floating
-      point number representing the resolution of the time stamps along the 0'th axis of 
-      the measurement. The TIMEDEL should match the CRDELi along the time axis of the 
-      measurement.
-    derived: true
-    derivation_fn: _get_wcs_timedel
-    required: false   # NOT Required in CDF Guide
-    overwrite: false
-    valid_values: null
-    alternate: null
-  CNAMEi:
-    description: > 
-      This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
-      high-dimensional or spectral CDF data variables. This metadata attribte should be 
-      used for the i'th dimension (1-based) and reapeated for all WCSAXES dimensions. 
-      The value shall contain a charachter string represnting the name of the i'th axis.
-      The name is used for comment/documentation purposes only and is not used as a part
-      of the i'th axis coordinate transformations.
-    derived: true
-    derivation_fn: _get_cnamei
-    iterable: true
-    required: false   # NOT Required in CDF Guide
-    overwrite: false
-    valid_values: null
-    alternate: null
-  CTYPEi:
-    description: > 
-      This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
-      high-dimensional or spectral CDF data variables. This metadata attribte should be 
-      used for the i'th dimension (1-based) and reapeated for all WCSAXES dimensions. 
-      The value field shall contain a character string, giving
-      the name of the coordinate represented by axis i.
-    derived: true
-    derivation_fn: _get_ctypei
-    iterable: true
-    required: false   # NOT Required in CDF Guide
-    overwrite: false
-    valid_values: null
-    alternate: null
-  CUNITi:
-    description: > 
-      This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
-      high-dimensional or spectral CDF data variables. This metadata attribte should be 
-      used for the i'th dimension (1-based) and reapeated for all WCSAXES dimensions. 
-      The value shall be the units along axis i, compatible with CTYPEi to be used for
-      scaling and coordinate transformations along the i'th axis. 
-    derived: true
-    derivation_fn: _get_cuniti
-    iterable: true
-    required: false   # NOT Required in CDF Guide
-    overwrite: false
-    valid_values: null
-    alternate: null
-  CRPIXi:
-    description: > 
-      This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
-      high-dimensional or spectral CDF data variables. This metadata attribte should be 
-      used for the i'th dimension (1-based) and reapeated for all WCSAXES dimensions. 
-      The value field shall contain a floating point number, 
-      identifying the location of a reference point along axis i, in units of
-      the axis index.  This value is based upon a counter that runs from 1 to
-      NAXISn with an increment of 1 per pixel.  The reference point value
-      need not be that for the center of a pixel nor lie within the actual
-      data array.  Use comments to indicate the location of the index point
-      relative to the pixel.
-    derived: true
-    derivation_fn: _get_crpixi
-    iterable: true
-    required: false   # NOT Required in CDF Guide
-    overwrite: false
-    valid_values: null
-    alternate: null
-  CRVALi:
-    description: > 
-      This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
-      high-dimensional or spectral CDF data variables. This metadata attribte should be 
-      used for the i'th dimension (1-based) and reapeated for all WCSAXES dimensions. 
-      The value field shall contain a floating point number,
-      giving the value of the coordinate specified by the CTYPEn keyword at
-      the reference point CRPIXi.
-    derived: true
-    derivation_fn: _get_crvali
-    iterable: true
-    required: false   # NOT Required in CDF Guide
-    overwrite: false
-    valid_values: null
-    alternate: null
-  CDELTi:
-    description: > 
-      This is a FITS WCS Keyword being repurposed for handling WCS transformations with 
-      high-dimensional or spectral CDF data variables. This metadata attribte should be 
-      used for the i'th dimension (1-based) and reapeated for all WCSAXES dimensions. 
-      The value field shall contain a floating point number 
-      giving the partial derivative of the coordinate specified by the CTYPEi 
-      keywords with respect to the pixel index, evaluated at the reference 
-      point CRPIXi, in units of the coordinate specified by  the CTYPEi 
-      keyword.
-    derived: true
-    derivation_fn: _get_cdelti
-    iterable: true
     required: false   # NOT Required in CDF Guide
     overwrite: false
     valid_values: null

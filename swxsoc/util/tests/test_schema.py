@@ -1,6 +1,7 @@
 import pytest
 import tempfile
 from collections import OrderedDict
+import yaml
 import numpy as np
 from numpy.random import random
 from astropy.time import Time
@@ -102,8 +103,8 @@ def test_load_yaml_data():
             file.write(invalid_yaml)
 
         # Load from an non-existant file
-        yaml_data = SWXSchema()._load_yaml_data(tmpdirname + "test.yaml")
-        assert yaml_data == {}
+        with pytest.raises(yaml.YAMLError):
+            _ = SWXSchema()._load_yaml_data(tmpdirname + "test.yaml")
 
 
 def test_global_attributes():

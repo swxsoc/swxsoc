@@ -150,9 +150,6 @@ For each attribute the following information is provided:
 * derived: (`bool`) Whether the attibute can be derived by the `swxsoc`
   :py:class:`~swxsoc.util.schema.SWXSchema` class
 * required: (`bool`) Whether the attribute is required by ISTP standards
-* validate: (`bool`) Whether the attribute is included in the
-  :py:func:`~swxsoc.util.validation.validate` checks (Note, not all attributes that
-  are required are validated)
 * overwrite: (`bool`) Whether the :py:class:`~swxsoc.util.schema.SWXSchema`
   attribute derivations will overwrite an existing attribute value with an updated
   attribute value from the derivation process.
@@ -161,7 +158,7 @@ Note that this table is derived from :file:`swxsoc/data/swxsoc_default_global_cd
 
 .. csv-table:: Table 3-1: Required Global Attributes
    :file: ../generated/global_attributes.csv
-   :widths: 30, 70, 30, 30, 30, 30, 30
+   :widths: 30, 70, 30, 30, 30, 30
    :header-rows: 1
 
 --------------------------------------

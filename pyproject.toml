@@ -37,6 +37,10 @@ dependencies = [
   'boto3==1.35.26'
 ]
 
+[project.urls]
+Homepage = "https://github.com/swxsoc/swxsoc"
+Documentation = "https://swxsoc.readthedocs.io/en/latest/"
+
 [project.optional-dependencies]
 dev = [
   'coverage>=5.0.3',

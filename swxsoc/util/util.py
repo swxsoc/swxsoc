@@ -39,11 +39,7 @@ FILENAME_EXTENSION = ".cdf"
 # Set the base URL and API key for Grafana Annotations API
 # You need to set the GRAFANA_API_KEY environment variables to use this feature
 API_KEY = os.environ.get("GRAFANA_API_KEY", None)
-HEADERS = {
-    "Authorization": f"Bearer {API_KEY}",
-    "Content-Type": "application/json"
-}
-
+HEADERS = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 
 
 def create_science_filename(
@@ -425,10 +421,10 @@ def _record_dimension_timestream(
 def _to_milliseconds(dt: datetime) -> int:
     """
     Converts a datetime object to milliseconds since epoch.
-    
+
     Args:
         dt (datetime): Datetime object to convert.
-        
+
     Returns:
         int: Milliseconds since epoch.
     """
@@ -438,16 +434,18 @@ def _to_milliseconds(dt: datetime) -> int:
 def get_dashboard_id(dashboard_name: str) -> Optional[int]:
     """
     Retrieves the dashboard UID by its name. Issues a warning if multiple dashboards with the same name are found.
-    
+
     Args:
         dashboard_name (str): Name of the dashboard to retrieve.
-        
+
     Returns:
         Optional[int]: The UID of the dashboard, or None if not found.
     """
     try:
         BASE_URL = f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov"
-        response = requests.get(f"{BASE_URL}/api/search", headers=HEADERS, params={"query": dashboard_name})
+        response = requests.get(
+            f"{BASE_URL}/api/search", headers=HEADERS, params={"query": dashboard_name}
+        )
         response.raise_for_status()
         dashboards = response.json()
     except requests.exceptions.HTTPError as e:
@@ -456,12 +454,16 @@ def get_dashboard_id(dashboard_name: str) -> Optional[int]:
     except requests.exceptions.ConnectionError as e:
         swxsoc.log.error(f"Failed to retrieve panels for dashboard: {e}")
         return None
-    
-    matching_dashboards = [dashboard for dashboard in dashboards if dashboard["title"] == dashboard_name]
+
+    matching_dashboards = [
+        dashboard for dashboard in dashboards if dashboard["title"] == dashboard_name
+    ]
 
     if len(matching_dashboards) == 0:
-        swxsoc.log.warning(f"Dashboard with title '{dashboard_name}' not found. Annotation will be created without a dashboard.")
-        
+        swxsoc.log.warning(
+            f"Dashboard with title '{dashboard_name}' not found. Annotation will be created without a dashboard."
+        )
+
     if len(matching_dashboards) > 1:
         swxsoc.log.warning(
             f"Multiple dashboards with title '{dashboard_name}' found. "
@@ -474,30 +476,36 @@ def get_dashboard_id(dashboard_name: str) -> Optional[int]:
 def get_panel_id(dashboard_id: int, panel_name: str) -> Optional[int]:
     """
     Retrieves the panel ID by dashboard UID and panel name. Issues a warning if multiple panels with the same name are found.
-    
+
     Args:
         dashboard_id (int): UID of the dashboard.
         panel_name (str): Name of the panel to retrieve.
-        
+
     Returns:
         Optional[int]: The ID of the panel, or None if not found.
     """
     try:
         BASE_URL = f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov"
-        response = requests.get(f"{BASE_URL}/api/dashboards/uid/{dashboard_id}", headers=HEADERS)
+        response = requests.get(
+            f"{BASE_URL}/api/dashboards/uid/{dashboard_id}", headers=HEADERS
+        )
         response.raise_for_status()
         panels = response.json().get("dashboard", {}).get("panels", [])
-    
+
     except requests.exceptions.HTTPError as e:
-        swxsoc.log.error(f"Failed to retrieve panels for dashboard ID {dashboard_id}: {e}")
+        swxsoc.log.error(
+            f"Failed to retrieve panels for dashboard ID {dashboard_id}: {e}"
+        )
         return None
-    
+
     except requests.exceptions.ConnectionError as e:
-        swxsoc.log.error(f"Failed to retrieve panels for dashboard ID {dashboard_id}: {e}")
+        swxsoc.log.error(
+            f"Failed to retrieve panels for dashboard ID {dashboard_id}: {e}"
+        )
         return None
 
     matching_panels = [panel for panel in panels if panel["title"] == panel_name]
-    
+
     if len(matching_panels) == 0:
         swxsoc.log.warning(
             f"Panel with title '{panel_name}' not found in dashboard ID {dashboard_id}. Annotation will be created without a panel."
@@ -520,11 +528,11 @@ def query_annotations(
     dashboard_id: Optional[int] = None,
     panel_id: Optional[int] = None,
     dashboard_name: Optional[str] = None,
-    panel_name: Optional[str] = None
+    panel_name: Optional[str] = None,
 ) -> List[Dict[str, Union[str, int]]]:
     """
     Queries annotations within a specific timeframe with optional filters for tags, dashboard, and panel names.
-    
+
     Args:
         start_time (datetime): Start time of the query.
         end_time (Optional[datetime]): End time of the query; defaults to start_time if None.
@@ -534,7 +542,7 @@ def query_annotations(
         panel_id (Optional[int]): ID of the panel to filter annotations.
         dashboard_name (Optional[str]): Name of the dashboard to look up UID if `dashboard_id` is not provided.
         panel_name (Optional[str]): Name of the panel to look up ID if `panel_id` is not provided.
-        
+
     Returns:
         List[Dict[str, Union[str, int]]]: List of annotations matching the query criteria.
     """
@@ -546,11 +554,11 @@ def query_annotations(
 
     if not end_time:
         end_time = start_time
-        
+
     params = {
         "from": _to_milliseconds(start_time),
         "to": _to_milliseconds(end_time),
-        "limit": limit
+        "limit": limit,
     }
     if tags:
         params["tags"] = tags
@@ -558,17 +566,21 @@ def query_annotations(
         params["dashboardUID"] = dashboard_id
     if panel_id:
         params["panelId"] = panel_id
-    
+
     try:
         BASE_URL = f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov"
-        response = requests.get(f"{BASE_URL}/api/annotations", headers=HEADERS, params=params)
+        response = requests.get(
+            f"{BASE_URL}/api/annotations", headers=HEADERS, params=params
+        )
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as e:
         swxsoc.log.error(f"Failed to query annotations: {e}")
         return []
     except requests.exceptions.ConnectionError as e:
-        swxsoc.log.error(f"Failed to retrieve panels for dashboard ID {dashboard_id}: {e}")
+        swxsoc.log.error(
+            f"Failed to retrieve panels for dashboard ID {dashboard_id}: {e}"
+        )
         return []
 
 
@@ -580,11 +592,11 @@ def create_annotation(
     dashboard_id: Optional[int] = None,
     panel_id: Optional[int] = None,
     dashboard_name: Optional[str] = None,
-    panel_name: Optional[str] = None
+    panel_name: Optional[str] = None,
 ) -> Dict[str, Union[str, int]]:
     """
     Creates a new annotation for a specified event or time period, with optional filtering by dashboard and panel names.
-    
+
     Args:
         start_time (datetime): Start time of the annotation.
         text (str): Annotation text to display.
@@ -594,7 +606,7 @@ def create_annotation(
         panel_id (Optional[int]): ID of the panel to associate the annotation.
         dashboard_name (Optional[str]): Name of the dashboard to look up UID if `dashboard_id` is not provided.
         panel_name (Optional[str]): Name of the panel to look up ID if `panel_id` is not provided.
-        
+
     Returns:
         Dict[str, Union[str, int]]: The created annotation data.
     """
@@ -618,24 +630,28 @@ def create_annotation(
 
     try:
         BASE_URL = f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov"
-        response = requests.post(f"{BASE_URL}/api/annotations", headers=HEADERS, json=payload)
+        response = requests.post(
+            f"{BASE_URL}/api/annotations", headers=HEADERS, json=payload
+        )
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as e:
         swxsoc.log.error(f"Failed to create annotation: {e}")
         return {}
     except requests.exceptions.ConnectionError as e:
-        swxsoc.log.error(f"Failed to retrieve panels for dashboard ID {dashboard_id}: {e}")
+        swxsoc.log.error(
+            f"Failed to retrieve panels for dashboard ID {dashboard_id}: {e}"
+        )
         return {}
-    
-    
+
+
 def remove_annotation_by_id(annotation_id: int) -> bool:
     """
     Deletes an annotation by its ID.
-    
+
     Args:
         annotation_id (int): The ID of the annotation to delete.
-        
+
     Returns:
         bool: True if the annotation was successfully deleted, False otherwise.
     """
@@ -644,9 +660,13 @@ def remove_annotation_by_id(annotation_id: int) -> bool:
         full_url = f"{BASE_URL}/api/annotations/{annotation_id}"
         response = requests.delete(full_url, headers=HEADERS)
         response.raise_for_status()
-        return response.status_code == 200  # Returns True if annotation was deleted successfully (204 No Content)
+        return (
+            response.status_code == 200
+        )  # Returns True if annotation was deleted successfully (204 No Content)
     except requests.exceptions.HTTPError as e:
-        swxsoc.log.error(f"Failed to remove annotation with ID {annotation_id}: {e} [swxsoc.util.util]")
+        swxsoc.log.error(
+            f"Failed to remove annotation with ID {annotation_id}: {e} [swxsoc.util.util]"
+        )
         return False
     except requests.exceptions.ConnectionError as e:
         swxsoc.log.error(f"Failed to connect to the server: {e}")

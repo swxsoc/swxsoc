@@ -38,7 +38,7 @@ Documentation
 -------------
 The documentation is hosted on readthedocs and is available `here <https://swxsoc.readthedocs.io/en/latest/>`_.
 
-Licenses
+License
 -------
 
 See the license/LICENSE file for more information.

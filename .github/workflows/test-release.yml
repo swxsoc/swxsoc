@@ -7,10 +7,7 @@ concurrency:
 on:
   push:
     branches:
-      - main
-  pull_request:
-    branches:
-      - main
+      - package-release
   workflow_dispatch: # For on demand runs
 
 jobs:

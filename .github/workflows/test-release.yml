@@ -5,10 +5,9 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  push:
-    branches:
-      - package-release
-  workflow_dispatch: # For on demand runs
+  release:
+    types:
+      - published
 
 jobs:
 

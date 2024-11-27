@@ -5,9 +5,7 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  release:
-    types:
-      - published
+  workflow_dispatch: # For on demand runs
 
 jobs:
 

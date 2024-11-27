@@ -17,7 +17,6 @@ requires-python = ">=3.9"
 keywords = ["swxsoc", "nasa mission", "space weather"]
 classifiers = [
     "Development Status :: 3 - Alpha",
-    "License :: OSI Approved :: Apache 2.0",
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
@@ -36,6 +35,10 @@ dependencies = [
   'pyyaml>=5.3.1',
   'boto3==1.35.26'
 ]
+
+[project.urls]
+Homepage = "https://github.com/swxsoc/swxsoc"
+Documentation = "https://swxsoc.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
 dev = [

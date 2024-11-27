@@ -5,7 +5,9 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  workflow_dispatch: # For on demand runs
+  release:
+    types:
+      - published
 
 jobs:
 
@@ -64,4 +66,4 @@ jobs:
           path: dist
 
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.8.10
+        uses: pypa/gh-action-pypi-publish@release/v1

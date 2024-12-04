@@ -28,6 +28,7 @@ def test_query_annotations(mock_requests):
             "alertName": "",
             "dashboardId": 7,
             "dashboardUID": "fe0cbqalk99fkd",
+            "uid": "fe0cbqalk99fkd",
             "panelId": 8,
             "userId": 0,
             "newState": "",

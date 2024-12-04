@@ -56,7 +56,6 @@ def test_query_annotations(mock_requests):
         start_time=start_time,
         end_time=end_time,
         dashboard_name="Solar flare",
-        panel_name="Observed solar flare",
         tags=["meddea", "test"],
     )
 
@@ -68,6 +67,7 @@ def test_query_annotations(mock_requests):
             "alertName": "",
             "dashboardId": 7,
             "dashboardUID": "fe0cbqalk99fkd",
+            "uid": "fe0cbqalk99fkd",
             "panelId": 8,
             "userId": 0,
             "newState": "",

@@ -57,6 +57,10 @@ Creating a Service Account API Key
 
    - Click **"Generate token"** and copy the generated key. **Important**: You will not be able to view this key again, so ensure you save it securely.
 
+5. **Utilize the API Key**:
+
+   - Use the generated API key to authenticate requests to the Grafana API. But remember, if you would like to work outside an instrument package, you need to set the `SWXSOC_MISSION` environment variable to the appropriate mission context. If you are working within an instrument package, this variable is automatically set.
+
 
 Storing the API Key Securely
 ----------------------------

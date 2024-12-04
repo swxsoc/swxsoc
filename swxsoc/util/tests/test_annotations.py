@@ -22,10 +22,25 @@ def test_query_annotations(mock_requests):
     mock_response = MagicMock()
     mock_response.json.return_value = [
         {
-            "id": 1,
-            "time": 1663351800000,
-            "text": "Solar flare",
+            "id": 43,
+            "alertId": 0,
+            "alertName": "",
+            "dashboardId": 7,
+            "dashboardUID": "fe0cbqalk99fkd",
+            "panelId": 8,
+            "userId": 0,
+            "newState": "",
+            "prevState": "",
+            "created": 1730204275308,
+            "updated": 1730204275308,
+            "time": 1726489800000,
+            "timeEnd": 1726490100000,
+            "text": "Observed solar flare",
             "tags": ["meddea", "test"],
+            "login": "",
+            "email": "",
+            "avatarUrl": "",
+            "data": {},
         }
     ]
     mock_response.status_code = 200

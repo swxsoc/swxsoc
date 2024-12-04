@@ -35,6 +35,7 @@ def test_query_annotations(mock_requests):
             "updated": 1730204275308,
             "time": 1726489800000,
             "timeEnd": 1726490100000,
+            "title": "Solar flare",
             "text": "Observed solar flare",
             "tags": ["meddea", "test"],
             "login": "",

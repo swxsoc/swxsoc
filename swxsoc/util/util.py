@@ -456,7 +456,7 @@ def get_dashboard_id(dashboard_name: str) -> Optional[int]:
         return None
 
     matching_dashboards = [
-        dashboard for dashboard in dashboards if dashboard["title"] == dashboard_name
+        dashboard for dashboard in dashboards if "title" in dashboard and dashboard["title"] == dashboard_name
     ]
 
     if len(matching_dashboards) == 0:

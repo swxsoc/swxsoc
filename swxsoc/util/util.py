@@ -428,10 +428,15 @@ def _to_milliseconds(dt: datetime) -> int:
     Returns:
         int: Milliseconds since epoch.
     """
+    if isinstance(dt, Time):
+        # Convert astropy Time object to a standard datetime object in UTC
+        dt = dt.to_datetime(timezone=None)  # Convert to naive datetime in UTC
+        return int(dt.timestamp() * 1000)
+    
     return int(dt.timestamp() * 1000)
 
 
-def get_dashboard_id(dashboard_name: str) -> Optional[int]:
+def get_dashboard_id(dashboard_name: str, mission_dashboard: Optional[str] = None) -> Optional[int]:
     """
     Retrieves the dashboard UID by its name. Issues a warning if multiple dashboards with the same name are found.
 
@@ -442,7 +447,7 @@ def get_dashboard_id(dashboard_name: str) -> Optional[int]:
         Optional[int]: The UID of the dashboard, or None if not found.
     """
     try:
-        BASE_URL = f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov"
+        BASE_URL = f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov" if not mission_dashboard else f"https://grafana.{mission_dashboard}.swsoc.smce.nasa.gov"
         response = requests.get(
             f"{BASE_URL}/api/search", headers=HEADERS, params={"query": dashboard_name}
         )
@@ -475,7 +480,7 @@ def get_dashboard_id(dashboard_name: str) -> Optional[int]:
     return matching_dashboards[0]["uid"] if matching_dashboards else None
 
 
-def get_panel_id(dashboard_id: int, panel_name: str) -> Optional[int]:
+def get_panel_id(dashboard_id: int, panel_name: str, mission_dashboard: Optional[str] = None) -> Optional[int]:
     """
     Retrieves the panel ID by dashboard UID and panel name. Issues a warning if multiple panels with the same name are found.
 
@@ -487,7 +492,7 @@ def get_panel_id(dashboard_id: int, panel_name: str) -> Optional[int]:
         Optional[int]: The ID of the panel, or None if not found.
     """
     try:
-        BASE_URL = f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov"
+        BASE_URL = f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov" if not mission_dashboard else f"https://grafana.{mission_dashboard}.swsoc.smce.nasa.gov"
         response = requests.get(
             f"{BASE_URL}/api/dashboards/uid/{dashboard_id}", headers=HEADERS
         )
@@ -531,6 +536,7 @@ def query_annotations(
     panel_id: Optional[int] = None,
     dashboard_name: Optional[str] = None,
     panel_name: Optional[str] = None,
+    mission_dashboard: Optional[str] = None,
 ) -> List[Dict[str, Union[str, int]]]:
     """
     Queries annotations within a specific timeframe with optional filters for tags, dashboard, and panel names.
@@ -550,9 +556,9 @@ def query_annotations(
     """
     # Look up dashboard and panel IDs if names are provided
     if dashboard_name and not dashboard_id:
-        dashboard_id = get_dashboard_id(dashboard_name)
+        dashboard_id = get_dashboard_id(dashboard_name, mission_dashboard)
     if dashboard_id and panel_name and not panel_id:
-        panel_id = get_panel_id(dashboard_id, panel_name)
+        panel_id = get_panel_id(dashboard_id, panel_name, mission_dashboard)
 
     if not end_time:
         end_time = start_time
@@ -570,7 +576,7 @@ def query_annotations(
         params["panelId"] = panel_id
 
     try:
-        BASE_URL = f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov"
+        BASE_URL = f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov" if not mission_dashboard else f"https://grafana.{mission_dashboard}.swsoc.smce.nasa.gov"
         response = requests.get(
             f"{BASE_URL}/api/annotations", headers=HEADERS, params=params
         )
@@ -595,6 +601,8 @@ def create_annotation(
     panel_id: Optional[int] = None,
     dashboard_name: Optional[str] = None,
     panel_name: Optional[str] = None,
+    mission_dashboard: Optional[str] = None,
+    overwrite: bool = False,
 ) -> Dict[str, Union[str, int]]:
     """
     Creates a new annotation for a specified event or time period, with optional filtering by dashboard and panel names.
@@ -614,10 +622,31 @@ def create_annotation(
     """
     # Look up dashboard and panel IDs if names are provided
     if dashboard_name and not dashboard_id:
-        dashboard_id = get_dashboard_id(dashboard_name)
+        dashboard_id = get_dashboard_id(dashboard_name, mission_dashboard)
     if dashboard_id and panel_name and not panel_id:
-        panel_id = get_panel_id(dashboard_id, panel_name)
+        panel_id = get_panel_id(dashboard_id, panel_name, mission_dashboard)
+        
+    # Overwrite functionality: query and remove existing identical annotations
+    if overwrite:
+        swxsoc.log.info("Overwriting existing annotations.")
+        existing_annotations = query_annotations(
+            start_time=start_time,
+            end_time=end_time or start_time,
+            tags=tags,
+            dashboard_id=dashboard_id,
+            panel_id=panel_id,
+            mission_dashboard=mission_dashboard,
+        )
 
+        for annotation in existing_annotations:
+            if annotation.get("text") == text:
+                annotation_id = annotation.get("id")
+                if annotation_id:
+                    removed = remove_annotation_by_id(annotation_id, mission_dashboard)
+                    if removed:
+                        swxsoc.log.info(
+                            f"Removed existing annotation with ID {annotation_id}."
+                        )
     payload = {
         "time": _to_milliseconds(start_time),
         "text": text,
@@ -631,7 +660,7 @@ def create_annotation(
         payload["panelId"] = panel_id
 
     try:
-        BASE_URL = f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov"
+        BASE_URL = f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov" if not mission_dashboard else f"https://grafana.{mission_dashboard}.swsoc.smce.nasa.gov"
         response = requests.post(
             f"{BASE_URL}/api/annotations", headers=HEADERS, json=payload
         )
@@ -647,7 +676,7 @@ def create_annotation(
         return {}
 
 
-def remove_annotation_by_id(annotation_id: int) -> bool:
+def remove_annotation_by_id(annotation_id: int, mission_dashboard: Optional[str] = None) -> bool:
     """
     Deletes an annotation by its ID.
 
@@ -658,7 +687,7 @@ def remove_annotation_by_id(annotation_id: int) -> bool:
         bool: True if the annotation was successfully deleted, False otherwise.
     """
     try:
-        BASE_URL = f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov"
+        BASE_URL = f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov" if not mission_dashboard else f"https://grafana.{mission_dashboard}.swsoc.smce.nasa.gov"
         full_url = f"{BASE_URL}/api/annotations/{annotation_id}"
         response = requests.delete(full_url, headers=HEADERS)
         response.raise_for_status()

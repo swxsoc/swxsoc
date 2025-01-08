@@ -36,11 +36,6 @@ TIME_FORMAT = "%Y%m%dT%H%M%S"
 VALID_DATA_LEVELS = ["l0", "l1", "ql", "l2", "l3", "l4"]
 FILENAME_EXTENSION = ".cdf"
 
-# Set the base URL and API key for Grafana Annotations API
-# You need to set the GRAFANA_API_KEY environment variables to use this feature
-API_KEY = os.environ.get("GRAFANA_API_KEY", None)
-HEADERS = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
-
 
 def create_science_filename(
     instrument: str,
@@ -432,11 +427,13 @@ def _to_milliseconds(dt: datetime) -> int:
         # Convert astropy Time object to a standard datetime object in UTC
         dt = dt.to_datetime(timezone=None)  # Convert to naive datetime in UTC
         return int(dt.timestamp() * 1000)
-    
+
     return int(dt.timestamp() * 1000)
 
 
-def get_dashboard_id(dashboard_name: str, mission_dashboard: Optional[str] = None) -> Optional[int]:
+def get_dashboard_id(
+    dashboard_name: str, mission_dashboard: Optional[str] = None
+) -> Optional[int]:
     """
     Retrieves the dashboard UID by its name. Issues a warning if multiple dashboards with the same name are found.
 
@@ -447,7 +444,18 @@ def get_dashboard_id(dashboard_name: str, mission_dashboard: Optional[str] = Non
         Optional[int]: The UID of the dashboard, or None if not found.
     """
     try:
-        BASE_URL = f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov" if not mission_dashboard else f"https://grafana.{mission_dashboard}.swsoc.smce.nasa.gov"
+        # Set the base URL and API key for Grafana Annotations API
+        # You need to set the GRAFANA_API_KEY environment variables to use this feature
+        API_KEY = os.environ.get("GRAFANA_API_KEY", None)
+        HEADERS = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json",
+        }
+        BASE_URL = (
+            f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov"
+            if not mission_dashboard
+            else f"https://grafana.{mission_dashboard}.swsoc.smce.nasa.gov"
+        )
         response = requests.get(
             f"{BASE_URL}/api/search", headers=HEADERS, params={"query": dashboard_name}
         )
@@ -480,7 +488,9 @@ def get_dashboard_id(dashboard_name: str, mission_dashboard: Optional[str] = Non
     return matching_dashboards[0]["uid"] if matching_dashboards else None
 
 
-def get_panel_id(dashboard_id: int, panel_name: str, mission_dashboard: Optional[str] = None) -> Optional[int]:
+def get_panel_id(
+    dashboard_id: int, panel_name: str, mission_dashboard: Optional[str] = None
+) -> Optional[int]:
     """
     Retrieves the panel ID by dashboard UID and panel name. Issues a warning if multiple panels with the same name are found.
 
@@ -492,7 +502,18 @@ def get_panel_id(dashboard_id: int, panel_name: str, mission_dashboard: Optional
         Optional[int]: The ID of the panel, or None if not found.
     """
     try:
-        BASE_URL = f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov" if not mission_dashboard else f"https://grafana.{mission_dashboard}.swsoc.smce.nasa.gov"
+        # Set the base URL and API key for Grafana Annotations API
+        # You need to set the GRAFANA_API_KEY environment variables to use this feature
+        API_KEY = os.environ.get("GRAFANA_API_KEY", None)
+        HEADERS = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json",
+        }
+        BASE_URL = (
+            f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov"
+            if not mission_dashboard
+            else f"https://grafana.{mission_dashboard}.swsoc.smce.nasa.gov"
+        )
         response = requests.get(
             f"{BASE_URL}/api/dashboards/uid/{dashboard_id}", headers=HEADERS
         )
@@ -576,7 +597,18 @@ def query_annotations(
         params["panelId"] = panel_id
 
     try:
-        BASE_URL = f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov" if not mission_dashboard else f"https://grafana.{mission_dashboard}.swsoc.smce.nasa.gov"
+        # Set the base URL and API key for Grafana Annotations API
+        # You need to set the GRAFANA_API_KEY environment variables to use this feature
+        API_KEY = os.environ.get("GRAFANA_API_KEY", None)
+        HEADERS = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json",
+        }
+        BASE_URL = (
+            f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov"
+            if not mission_dashboard
+            else f"https://grafana.{mission_dashboard}.swsoc.smce.nasa.gov"
+        )
         response = requests.get(
             f"{BASE_URL}/api/annotations", headers=HEADERS, params=params
         )
@@ -625,7 +657,7 @@ def create_annotation(
         dashboard_id = get_dashboard_id(dashboard_name, mission_dashboard)
     if dashboard_id and panel_name and not panel_id:
         panel_id = get_panel_id(dashboard_id, panel_name, mission_dashboard)
-        
+
     # Overwrite functionality: query and remove existing identical annotations
     if overwrite:
         swxsoc.log.info("Overwriting existing annotations.")
@@ -660,7 +692,18 @@ def create_annotation(
         payload["panelId"] = panel_id
 
     try:
-        BASE_URL = f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov" if not mission_dashboard else f"https://grafana.{mission_dashboard}.swsoc.smce.nasa.gov"
+        # Set the base URL and API key for Grafana Annotations API
+        # You need to set the GRAFANA_API_KEY environment variables to use this feature
+        API_KEY = os.environ.get("GRAFANA_API_KEY", None)
+        HEADERS = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json",
+        }
+        BASE_URL = (
+            f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov"
+            if not mission_dashboard
+            else f"https://grafana.{mission_dashboard}.swsoc.smce.nasa.gov"
+        )
         response = requests.post(
             f"{BASE_URL}/api/annotations", headers=HEADERS, json=payload
         )
@@ -676,7 +719,9 @@ def create_annotation(
         return {}
 
 
-def remove_annotation_by_id(annotation_id: int, mission_dashboard: Optional[str] = None) -> bool:
+def remove_annotation_by_id(
+    annotation_id: int, mission_dashboard: Optional[str] = None
+) -> bool:
     """
     Deletes an annotation by its ID.
 
@@ -687,7 +732,18 @@ def remove_annotation_by_id(annotation_id: int, mission_dashboard: Optional[str]
         bool: True if the annotation was successfully deleted, False otherwise.
     """
     try:
-        BASE_URL = f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov" if not mission_dashboard else f"https://grafana.{mission_dashboard}.swsoc.smce.nasa.gov"
+        # Set the base URL and API key for Grafana Annotations API
+        # You need to set the GRAFANA_API_KEY environment variables to use this feature
+        API_KEY = os.environ.get("GRAFANA_API_KEY", None)
+        HEADERS = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json",
+        }
+        BASE_URL = (
+            f"https://grafana.{swxsoc.config['mission']['mission_name']}.swsoc.smce.nasa.gov"
+            if not mission_dashboard
+            else f"https://grafana.{mission_dashboard}.swsoc.smce.nasa.gov"
+        )
         full_url = f"{BASE_URL}/api/annotations/{annotation_id}"
         response = requests.delete(full_url, headers=HEADERS)
         response.raise_for_status()

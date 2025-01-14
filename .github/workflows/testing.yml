@@ -36,5 +36,7 @@ jobs:
       run: pytest --pyargs swxsoc --cov swxsoc
     
     # Upload coverage reports to Codecov
-    - name: Upload coverage reports to Codecov with GitHub Action
-      uses: codecov/codecov-action@v3
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      env:
+         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

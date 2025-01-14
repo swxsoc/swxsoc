@@ -17,4 +17,5 @@ For more details checkout the :ref:`reference`.
    schema_information_guide
    cdf_format_guide
    customization
+   retrieving_data
    logger

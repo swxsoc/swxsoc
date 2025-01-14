@@ -7,13 +7,24 @@ from datetime import datetime, timezone
 import time
 
 from astropy.time import Time
-from astropy.timeseries import TimeSeries
 import astropy.units as u
-
+from astropy.timeseries import TimeSeries
 import requests
 from datetime import datetime
 from typing import List, Dict, Optional, Union
 import boto3
+from botocore.exceptions import NoCredentialsError, ClientError
+from botocore import UNSIGNED
+from botocore.client import Config
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+from parfive import Downloader
+import sunpy.util.net
+import sunpy.time
+import sunpy.net.attrs as a
+from sunpy.net.attr import AttrWalker, AttrAnd, AttrOr, SimpleAttr
+from sunpy.net.base_client import BaseClient, QueryResponseTable, convert_row_to_table
+
 
 import swxsoc
 
@@ -21,6 +32,12 @@ import swxsoc
 __all__ = [
     "create_science_filename",
     "parse_science_filename",
+    "SWXSOCClient",
+    "VALID_DATA_LEVELS",
+    "SearchTime",
+    "Level",
+    "Instrument",
+    "DevelopmentBucket",
     "record_timeseries",
     "get_dashboard_id",
     "get_panel_id",
@@ -222,6 +239,577 @@ def parse_science_filename(filepath: str) -> dict:
     result["version"] = filename_components[-1][1:]  # remove the v
 
     return result
+
+
+# ================================================================================================
+#                                  SWXSOC FIDO CLIENT
+# ================================================================================================
+
+# Initialize the attribute walker
+walker = AttrWalker()
+
+
+# Map sunpy attributes to SWXSOC attributes for easy access
+class SearchTime(a.Time):
+    """
+    Attribute for specifying the time range for the search.
+
+    Attributes
+    ----------
+    start : `str`
+        The start time in ISO format.
+    end : `str`
+        The end time in ISO format.
+    """
+
+
+class Level(a.Level):
+    """
+    Attribute for specifying the data level for the search.
+
+    Attributes
+    ----------
+    value : str
+        The data level value.
+    """
+
+
+class Instrument(a.Instrument):
+    """
+    Attribute for specifying the instrument for the search.
+
+    Attributes
+    ----------
+    value : str
+        The instrument value.
+    """
+
+
+class DevelopmentBucket(SimpleAttr):
+    """
+    Attribute for specifying whether to search in the DevelopmentBucket for testing purposes.
+
+    Attributes
+    ----------
+    value : bool
+        Whether to use the DevelopmentBucket. Defaults to False.
+    """
+
+
+@walker.add_creator(AttrOr)
+def create_or(wlk, tree):
+    """
+    Creates an 'AttrOr' object from the provided tree of attributes.
+
+    Parameters
+    ----------
+    wlk : AttrWalker
+        The AttrWalker instance used for creating the attributes.
+    tree : AttrOr
+        The 'AttrOr' tree structure.
+
+    Returns
+    -------
+    list
+        A list of created attributes.
+    """
+    results = []
+    for sub in tree.attrs:
+        results.append(wlk.create(sub))
+    return results
+
+
+@walker.add_creator(AttrAnd)
+def create_and(wlk, tree):
+    """
+    Creates an 'AttrAnd' object from the provided tree of attributes.
+
+    Parameters
+    ----------
+    wlk : AttrWalker
+        The AttrWalker instance used for creating the attributes.
+    tree : AttrAnd
+        The 'AttrAnd' tree structure.
+
+    Returns
+    -------
+    list
+        A list containing a single dictionary of attributes.
+    """
+    result = {}
+    for sub in tree.attrs:
+        wlk.apply(sub, result)
+    return [result]
+
+
+@walker.add_applier(SearchTime)
+def apply_time(wlk, attr, params):
+    """
+    Applies 'a.Time' attribute to the parameters.
+
+    Parameters
+    ----------
+    wlk : AttrWalker
+        The AttrWalker instance used for applying the attributes.
+    attr : a.Time
+        The 'a.Time' attribute to be applied.
+    params : dict
+        The parameters dictionary to be updated.
+    """
+    params.update({"startTime": attr.start.isot, "endTime": attr.end.isot})
+
+
+@walker.add_applier(Level)
+def apply_level(wlk, attr, params):
+    """
+    Applies 'a.Level' attribute to the parameters.
+
+    Parameters
+    ----------
+    wlk : AttrWalker
+        The AttrWalker instance used for applying the attributes.
+    attr : a.Level
+        The 'a.Level' attribute to be applied.
+    params : dict
+        The parameters dictionary to be updated.
+    """
+    params.update({"level": attr.value.lower()})
+
+
+@walker.add_applier(Instrument)
+def apply_instrument(wlk, attr, params):
+    """
+    Applies 'a.Instrument' attribute to the parameters.
+
+    Parameters
+    ----------
+    wlk : AttrWalker
+        The AttrWalker instance used for applying the attributes.
+    attr : a.Instrument
+        The 'a.Instrument' attribute to be applied.
+    params : dict
+        The parameters dictionary to be updated.
+    """
+    params.update({"instrument": attr.value.upper()})
+
+
+@walker.add_applier(DevelopmentBucket)
+def apply_development_bucket(wlk, attr, params):
+    """
+    Applies 'DevelopmentBucket' attribute to the parameters.
+
+    Parameters
+    ----------
+    wlk : AttrWalker
+        The AttrWalker instance used for applying the attributes.
+    attr : DevelopmentBucket
+        The 'DevelopmentBucket' attribute to be applied.
+    params : dict
+        The parameters dictionary to be updated.
+    """
+    params.update({"use_development_bucket": attr.value})
+
+
+class SWXSOCClient(BaseClient):
+    """
+    Client for interacting with SWXSOC data. This client provides search and fetch functionality for SWXSOC data and is based on the sunpy BaseClient for FIDO.
+
+    For more information on the sunpy BaseClient, see: https://docs.sunpy.org/en/stable/generated/api/sunpy.net.base_client.BaseClient.html
+
+    """
+
+    size_column = "size"
+
+    def search(self, query=None):
+        """
+        Searches for data based on the given query.
+
+        Parameters
+        ----------
+        query : AttrAnd
+            The query object specifying search criteria.
+
+        Returns
+        -------
+        QueryResponseTable
+            A table containing the search results.
+        """
+        if query is None:
+            query = AttrAnd([])
+
+        queries = walker.create(query)
+        swxsoc.log.info(f"Searching with {queries}")
+
+        results = []
+        for query_parameters in queries:
+            results.extend(self._make_search(query_parameters))
+
+        if results == []:
+            return QueryResponseTable(names=[], rows=[], client=self)
+
+        names = [
+            "instrument",
+            "mode",
+            "test",
+            "time",
+            "level",
+            "version",
+            "descriptor",
+            "key",
+            "size",
+            "bucket",
+            "etag",
+            "storage_class",
+            "last_modified",
+        ]
+        return QueryResponseTable(names=names, rows=results, client=self)
+
+    @convert_row_to_table
+    def fetch(self, query_results, *, path, downloader, **kwargs):
+        """
+        Fetches the files based on query results and queues them up to be downloaded to the specified path by your downloader.
+
+        Note: The downloader must be an instance of parfive.Downloader
+
+        Parameters
+        ----------
+        query_results : list
+            The results of the search query.
+        path : str
+            The directory path where files should be saved.
+        downloader : Downloader
+            The parfive downloader instance used for fetching files.
+        """
+
+        if not isinstance(downloader, Downloader):
+            raise ValueError("Downloader must be an instance of parfive.Downloader")
+
+        for row in query_results:
+            swxsoc.log.info(f"Fetching {row['key']}")
+            if path is None or path == ".":
+                path = os.getcwd()
+
+            if os.path.exists(path) and not os.path.isdir(path):
+                raise ValueError(f"Path {path} is not a directory")
+
+            filepath = self._make_filename(path, row)
+
+            presigned_url = self.generate_presigned_url(row["bucket"], row["key"])
+            url = (
+                presigned_url
+                if presigned_url is not None
+                else f'https://{row["bucket"]}.s3.amazonaws.com/{row["key"]}'
+            )
+
+            downloader.enqueue_file(url, filename=filepath)
+
+    @classmethod
+    def _make_filename(cls, path, row):
+        """
+        Creates a filename based on the provided path and row data.
+
+        Parameters
+        ----------
+        path : str
+            The directory path.
+        row : dict
+            The row data containing the file key.
+
+        Returns
+        -------
+        str
+            The full file path.
+        """
+        return os.path.join(path, row["key"].split("/")[-1])
+
+    @staticmethod
+    def generate_presigned_url(bucket_name, object_key, expiration=3600):
+        """
+        Generates a presigned URL for accessing an object in S3. If credentials are not available
+        or access is denied, attempts an unsigned request for public access.
+
+        Parameters
+        ----------
+        bucket_name : str
+            The name of the S3 bucket.
+        object_key : str
+            The key of the S3 object.
+        expiration : int, optional
+            The expiration time in seconds for the presigned URL. Default is 3600 seconds.
+
+        Returns
+        -------
+        str or None
+            The presigned URL if successful, or a direct unsigned URL if public access is allowed.
+            Otherwise, returns None.
+        """
+        try:
+            # Attempt to generate a presigned URL with credentials
+            s3_client = boto3.client("s3")
+
+            # Try to list one object to check if credentials are available
+            s3_client.list_objects_v2(Bucket=bucket_name, MaxKeys=1)
+
+            response = s3_client.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": bucket_name, "Key": object_key},
+                ExpiresIn=expiration,
+            )
+            return response
+
+        except NoCredentialsError:
+            swxsoc.log.warning("Credentials not available. Trying unsigned access.")
+        except ClientError as e:
+            error_code = e.response["Error"]["Code"]
+            if error_code == "AccessDenied":
+                swxsoc.log.warning(
+                    f"Access denied to {bucket_name}/{object_key}. Trying unsigned access."
+                )
+            else:
+                swxsoc.log.warning(f"Error generating presigned URL: {e}")
+                return None
+
+        # If credentials are missing or access is denied, try unsigned access
+        try:
+            # Attempt to access the object with an unsigned request (public access)
+            swxsoc.log.info(f"Attempting unsigned access to {bucket_name}/{object_key}")
+            url = f"https://{bucket_name}.s3.amazonaws.com/{object_key}"
+            return url
+        except ClientError as unsigned_error:
+            print(f"Unsigned access failed: {unsigned_error}")
+            return None
+
+    @classmethod
+    def _can_handle_query(cls, *query):
+        """
+        Determines if the client can handle the given query based on its attributes.
+
+        Parameters
+        ----------
+        query : tuple
+            The query attributes to check.
+
+        Returns
+        -------
+        bool
+            True if the client can handle the query, otherwise False.
+        """
+        query_attrs = set(type(x) for x in query)
+        supported_attrs = {SearchTime, Level, Instrument, DevelopmentBucket}
+        return supported_attrs.issuperset(query_attrs)
+
+    @classmethod
+    def _make_search(cls, query):
+        """
+        Performs a search based on the provided query parameters.
+
+        Parameters
+        ----------
+        query : dict
+            The query parameters including instrument, levels, time range, and development bucket flag.
+
+        Returns
+        -------
+        list
+            A list of rows containing the search results.
+        """
+        instrument = query.get("instrument")
+        levels = query.get("level")
+        start_time = query.get("startTime")
+        end_time = query.get("endTime")
+        use_development_bucket = query.get("use_development_bucket")
+
+        if levels is not None and not isinstance(levels, list):
+            levels = [levels]
+
+        if levels is not None and len(levels) > 0:
+            for level in levels:
+                if level not in VALID_DATA_LEVELS:
+                    raise ValueError(f"Invalid data level: {level}")
+        else:
+            levels = VALID_DATA_LEVELS
+
+        if start_time is None:
+            start_time = "2000-01-01"
+
+        if end_time is None:
+            end_time = datetime.now().isoformat()
+
+        instrument_buckets = {
+            f"{swxsoc.config['mission']['inst_to_targetname'][inst]}": (
+                f"{'dev-' if use_development_bucket else ''}"
+                f"{swxsoc.config['mission']['mission_name']}-{inst}"
+            )
+            for inst in swxsoc.config["mission"]["inst_names"]
+        }
+
+        swxsoc.log.debug(f"Mapping of instruments to S3 buckets: {instrument_buckets}")
+
+        if instrument is None or instrument not in instrument_buckets:
+            swxsoc.log.info(
+                f"No instrument specified or invalid instrument. Searching all instruments."
+            )
+            instrument_bucket_to_search = instrument_buckets.values()
+        else:
+            swxsoc.log.info(f"Searching for instrument: {instrument}")
+            instrument_bucket_to_search = [instrument_buckets[instrument]]
+
+        swxsoc.log.debug(f"Searching in buckets: {instrument_bucket_to_search}")
+
+        files_in_s3 = cls.list_files_in_s3(instrument_bucket_to_search)
+
+        if levels is not None or start_time is not None or end_time is not None:
+            swxsoc.log.info(
+                f"Searching for files with level {levels} between {start_time} and {end_time}"
+            )
+
+            prefixes = cls.generate_prefixes(levels, start_time, end_time)
+
+            files_in_s3 = [
+                f
+                for f in files_in_s3
+                if any(f["Key"].startswith(prefix) for prefix in prefixes)
+            ]
+        else:
+            swxsoc.log.info(f"Searching for all files")
+
+        swxsoc.log.info(f"Found {len(files_in_s3)} files in S3")
+
+        rows = []
+        for s3_object in files_in_s3:
+            swxsoc.log.debug(f"Processing S3 object: {s3_object}")
+
+            try:
+                info = parse_science_filename(s3_object["Key"])
+            except ValueError:
+                info = {}
+
+            row = [
+                info.get("instrument", "unknown"),
+                info.get("mode", "unknown"),
+                info.get("test", False),
+                info.get("time", "unknown"),
+                info.get("level", "unknown"),
+                info.get("version", "unknown"),
+                info.get("descriptor", "unknown"),
+                s3_object["Key"],
+                s3_object["Size"] * u.byte,
+                s3_object["Bucket"],
+                s3_object["ETag"],
+                s3_object["StorageClass"],
+                s3_object["LastModified"],
+            ]
+            rows.append(row)
+
+        return rows
+
+    @staticmethod
+    def list_files_in_s3(bucket_names: list) -> list:
+        """
+        Lists all files in the specified S3 buckets. If access is denied, it retries with an unsigned request.
+
+        Parameters
+        ----------
+        bucket_names : list
+            A list of S3 bucket names.
+
+        Returns
+        -------
+        list
+            A list of dictionaries containing metadata about each S3 object.
+        """
+        content = []
+        s3 = boto3.client("s3")
+        paginator = s3.get_paginator("list_objects_v2")
+
+        for bucket_name in bucket_names:
+            try:
+                # Try with authenticated client
+                pages = paginator.paginate(Bucket=bucket_name)
+                for page in pages:
+                    for obj in page.get("Contents", []):
+                        metadata = {
+                            "Key": obj["Key"],
+                            "LastModified": sunpy.time.parse_time(obj["LastModified"]),
+                            "Size": obj["Size"],
+                            "ETag": obj["ETag"],
+                            "StorageClass": obj.get("StorageClass", "STANDARD"),
+                            "Bucket": bucket_name,
+                        }
+                        content.append(metadata)
+            except (ClientError, NoCredentialsError) as e:
+                swxsoc.log.warning(f"Error accessing bucket {bucket_name}: {e}")
+                if isinstance(e, NoCredentialsError):
+                    error_code = "NoCredentialsError"
+                elif isinstance(e, ClientError):
+                    error_code = e.response["Error"]["Code"]
+                # Retry?
+                if error_code == "AccessDenied" or error_code == "NoCredentialsError":
+                    swxsoc.log.warning(
+                        f"Access denied to bucket {bucket_name}. Trying unsigned request."
+                    )
+                    # Retry with an unsigned (anonymous) client
+                    try:
+                        unsigned_s3 = boto3.client(
+                            "s3", config=Config(signature_version=UNSIGNED)
+                        )
+                        unsigned_paginator = unsigned_s3.get_paginator(
+                            "list_objects_v2"
+                        )
+                        pages = unsigned_paginator.paginate(Bucket=bucket_name)
+                        for page in pages:
+                            for obj in page.get("Contents", []):
+                                metadata = {
+                                    "Key": obj["Key"],
+                                    "LastModified": sunpy.time.parse_time(
+                                        obj["LastModified"]
+                                    ),
+                                    "Size": obj["Size"],
+                                    "ETag": obj["ETag"],
+                                    "StorageClass": obj.get("StorageClass", "STANDARD"),
+                                    "Bucket": bucket_name,
+                                }
+                                content.append(metadata)
+                    except ClientError as retry_error:
+                        raise Exception(
+                            f"Unsigned request failed for bucket {bucket_name} (Ensure you have the correct IAM permissions, or are on the VPN)"
+                        )
+                else:
+                    raise Exception(f"Error accessing bucket {bucket_name}: {e}")
+
+        return content
+
+    @staticmethod
+    def generate_prefixes(levels: list, start_time: str, end_time: str) -> list:
+        """
+        Generates a list of prefixes based on the level and time range.
+
+        Parameters
+        ----------
+        levels : list
+            A list of data levels.
+        start_time : str
+            The start time in ISO format.
+        end_time : str
+            The end time in ISO format.
+
+        Returns
+        -------
+        list
+            A list of prefixes.
+        """
+        current_time = datetime.fromisoformat(start_time)
+        end_time = datetime.fromisoformat(end_time)
+        prefixes = []
+
+        while current_time <= end_time:
+            for level in levels:
+                prefix = f"{level}/{current_time.year}/{current_time.month:02d}/"
+                prefixes.append(prefix)
+            current_time += relativedelta(months=1)
+            swxsoc.log.debug(f"Generated prefix: {prefix}")
+
+        return prefixes
 
 
 def record_timeseries(

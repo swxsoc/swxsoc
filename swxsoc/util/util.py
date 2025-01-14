@@ -671,15 +671,19 @@ class SWXSOCClient(BaseClient):
         for s3_object in files_in_s3:
             swxsoc.log.debug(f"Processing S3 object: {s3_object}")
 
-            info = parse_science_filename(s3_object["Key"])
+            try:
+                info = parse_science_filename(s3_object["Key"])
+            except ValueError:
+                info = {}
+
             row = [
-                info.get("instrument", None),
-                info.get("mode", None),
+                info.get("instrument", "unknown"),
+                info.get("mode", "unknown"),
                 info.get("test", False),
-                info.get("time", None),
-                info.get("level", None),
-                info.get("version", None),
-                info.get("descriptor", None),
+                info.get("time", "unknown"),
+                info.get("level", "unknown"),
+                info.get("version", "unknown"),
+                info.get("descriptor", "unknown"),
                 s3_object["Key"],
                 s3_object["Size"] * u.byte,
                 s3_object["Bucket"],
@@ -725,9 +729,14 @@ class SWXSOCClient(BaseClient):
                             "Bucket": bucket_name,
                         }
                         content.append(metadata)
-            except ClientError as e:
-                error_code = e.response["Error"]["Code"]
-                if error_code == "AccessDenied":
+            except (ClientError, NoCredentialsError) as e:
+                swxsoc.log.warning(f"Error accessing bucket {bucket_name}: {e}")
+                if isinstance(e, NoCredentialsError):
+                    error_code = "NoCredentialsError"
+                elif isinstance(e, ClientError):
+                    error_code = e.response["Error"]["Code"]
+                # Retry?
+                if error_code == "AccessDenied" or error_code == "NoCredentialsError":
                     swxsoc.log.warning(
                         f"Access denied to bucket {bucket_name}. Trying unsigned request."
                     )

@@ -18,6 +18,10 @@ build:
       - pip install spacepy --no-build-isolation
       - pip install -e .[docs,all]
 
+sphinx:
+  # Path to your Sphinx configuration file.
+  configuration: docs/conf.py
+  
 # Optionally build your docs in additional formats such as PDF and ePub
 formats:
   - pdf

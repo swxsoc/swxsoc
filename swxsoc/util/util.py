@@ -5,6 +5,7 @@ This module provides general utility functions.
 import os
 from datetime import datetime, timezone
 import time
+import re
 
 from astropy.time import Time
 import astropy.units as u
@@ -51,7 +52,6 @@ __all__ = [
 TIME_FORMAT_L0 = "%Y%j-%H%M%S"
 TIME_FORMAT = "%Y%m%dT%H%M%S"
 VALID_DATA_LEVELS = ["l0", "l1", "ql", "l2", "l3", "l4"]
-FILENAME_EXTENSION = ".cdf"
 
 
 def create_science_filename(
@@ -175,36 +175,13 @@ def parse_science_filename(filepath: str) -> dict:
     filename = os.path.basename(filepath)
     file_name, file_ext = os.path.splitext(filename)
 
-    filename_components = file_name.split("_")
 
-    if filename_components[0] != swxsoc.config["mission"]["mission_name"]:
-        raise ValueError(f"File {filename} not recognized. Not a valid mission name.")
+    if file_ext == swxsoc.config["mission"]["file_extension"]:
+        filename_components = file_name.split("_")
 
-    if file_ext == ".bin":
-        if filename_components[1] not in swxsoc.config["mission"]["inst_targetnames"]:
-            raise ValueError(
-                f"File {filename} not recognized. Not a valid target name."
-            )
+        if filename_components[0] != swxsoc.config["mission"]["mission_name"]:
+            raise ValueError(f"File {filename} not recognized. Not a valid mission name.")
 
-        offset = 1 if len(filename_components) > 5 else 0
-
-        if offset:
-            result["mode"] = filename_components[2]
-
-        if filename_components[2 + offset] != VALID_DATA_LEVELS[0]:
-            raise ValueError(
-                f"Data level {filename_components[2 + offset]} is not correct for this file extension."
-            )
-        else:
-            result["level"] = filename_components[2 + offset]
-        #  reverse the dictionary to look up instrument name from the short name
-        from_shortname = {
-            v: k for k, v in swxsoc.config["mission"]["inst_to_targetname"].items()
-        }
-
-        result["time"] = Time.strptime(filename_components[3 + offset], TIME_FORMAT_L0)
-
-    elif file_ext == swxsoc.config["mission"]["file_extension"]:
         if filename_components[1] not in swxsoc.config["mission"]["inst_shortnames"]:
             raise ValueError(
                 "File {filename} not recognized. Not a valid instrument name."
@@ -232,11 +209,78 @@ def parse_science_filename(filepath: str) -> dict:
                 result["test"] = True
             if len(filename_components) == 6:
                 result["descriptor"] = filename_components[3]
-    else:
-        raise ValueError(f"File extension {file_ext} not recognized.")
+        result["instrument"] = from_shortname[filename_components[1]]
+        result["version"] = filename_components[-1][1:]  # remove the v
 
-    result["instrument"] = from_shortname[filename_components[1]]
-    result["version"] = filename_components[-1][1:]  # remove the v
+    else:
+
+        mission_name = swxsoc.config["mission"]["mission_name"].lower()
+        inst_names = [name.lower() for name in swxsoc.config["mission"]["inst_names"]]
+        inst_shortnames = [name.lower() for name in swxsoc.config["mission"]["inst_shortnames"]]
+        
+        swxsoc.log.debug(f"Configured mission name: {mission_name}")
+        swxsoc.log.debug(f"Configured instrument names: {inst_names + inst_shortnames}")
+        
+        # Compile regex patterns
+        mission_pattern = re.compile(rf'\b{re.escape(mission_name)}\b', re.IGNORECASE)
+        inst_pattern = re.compile(r'\b(' + '|'.join(map(re.escape, inst_names + inst_shortnames)) + r')\b', re.IGNORECASE)
+        time_patterns = [
+            re.compile(r'\d{8}[-_ T]?\d{6}'),  # YYYYMMDD-HHMMSS, YYYYMMDD_HHMMSS, YYYYMMDD HHMMSS
+            re.compile(r'\d{4}-\d{2}-\d{2}[-_ T]\d{2}:\d{2}:\d{2}'),  # ISO 8601 with variants
+            re.compile(r'\d{7}-\d{6}')  # Legacy L0 format (YYYYJJJ-HHMMSS)
+        ]
+
+        # Match mission name
+        mission_matches = mission_pattern.findall(filename.lower())
+        if not mission_matches:
+            raise ValueError(f"File {filename} not recognized. Not a valid mission name '{mission_name}'.")
+        elif len(mission_matches) > 1:
+            raise ValueError(f"File {filename} not recognized. Multiple mission names found: {mission_matches}.")
+        
+        mission_name_found = mission_matches[0].lower()
+        swxsoc.log.debug(f"Mission name: {mission_name_found}")
+        
+        # Match instrument name
+        inst_matches = inst_pattern.findall(filename.lower())
+        if not inst_matches:
+            raise ValueError(f"File {filename} not recognized. No valid instrument name found.")
+        elif len(inst_matches) > 1:
+            raise ValueError(f"File {filename} not recognized. Multiple instrument names found: {inst_matches}.")
+        
+        instrument_name_found = inst_matches[0].lower()
+        swxsoc.log.debug(f"Instrument name: {instrument_name_found}")
+        TIME_FORMAT_L0 = "%Y%j-%H%M%S"
+
+        # Match time
+        parsed_time = None
+        for pattern in time_patterns:
+            time_matches = pattern.findall(filename)
+            if time_matches:
+                try:
+                    parsed_time = sunpy.time.parse_time(time_matches[0])
+                    swxsoc.log.debug(f"Parsed time: {parsed_time}")
+                except ValueError as e:
+                    swxsoc.log.debug(f"Error parsing time {time_matches[0]}: {e}")
+                
+                try: 
+                    parsed_time = datetime.strptime(time_matches[0], TIME_FORMAT_L0)
+                    swxsoc.log.debug(f"Parsed time: {parsed_time}")
+                except ValueError as e:
+                    swxsoc.log.debug(f"Error parsing time {time_matches[0]}: {e}")
+                if parsed_time is not None:
+                    break
+        
+         
+        if parsed_time is None:
+            raise ValueError(f"File {filename} does not contain a recognizable time format.")
+        
+        swxsoc.log.debug(f"Time: {parsed_time}")
+        # Turn the parsed time into a Time object
+
+        result["mission_name_found"] = mission_name_found
+        result["instrument"] = instrument_name_found
+        result["time"] = Time(parsed_time)
+        result["level"] = "l0"
 
     return result
 

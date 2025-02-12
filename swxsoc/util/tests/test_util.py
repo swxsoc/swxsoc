@@ -3,11 +3,11 @@
 import os
 import pytest
 import yaml
-from pathlib import Path
-import boto3
 from moto import mock_aws
-from moto.core import DEFAULT_ACCOUNT_ID as ACCOUNT_ID
-from moto.timestreamwrite.models import timestreamwrite_backends
+
+import boto3
+from pathlib import Path
+import parfive
 
 from astropy import units as u
 from astropy.timeseries import TimeSeries
@@ -424,3 +424,310 @@ def test_create_configdir_configured(instrument, time, level, version, result):
     del os.environ["SWXSOC_CONFIGDIR"]
     swxsoc._reconfigure()
 # fmt: on
+
+
+@mock_aws
+def test_search_all_attr():
+    conn = boto3.resource("s3", region_name="us-east-1")
+
+    bucket_name = "swxsoc-eea"
+    conn.create_bucket(Bucket=bucket_name)
+
+    s3 = boto3.client("s3")
+    s3.put_object(
+        Bucket=bucket_name,
+        Key="l0/2024/04/swxsoc_EEA_l0_2024094-124603_v01.bin",
+        Body=b"test data 1",
+    )
+    s3.put_object(
+        Bucket=bucket_name,
+        Key=f"l1/2024/04/swxsoc_eea_l1_{time_formatted}_v1.2.3.cdf",
+        Body=b"test data 2",
+    )
+
+    fido_client = util.SWXSOCClient()
+
+    # Test search with a query for specific instrument, level, and time
+    query = util.AttrAnd(
+        [
+            util.SearchTime("2024-01-01", "2025-01-01"),
+            util.DevelopmentBucket(False),
+            util.Level("l0"),
+            util.Instrument("eea"),
+        ]
+    )
+    results = fido_client.search(query)
+
+    for result in results:
+        assert result["instrument"] == "eea"
+        assert result["level"] == "l0"
+        assert result["version"] == "01"
+        assert result["time"] == Time("2024-04-03T12:46:03")
+
+    # Test search with a query for specific instrument, level, and time
+    query = util.AttrAnd(
+        [
+            util.SearchTime("2024-01-01", "2025-01-01"),
+            util.DevelopmentBucket(False),
+            util.Level("l1"),
+            util.Instrument("eea"),
+        ]
+    )
+    results = fido_client.search(query)
+    for result in results:
+        assert result["instrument"] == "eea"
+        assert result["level"] == "l1"
+        assert result["version"] == "1.2.3"
+        assert result["time"] == Time("2024-04-06T12:06:21")
+
+
+@mock_aws
+def test_search_time_attr():
+    conn = boto3.resource("s3", region_name="us-east-1")
+
+    buckets = ["swxsoc-eea", "swxsoc-nemisis", "swxsoc-merit", "swxsoc-spani"]
+
+    for bucket in buckets:
+        conn.create_bucket(Bucket=bucket)
+
+    s3 = boto3.client("s3")
+    s3.put_object(
+        Bucket=buckets[0],
+        Key="l0/2024/04/swxsoc_EEA_l0_2024094-124603_v01.bin",
+        Body=b"test data 1",
+    )
+    s3.put_object(
+        Bucket=buckets[0],
+        Key=f"l1/2024/04/swxsoc_eea_l1_{time_formatted}_v1.2.3.cdf",
+        Body=b"test data 2",
+    )
+    s3.put_object(
+        Bucket=buckets[1],
+        Key="l0/2024/04/swxsoc_NEM_l0_2024094-124603_v01.bin",
+        Body=b"test data 3",
+    )
+    s3.put_object(
+        Bucket=buckets[1],
+        Key=f"l3/2024/04/swxsoc_nem_l3_{time_formatted}_v1.2.3.cdf",
+        Body=b"test data 4",
+    )
+    s3.put_object(
+        Bucket=buckets[2],
+        Key="l0/2024/04/swxsoc_MERIT_l0_2024094-124603_v01.bin",
+        Body=b"test data 5",
+    )
+    s3.put_object(
+        Bucket=buckets[2],
+        Key=f"l3/2024/04/swxsoc_mrt_l3_{time_formatted}_v1.2.3.cdf",
+        Body=b"test data 6",
+    )
+    s3.put_object(
+        Bucket=buckets[3],
+        Key="l0/2024/04/swxsoc_SPANI_l0_2024094-124603_v01.bin",
+        Body=b"test data 7",
+    )
+    s3.put_object(
+        Bucket=buckets[3],
+        Key=f"l3/2024/04/swxsoc_spn_l3_{time_formatted}_v1.2.3.cdf",
+        Body=b"test data 8",
+    )
+
+    fido_client = util.SWXSOCClient()
+
+    # Test search with a query for specific time
+    query = util.AttrAnd([util.SearchTime("2024-01-01", "2025-01-01")])
+    results = fido_client.search(query)
+
+    for result in results:
+        assert result["time"] >= Time("2024-01-01")
+        assert result["time"] <= Time("2025-01-01")
+
+    # Test search with a query for out of range time
+    query = util.AttrAnd([util.SearchTime("2025-01-01", "2026-01-01")])
+    results = fido_client.search(query)
+    assert len(results) == 0
+
+
+@mock_aws
+def test_search_instrument_attr():
+    conn = boto3.resource("s3", region_name="us-east-1")
+
+    buckets = ["swxsoc-eea", "swxsoc-nemisis", "swxsoc-merit", "swxsoc-spani"]
+
+    for bucket in buckets:
+        conn.create_bucket(Bucket=bucket)
+
+    s3 = boto3.client("s3")
+    s3.put_object(
+        Bucket=buckets[0],
+        Key="l0/2024/04/swxsoc_EEA_l0_2024094-124603_v01.bin",
+        Body=b"test data 1",
+    )
+    s3.put_object(
+        Bucket=buckets[0],
+        Key=f"l1/2024/04/swxsoc_eea_l1_{time_formatted}_v1.2.3.cdf",
+        Body=b"test data 2",
+    )
+
+    fido_client = util.SWXSOCClient()
+
+    # Test search with a query for specific instrument
+    query = util.AttrAnd([util.Instrument("eea")])
+    results = fido_client.search(query)
+
+    for result in results:
+        assert result["instrument"] == "eea"
+
+    # Test search with a query for out of range instrument
+    query = util.AttrAnd([util.Instrument("not_instrument")])
+    results = fido_client.search(query)
+
+    # Should search all instruments
+    assert len(results) == 2
+
+
+@mock_aws
+def test_search_level_attr():
+    conn = boto3.resource("s3", region_name="us-east-1")
+
+    buckets = ["swxsoc-eea", "swxsoc-nemisis", "swxsoc-merit", "swxsoc-spani"]
+
+    for bucket in buckets:
+        conn.create_bucket(Bucket=bucket)
+
+    s3 = boto3.client("s3")
+    s3.put_object(
+        Bucket=buckets[0],
+        Key="l0/2024/04/swxsoc_EEA_l0_2024094-124603_v01.bin",
+        Body=b"test data 1",
+    )
+    s3.put_object(
+        Bucket=buckets[0],
+        Key=f"l1/2024/04/swxsoc_eea_l1_{time_formatted}_v1.2.3.cdf",
+        Body=b"test data 2",
+    )
+    s3.put_object(
+        Bucket=buckets[1],
+        Key="l0/2024/04/swxsoc_NEM_l0_2024094-124603_v01.bin",
+        Body=b"test data 3",
+    )
+
+    fido_client = util.SWXSOCClient()
+
+    # Test search with a query for specific level
+    query = util.AttrAnd([util.Level("l0")])
+    results = fido_client.search(query)
+
+    for result in results:
+        assert result["level"] == "l0"
+
+    assert len(results) == 2
+
+    # Test search with a query for existing level but not in the bucket
+    query = util.AttrAnd([util.Level("l2")])
+    results = fido_client.search(query)
+
+    assert len(results) == 0
+
+    # Test search with a query for out of range should raise an error
+    query = util.AttrAnd([util.Level("l5")])
+    with pytest.raises(ValueError):
+        results = fido_client.search(query)
+
+
+@mock_aws
+def test_search_development_bucket():
+    conn = boto3.resource("s3", region_name="us-east-1")
+
+    dev_buckets = [
+        "dev-swxsoc-eea",
+        "dev-swxsoc-nemisis",
+        "dev-swxsoc-merit",
+        "dev-swxsoc-spani",
+    ]
+    buckets = ["swxsoc-eea", "swxsoc-nemisis", "swxsoc-merit", "swxsoc-spani"]
+
+    for bucket in dev_buckets:
+        conn.create_bucket(Bucket=bucket)
+
+    for bucket in buckets:
+        conn.create_bucket(Bucket=bucket)
+
+    s3 = boto3.client("s3")
+    for bucket in dev_buckets:
+        s3.put_object(
+            Bucket=bucket,
+            Key="l0/2024/04/swxsoc_EEA_l0_2024094-124603_v01.bin",
+            Body=b"test data 1",
+        )
+
+    fido_client = util.SWXSOCClient()
+
+    # Test search with a query for in development bucket
+    query = util.AttrAnd([util.DevelopmentBucket(True)])
+    results = fido_client.search(query)
+
+    assert len(results) == 4
+
+    # Test search with a query for not in development bucket
+    query = util.AttrAnd([util.DevelopmentBucket(False)])
+    results = fido_client.search(query)
+
+    assert len(results) == 0
+
+
+@mock_aws
+def test_fetch():
+    conn = boto3.resource("s3", region_name="us-east-1")
+
+    bucket_name = "swxsoc-eea"
+    conn.create_bucket(Bucket=bucket_name)
+
+    s3 = boto3.client("s3")
+    s3.put_object(
+        Bucket=bucket_name,
+        Key="l0/2024/04/swxsoc_EEA_l0_2024094-124603_v01.bin",
+        Body=b"test data 1",
+    )
+    s3.put_object(
+        Bucket=bucket_name,
+        Key=f"l1/2024/04/swxsoc_eea_l1_{time_formatted}_v1.2.3.cdf",
+        Body=b"test data 2",
+    )
+
+    fido_client = util.SWXSOCClient()
+
+    # Test search with a query for specific instrument, level, and time
+    query = util.AttrAnd(
+        [
+            util.SearchTime("2024-01-01", "2025-01-01"),
+            util.DevelopmentBucket(False),
+            util.Level("l0"),
+            util.Instrument("eea"),
+        ]
+    )
+    results = fido_client.search(query)
+
+    # Initalizing parfive downloader
+    downloader = parfive.Downloader(progress=False, overwrite=True)
+
+    fido_client.fetch(results, path=".", downloader=downloader)
+
+    assert downloader.queued_downloads == 1
+
+    # Test search with a query for specific instrument, and time
+    query = util.AttrAnd(
+        [
+            util.SearchTime("2024-01-01", "2025-01-01"),
+            util.DevelopmentBucket(False),
+            util.Instrument("eea"),
+        ]
+    )
+    results = fido_client.search(query)
+
+    # Initalizing parfive downloader
+    downloader = parfive.Downloader(progress=False, overwrite=True)
+
+    fido_client.fetch(results, path=".", downloader=downloader)
+
+    assert downloader.queued_downloads == 2

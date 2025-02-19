@@ -857,7 +857,7 @@ def record_timeseries(
         error = f"Invalid instrument name: {instrument_name}. Must be one of {swxsoc.config['mission']['inst_names']}."
         swxsoc.log.error(error)
         raise ValueError(error)
-    
+
     dimensions.append({"Name": "instrument", "Value": instrument_name})
 
     records = []

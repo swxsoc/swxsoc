@@ -837,13 +837,6 @@ def record_timeseries(
         if "INSTRUME" not in ts.meta
         else ts.meta["INSTRUME"].lower()
     )
-    if instrument_name not in swxsoc.config["mission"]["inst_names"]:
-        swxsoc.log.error(
-            f"Invalid instrument name: {instrument_name}. Must be one of {swxsoc.config['mission']['inst_names']}."
-        )
-        raise ValueError(
-            f"Invalid instrument name: {instrument_name}. Must be one of {swxsoc.config['mission']['inst_names']}."
-        )
 
     if ts_name is None or ts_name == "":
         ts_name = ts.meta.get("name", "measurement_group")
@@ -860,8 +853,12 @@ def record_timeseries(
         {"Name": "source", "Value": os.getenv("LAMBDA_ENVIRONMENT", "DEVELOPMENT")},
     ]
 
-    if instrument_name != "":
-        dimensions.append({"Name": "instrument", "Value": instrument_name})
+    if instrument_name == "" or instrument_name is None:
+        error = f"Invalid instrument name: {instrument_name}. Must be one of {swxsoc.config['mission']['inst_names']}."
+        swxsoc.log.error(error)
+        raise ValueError(error)
+    
+    dimensions.append({"Name": "instrument", "Value": instrument_name})
 
     records = []
     for i, time_point in enumerate(ts.time):

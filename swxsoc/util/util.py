@@ -837,6 +837,13 @@ def record_timeseries(
         if "INSTRUME" not in ts.meta
         else ts.meta["INSTRUME"].lower()
     )
+    if instrument_name not in swxsoc.config["mission"]["inst_names"]:
+        swxsoc.log.error(
+            f"Invalid instrument name: {instrument_name}. Must be one of {swxsoc.config['mission']['inst_names']}."
+        )
+        raise ValueError(
+            f"Invalid instrument name: {instrument_name}. Must be one of {swxsoc.config['mission']['inst_names']}."
+        )
 
     if ts_name is None or ts_name == "":
         ts_name = ts.meta.get("name", "measurement_group")
@@ -881,7 +888,7 @@ def record_timeseries(
             measure_record["MeasureValues"].append(
                 {
                     "Name": f"{this_col}_{measure_unit}" if measure_unit else this_col,
-                    "Value": str(value),
+                    "Value": value if isinstance(value, (int, float)) else str(value),
                     "Type": "DOUBLE" if isinstance(value, (int, float)) else "VARCHAR",
                 }
             )

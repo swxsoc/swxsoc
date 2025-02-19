@@ -888,7 +888,7 @@ def record_timeseries(
             measure_record["MeasureValues"].append(
                 {
                     "Name": f"{this_col}_{measure_unit}" if measure_unit else this_col,
-                    "Value": value if isinstance(value, (int, float)) else str(value),
+                    "Value": str(value),
                     "Type": "DOUBLE" if isinstance(value, (int, float)) else "VARCHAR",
                 }
             )

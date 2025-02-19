@@ -853,8 +853,12 @@ def record_timeseries(
         {"Name": "source", "Value": os.getenv("LAMBDA_ENVIRONMENT", "DEVELOPMENT")},
     ]
 
-    if instrument_name != "":
-        dimensions.append({"Name": "instrument", "Value": instrument_name})
+    if instrument_name == "" or instrument_name is None:
+        error = f"Invalid instrument name: {instrument_name}. Must be one of {swxsoc.config['mission']['inst_names']}."
+        swxsoc.log.error(error)
+        raise ValueError(error)
+
+    dimensions.append({"Name": "instrument", "Value": instrument_name})
 
     records = []
     for i, time_point in enumerate(ts.time):

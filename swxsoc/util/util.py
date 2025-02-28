@@ -238,6 +238,7 @@ def parse_science_filename(filepath: str) -> dict:
                 r"\d{4}-\d{2}-\d{2}[-_ T]\d{2}:\d{2}:\d{2}"
             ),  # ISO 8601 with variants
             re.compile(r"\d{7}-\d{6}"),  # Legacy L0 format (YYYYJJJ-HHMMSS)
+            re.compile(r"\d{7}_\d{6}"),  # Legacy L0 format v2 (YYYYJJJ_HHMMSS)
         ]
 
         # Match mission name
@@ -276,6 +277,7 @@ def parse_science_filename(filepath: str) -> dict:
 
         swxsoc.log.debug(f"Instrument name: {instrument_name_found}")
         TIME_FORMAT_L0 = "%Y%j-%H%M%S"
+        TIME_FORMAT_L0_v2 = "%Y%j_%H%M%S"
 
         # Match time
         parsed_time = None
@@ -293,6 +295,12 @@ def parse_science_filename(filepath: str) -> dict:
                     swxsoc.log.debug(f"Parsed time: {parsed_time}")
                 except ValueError as e:
                     swxsoc.log.debug(f"Error parsing time {time_matches[0]}: {e}")
+                try:
+                    parsed_time = datetime.strptime(time_matches[0], TIME_FORMAT_L0_v2)
+                    swxsoc.log.debug(f"Parsed time: {parsed_time}")
+                except ValueError as e:
+                    swxsoc.log.debug(f"Error parsing time {time_matches[0]}: {e}")
+
                 if parsed_time is not None:
                     break
 

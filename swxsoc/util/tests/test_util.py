@@ -324,16 +324,46 @@ def test_parse_env_var_configured(filename, instrument, time, level, version, mo
 # fmt: on
 
 
-#padre_{instrument}_apid###_YYYYDOY_HHMMSS.bin
-
-@pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
-    ("padre_MEDDEA_l0_2025131-192102_v3.bin", "meddea", "2025-05-11 19:21:02", "l0", None, None),
-    ("padre_MEDDEA_apid13_2025131-192102.bin", "meddea", "2025-05-11 19:21:02", "l0", None, None),
-    ("padre_meddea_l0test_light_20250131T192102_v0.3.0.bin", "meddea", "2025-01-31T19:21:02.000", "l0", None, None),
-    ("padre_sharp_ql_20230430T000000_v0.0.1.fits", "sharp", "2023-04-30T00:00:00.000", "ql", "0.0.1", None),
+# padre_{instrument}_apid###_YYYYDOY_HHMMSS.bin
 
 
-])
+@pytest.mark.parametrize(
+    "filename,instrument,time,level,version,mode",
+    [
+        (
+            "padre_MEDDEA_l0_2025131-192102_v3.bin",
+            "meddea",
+            "2025-05-11 19:21:02",
+            "l0",
+            None,
+            None,
+        ),
+        (
+            "padre_MEDDEA_apid13_2025131-192102.bin",
+            "meddea",
+            "2025-05-11 19:21:02",
+            "l0",
+            None,
+            None,
+        ),
+        (
+            "padre_meddea_l0test_light_20250131T192102_v0.3.0.bin",
+            "meddea",
+            "2025-01-31T19:21:02.000",
+            "l0",
+            None,
+            None,
+        ),
+        (
+            "padre_sharp_ql_20230430T000000_v0.0.1.fits",
+            "sharp",
+            "2023-04-30T00:00:00.000",
+            "ql",
+            "0.0.1",
+            None,
+        ),
+    ],
+)
 def test_parse_padre_science_files(filename, instrument, time, level, version, mode):
     """Testing parsing of MOC-generated level 0 files."""
     # Set SWXSOC_MISSION to 'hermes' mission
@@ -341,11 +371,13 @@ def test_parse_padre_science_files(filename, instrument, time, level, version, m
 
     swxsoc._reconfigure()
     result = util.parse_science_filename(filename)
-    assert result['instrument'] == instrument
-    assert result['level'] == level
-    assert result['version'] == version
-    assert result['time'] == Time(time)
-    assert result['mode'] == mode
+    assert result["instrument"] == instrument
+    assert result["level"] == level
+    assert result["version"] == version
+    assert result["time"] == Time(time)
+    assert result["mode"] == mode
+
+
 # fmt: on
 
 

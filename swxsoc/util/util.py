@@ -174,23 +174,23 @@ def parse_science_filename(filepath: str) -> dict:
 
     filename = os.path.basename(filepath)
     file_name, file_ext = os.path.splitext(filename)
-
+    #  reverse the dictionary to look up instrument name from the short name
+    from_shortname = {
+        v: k for k, v in swxsoc.config["mission"]["inst_to_shortname"].items()
+    }
 
     if file_ext == swxsoc.config["mission"]["file_extension"]:
         filename_components = file_name.split("_")
 
         if filename_components[0] != swxsoc.config["mission"]["mission_name"]:
-            raise ValueError(f"File {filename} not recognized. Not a valid mission name.")
+            raise ValueError(
+                f"File {filename} not recognized. Not a valid mission name."
+            )
 
         if filename_components[1] not in swxsoc.config["mission"]["inst_shortnames"]:
             raise ValueError(
                 "File {filename} not recognized. Not a valid instrument name."
             )
-
-        #  reverse the dictionary to look up instrument name from the short name
-        from_shortname = {
-            v: k for k, v in swxsoc.config["mission"]["inst_to_shortname"].items()
-        }
 
         result["time"] = Time.strptime(filename_components[-2], TIME_FORMAT)
 
@@ -213,41 +213,67 @@ def parse_science_filename(filepath: str) -> dict:
         result["version"] = filename_components[-1][1:]  # remove the v
 
     else:
+        mission_config = swxsoc.config["mission"]
+        mission_name = mission_config["mission_name"].lower()
+        inst_names = [
+            name.lower()
+            for name in mission_config["inst_names"] + mission_config["inst_shortnames"]
+        ]
 
-        mission_name = swxsoc.config["mission"]["mission_name"].lower()
-        inst_names = [name.lower() for name in swxsoc.config["mission"]["inst_names"]]
-        inst_shortnames = [name.lower() for name in swxsoc.config["mission"]["inst_shortnames"]]
-        
         swxsoc.log.debug(f"Configured mission name: {mission_name}")
-        swxsoc.log.debug(f"Configured instrument names: {inst_names + inst_shortnames}")
-        
+        swxsoc.log.debug(f"Configured instrument names: {inst_names}")
+
         # Compile regex patterns
-        mission_pattern = re.compile(rf'\b{re.escape(mission_name)}\b', re.IGNORECASE)
-        inst_pattern = re.compile(r'\b(' + '|'.join(map(re.escape, inst_names + inst_shortnames)) + r')\b', re.IGNORECASE)
+        mission_pattern = re.compile(
+            rf"(?:^|[_\-.]){mission_name}(?:[_\-.]|$)", re.IGNORECASE
+        )
+        inst_pattern = re.compile(
+            r"(?:^|[_\-.])(" + "|".join(inst_names) + r")(?:[_\-.]|$)", re.IGNORECASE
+        )
         time_patterns = [
-            re.compile(r'\d{8}[-_ T]?\d{6}'),  # YYYYMMDD-HHMMSS, YYYYMMDD_HHMMSS, YYYYMMDD HHMMSS
-            re.compile(r'\d{4}-\d{2}-\d{2}[-_ T]\d{2}:\d{2}:\d{2}'),  # ISO 8601 with variants
-            re.compile(r'\d{7}-\d{6}')  # Legacy L0 format (YYYYJJJ-HHMMSS)
+            re.compile(
+                r"\d{8}[-_ T]?\d{6}"
+            ),  # YYYYMMDD-HHMMSS, YYYYMMDD_HHMMSS, YYYYMMDD HHMMSS
+            re.compile(
+                r"\d{4}-\d{2}-\d{2}[-_ T]\d{2}:\d{2}:\d{2}"
+            ),  # ISO 8601 with variants
+            re.compile(r"\d{7}-\d{6}"),  # Legacy L0 format (YYYYJJJ-HHMMSS)
         ]
 
         # Match mission name
-        mission_matches = mission_pattern.findall(filename.lower())
+        mission_matches = mission_pattern.findall(filename)
+
+        # Debug mission matches
+
         if not mission_matches:
-            raise ValueError(f"File {filename} not recognized. Not a valid mission name '{mission_name}'.")
+            raise ValueError(
+                f"File {filename} not recognized. Not a valid mission name '{mission_name}'."
+            )
         elif len(mission_matches) > 1:
-            raise ValueError(f"File {filename} not recognized. Multiple mission names found: {mission_matches}.")
-        
+            raise ValueError(
+                f"File {filename} not recognized. Multiple mission names found: {mission_matches}."
+            )
+
         mission_name_found = mission_matches[0].lower()
         swxsoc.log.debug(f"Mission name: {mission_name_found}")
-        
+
         # Match instrument name
         inst_matches = inst_pattern.findall(filename.lower())
         if not inst_matches:
-            raise ValueError(f"File {filename} not recognized. No valid instrument name found.")
+            raise ValueError(
+                f"File {filename} not recognized. No valid instrument name found."
+            )
         elif len(inst_matches) > 1:
-            raise ValueError(f"File {filename} not recognized. Multiple instrument names found: {inst_matches}.")
-        
+            raise ValueError(
+                f"File {filename} not recognized. Multiple instrument names found: {inst_matches}."
+            )
+
         instrument_name_found = inst_matches[0].lower()
+        try:
+            instrument_name_found = from_shortname[instrument_name_found]
+        except KeyError:
+            instrument_name_found = instrument_name_found
+
         swxsoc.log.debug(f"Instrument name: {instrument_name_found}")
         TIME_FORMAT_L0 = "%Y%j-%H%M%S"
 
@@ -261,19 +287,20 @@ def parse_science_filename(filepath: str) -> dict:
                     swxsoc.log.debug(f"Parsed time: {parsed_time}")
                 except ValueError as e:
                     swxsoc.log.debug(f"Error parsing time {time_matches[0]}: {e}")
-                
-                try: 
+
+                try:
                     parsed_time = datetime.strptime(time_matches[0], TIME_FORMAT_L0)
                     swxsoc.log.debug(f"Parsed time: {parsed_time}")
                 except ValueError as e:
                     swxsoc.log.debug(f"Error parsing time {time_matches[0]}: {e}")
                 if parsed_time is not None:
                     break
-        
-         
+
         if parsed_time is None:
-            raise ValueError(f"File {filename} does not contain a recognizable time format.")
-        
+            raise ValueError(
+                f"File {filename} does not contain a recognizable time format."
+            )
+
         swxsoc.log.debug(f"Time: {parsed_time}")
         # Turn the parsed time into a Time object
 

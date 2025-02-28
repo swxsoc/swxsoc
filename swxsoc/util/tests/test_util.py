@@ -298,7 +298,7 @@ def test_parse_l0_filenames(filename, instrument, time):
     result = util.parse_science_filename(filename)
     assert result['instrument'] == instrument
     assert result['level'] == "l0"
-    assert result['version'] == None
+    assert result['version'] is None
     assert result['time'] == Time(time)
 # fmt: on
 
@@ -481,7 +481,7 @@ def test_search_all_attr():
     for result in results:
         assert result["instrument"] == "eea"
         assert result["level"] == "l0"
-        assert result["version"] == None
+        assert result["version"] is None
         assert result["time"] == Time("2024-04-03T12:46:03")
 
     # Test search with a query for specific instrument, level, and time

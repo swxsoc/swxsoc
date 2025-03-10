@@ -215,14 +215,14 @@ def test_parse_science_filename_output():
         mode=input["mode"],
     )
     assert util.parse_science_filename(f) == input
-    
+
+
 @pytest.mark.parametrize(
     "filename",
     [
         ("swxsoc_SPANI_VA_l0_2026215ERROR124603_v21.bin"),  # Bad time Value
         ("swxsoc_FAKE_VA_l0_2026215-124603_v21.bin"),  # Bad Instrument Value
-
-    ]
+    ],
 )
 def test_parse_science_filename_errors_l0(filename):
     """Test for errors in l0 and above files"""

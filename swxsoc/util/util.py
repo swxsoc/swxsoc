@@ -254,7 +254,9 @@ def parse_science_filename(filepath: str) -> dict:
             )
 
         instrument_match_found = inst_matches[0].lower()
-        instrument_name_found = from_shortname.get(instrument_match_found, instrument_match_found)
+        instrument_name_found = from_shortname.get(
+            instrument_match_found, instrument_match_found
+        )
 
         swxsoc.log.debug(f"Instrument name: {instrument_name_found}")
         TIME_FORMAT_L0 = "%Y%j-%H%M%S"

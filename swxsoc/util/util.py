@@ -179,6 +179,9 @@ def parse_science_filename(filepath: str) -> dict:
         v: k for k, v in swxsoc.config["mission"]["inst_to_shortname"].items()
     }
 
+    # Enables flexible parsing for file formats beyond the mission's default `file_extension`
+    # (e.g., CDF, FITS) and allows for more adaptable parsing of the mission name,
+    # instrument name, and timestamp.
     if file_ext == swxsoc.config["mission"]["file_extension"]:
         filename_components = file_name.split("_")
 
@@ -213,6 +216,7 @@ def parse_science_filename(filepath: str) -> dict:
         result["version"] = filename_components[-1][1:]  # remove the v
 
     else:
+        # Mission name should be picked up from the config (either env or config file)
         mission_config = swxsoc.config["mission"]
         mission_name = mission_config["mission_name"].lower()
         inst_names = [
@@ -224,9 +228,6 @@ def parse_science_filename(filepath: str) -> dict:
         swxsoc.log.debug(f"Configured instrument names: {inst_names}")
 
         # Compile regex patterns
-        mission_pattern = re.compile(
-            rf"(?:^|[_\-.]){mission_name}(?:[_\-.]|$)", re.IGNORECASE
-        )
         inst_pattern = re.compile(
             r"(?:^|[_\-.])(" + "|".join(inst_names) + r")(?:[_\-.]|$)", re.IGNORECASE
         )
@@ -241,23 +242,6 @@ def parse_science_filename(filepath: str) -> dict:
             re.compile(r"\d{7}_\d{6}"),  # Legacy L0 format v2 (YYYYJJJ_HHMMSS)
         ]
 
-        # Match mission name
-        mission_matches = mission_pattern.findall(filename)
-
-        # Debug mission matches
-
-        if not mission_matches:
-            raise ValueError(
-                f"File {filename} not recognized. Not a valid mission name '{mission_name}'."
-            )
-        elif len(mission_matches) > 1:
-            raise ValueError(
-                f"File {filename} not recognized. Multiple mission names found: {mission_matches}."
-            )
-
-        mission_name_found = mission_matches[0].lower()
-        swxsoc.log.debug(f"Mission name: {mission_name_found}")
-
         # Match instrument name
         inst_matches = inst_pattern.findall(filename.lower())
         if not inst_matches:
@@ -269,11 +253,8 @@ def parse_science_filename(filepath: str) -> dict:
                 f"File {filename} not recognized. Multiple instrument names found: {inst_matches}."
             )
 
-        instrument_name_found = inst_matches[0].lower()
-        try:
-            instrument_name_found = from_shortname[instrument_name_found]
-        except KeyError:
-            instrument_name_found = instrument_name_found
+        instrument_match_found = inst_matches[0].lower()
+        instrument_name_found = from_shortname.get(instrument_match_found, instrument_match_found)
 
         swxsoc.log.debug(f"Instrument name: {instrument_name_found}")
         TIME_FORMAT_L0 = "%Y%j-%H%M%S"
@@ -312,7 +293,7 @@ def parse_science_filename(filepath: str) -> dict:
         swxsoc.log.debug(f"Time: {parsed_time}")
         # Turn the parsed time into a Time object
 
-        result["mission_name_found"] = mission_name_found
+        result["mission_name"] = mission_name
         result["instrument"] = instrument_name_found
         result["time"] = Time(parsed_time)
         result["level"] = "l0"

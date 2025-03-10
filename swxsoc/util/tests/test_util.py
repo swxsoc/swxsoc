@@ -215,6 +215,21 @@ def test_parse_science_filename_output():
         mode=input["mode"],
     )
     assert util.parse_science_filename(f) == input
+    
+@pytest.mark.parametrize(
+    "filename",
+    [
+        ("swxsoc_SPANI_VA_l0_2026215ERROR124603_v21.bin"),  # Bad time Value
+        ("swxsoc_FAKE_VA_l0_2026215-124603_v21.bin"),  # Bad Instrument Value
+
+    ]
+)
+def test_parse_science_filename_errors_l0(filename):
+    """Test for errors in l0 and above files"""
+    with pytest.raises(ValueError):
+        # wrong time name
+        f = ""
+        util.parse_science_filename(filename)
 
 
 def test_parse_science_filename_errors_l1():
@@ -233,7 +248,6 @@ good_time = "2025-06-02T12:04:01"
 good_instrument = "eea"
 good_level = "l1"
 good_version = "1.3.4"
-
 
 # fmt: off
 @pytest.mark.parametrize(
@@ -289,17 +303,21 @@ def test_science_filename_errors_l1_b():
     ("swxsoc_MERIT_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03"),
     ("swxsoc_SPANI_l0_2026337-065422_v11.bin", "spani", "2026-12-03T06:54:22"),
     ("swxsoc_MERIT_VC_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03"),
-    ("swxsoc_SPANI_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03")
+    ("swxsoc_SPANI_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03"),
+    ("SPANI_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03"),
+    ("spani_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03")
 ])
 def test_parse_l0_filenames(filename, instrument, time):
     """Testing parsing of MOC-generated level 0 files."""
-    # Set SWXSOC_MISSION to 'hermes' mission
-    os.environ["SWXSOC_MISSION"] = "swxsoc"
+    # Set SWXSOC_MISSION to 'swxsoc' mission
+    mission_name = "swxsoc"
+    os.environ["SWXSOC_MISSION"] = mission_name
     result = util.parse_science_filename(filename)
     assert result['instrument'] == instrument
     assert result['level'] == "l0"
     assert result['version'] is None
     assert result['time'] == Time(time)
+    assert result['mission'] is mission_name
 # fmt: on
 
 

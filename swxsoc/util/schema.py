@@ -1239,7 +1239,9 @@ class SWXSchema(CdfAttributeManager):
                 version=version,
                 mode=mode,
             )
-            science_filename = science_filename.rstrip(util.FILENAME_EXTENSION)
+            science_filename = science_filename.rstrip(
+                swxsoc.config["mission"]["file_extension"]
+            )
         else:
             science_filename = data.meta[attr_name]
         return science_filename

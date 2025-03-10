@@ -295,7 +295,7 @@ def parse_science_filename(filepath: str) -> dict:
         swxsoc.log.debug(f"Time: {parsed_time}")
         # Turn the parsed time into a Time object
 
-        result["mission_name"] = mission_name
+        result["mission"] = mission_name
         result["instrument"] = instrument_name_found
         result["time"] = Time(parsed_time)
         result["level"] = "l0"

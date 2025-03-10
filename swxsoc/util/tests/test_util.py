@@ -319,7 +319,7 @@ def test_parse_l0_filenames(filename, instrument, time):
     assert result['level'] == "l0"
     assert result['version'] is None
     assert result['time'] == Time(time)
-    assert result['mission'] is mission_name
+    assert result['mission'] == mission_name
 # fmt: on
 
 

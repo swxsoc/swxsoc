@@ -882,7 +882,7 @@ def record_timeseries(
 
     This function requires AWS credentials with permission to write to the AWS Timestream database.
 
-    :param ts: A timeseries with column data to record.
+    :param ts: A timeseries with column data to record. Note that times are assumed to be in UTC.
     :type ts: TimeSeries
     :param ts_name: The name of the timeseries to record.
     :type ts_name: str
@@ -1217,7 +1217,7 @@ def query_annotations(
     Queries annotations within a specific timeframe with optional filters for tags, dashboard, and panel names.
 
     Args:
-        start_time (datetime): Start time of the query.
+        start_time (datetime): Start time of the query in UTC.
         end_time (Optional[datetime]): End time of the query; defaults to start_time if None.
         tags (Optional[List[str]]): List of tags to filter the annotations.
         limit (Optional[int]): Maximum number of annotations to retrieve.
@@ -1294,7 +1294,7 @@ def create_annotation(
     Creates a new annotation for a specified event or time period, with optional filtering by dashboard and panel names.
 
     Args:
-        start_time (datetime): Start time of the annotation.
+        start_time (datetime): Start time of the annotation in UTC.
         text (str): Annotation text to display.
         tags (List[str]): List of tags for categorizing the annotation.
         end_time (Optional[datetime]): End time of the annotation, if applicable.

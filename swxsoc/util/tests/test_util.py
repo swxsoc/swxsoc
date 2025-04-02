@@ -217,6 +217,21 @@ def test_parse_science_filename_output():
     assert util.parse_science_filename(f) == input
 
 
+@pytest.mark.parametrize(
+    "filename",
+    [
+        ("swxsoc_SPANI_VA_l0_2026215ERROR124603_v21.bin"),  # Bad time Value
+        ("swxsoc_FAKE_VA_l0_2026215-124603_v21.bin"),  # Bad Instrument Value
+    ],
+)
+def test_parse_science_filename_errors_l0(filename):
+    """Test for errors in l0 and above files"""
+    with pytest.raises(ValueError):
+        # wrong time name
+        f = ""
+        util.parse_science_filename(filename)
+
+
 def test_parse_science_filename_errors_l1():
     """Test for errors in l1 and above files"""
     with pytest.raises(ValueError):
@@ -234,8 +249,9 @@ good_instrument = "eea"
 good_level = "l1"
 good_version = "1.3.4"
 
-
 # fmt: off
+
+
 @pytest.mark.parametrize(
     "instrument,time,level,version",
     [
@@ -283,16 +299,66 @@ def test_science_filename_errors_l1_b():
 
 
 # fmt: off
-@pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
-    ("swxsoc_NEM_l0_2024094-124603_v01.bin", "nemisis", "2024-04-03T12:46:03", "l0", "01", None),
-    ("swxsoc_EEA_l0_2026337-124603_v11.bin", "eea", "2026-12-03T12:46:03", "l0", "11", None),
-    ("swxsoc_MERIT_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03", "l0", "21", None),
-    ("swxsoc_SPANI_l0_2026337-065422_v11.bin", "spani", "2026-12-03T06:54:22", "l0", "11", None),
-    ("swxsoc_MERIT_VC_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03", "l0", "21", "VC"),
-    ("swxsoc_SPANI_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03", "l0", "21", "VA")
+@pytest.mark.parametrize("filename,instrument,time", [
+    ("swxsoc_NEM_l0_2024094-124603_v01.bin", "nemisis", "2024-04-03T12:46:03"),
+    ("swxsoc_EEA_l0_2026337-124603_v11.bin", "eea", "2026-12-03T12:46:03"),
+    ("swxsoc_MERIT_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03"),
+    ("swxsoc_SPANI_l0_2026337-065422_v11.bin", "spani", "2026-12-03T06:54:22"),
+    ("swxsoc_MERIT_VC_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03"),
+    ("swxsoc_SPANI_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03"),
+    ("SPANI_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03"),
+    ("spani_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03")
 ])
-def test_parse_l0_filenames(filename, instrument, time, level, version, mode):
+def test_parse_l0_filenames(filename, instrument, time):
     """Testing parsing of MOC-generated level 0 files."""
+    # Set SWXSOC_MISSION to 'swxsoc' mission
+    mission_name = "swxsoc"
+    os.environ["SWXSOC_MISSION"] = mission_name
+    result = util.parse_science_filename(filename)
+    assert result['instrument'] == instrument
+    assert result['level'] == "l0"
+    assert result['version'] is None
+    assert result['time'] == Time(time)
+    assert result['mission'] == mission_name
+# fmt: on
+
+
+# fmt: off
+@pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
+    ("hermes_NEM_l0_2024094-124603_v01.bin", "nemisis", "2024-04-03T12:46:03", "l0", None, None),
+    ("hermes_EEA_l0_2026337-124603_v11.bin", "eea", "2026-12-03T12:46:03", "l0", None, None),
+])
+def test_parse_env_var_configured(filename, instrument, time, level, version, mode):
+    """Testing parsing of MOC-generated level 0 files."""
+    # Set SWXSOC_MISSION to 'hermes' mission
+    os.environ["SWXSOC_MISSION"] = "hermes"
+
+    swxsoc._reconfigure()
+    result = util.parse_science_filename(filename)
+    assert result['instrument'] == instrument
+    assert result['level'] == level
+    assert result['version'] == version
+    assert result['time'] == Time(time)
+    assert result['mode'] == mode
+# fmt: on
+
+# fmt: off
+
+
+@pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
+    ("padre_MEDDEA_l0_2025131-192102_v3.bin", "meddea", "2025-05-11 19:21:02", "l0", None, None),
+    ("padre_MEDDEA_apid13_2025131-192102.bin", "meddea", "2025-05-11 19:21:02", "l0", None, None),
+    ("padre_meddea_l0test_light_20250131T192102_v0.3.0.bin", "meddea", "2025-01-31T19:21:02.000", "l0", None, None),
+    ("padre_sharp_ql_20230430T000000_v0.0.1.fits", "sharp", "2023-04-30T00:00:00.000", "ql", "0.0.1", None),
+
+
+])
+def test_parse_padre_science_files(filename, instrument, time, level, version, mode):
+    """Testing parsing of MOC-generated level 0 files."""
+    # Set SWXSOC_MISSION to 'hermes' mission
+    os.environ["SWXSOC_MISSION"] = "padre"
+
+    swxsoc._reconfigure()
     result = util.parse_science_filename(filename)
     assert result['instrument'] == instrument
     assert result['level'] == level
@@ -304,10 +370,10 @@ def test_parse_l0_filenames(filename, instrument, time, level, version, mode):
 
 # fmt: off
 @pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
-    ("hermes_NEM_l0_2024094-124603_v01.bin", "nemisis", "2024-04-03T12:46:03", "l0", "01", None),
-    ("hermes_EEA_l0_2026337-124603_v11.bin", "eea", "2026-12-03T12:46:03", "l0", "11", None),
-    ("hermes_MERIT_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03", "l0", "21", None),
-    ("hermes_SPANI_l0_2026337-065422_v11.bin", "spani", "2026-12-03T06:54:22", "l0", "11", None),
+    ("hermes_NEM_l0_2024094-124603_v01.bin", "nemisis", "2024-04-03T12:46:03", "l0", None, None),
+    ("hermes_EEA_l0_2026337-124603_v11.bin", "eea", "2026-12-03T12:46:03", "l0", None, None),
+    ("hermes_MERIT_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03", "l0", None, None),
+    ("hermes_SPANI_l0_2026337-065422_v11.bin", "spani", "2026-12-03T06:54:22", "l0", None, None),
     (f"hermes_eea_l1_{time_formatted}_v1.2.3.cdf", "eea", "2024-04-06T12:06:21", "l1", "1.2.3", None),
     (f"hermes_mrt_l2_{time_formatted}_v1.2.5.cdf", "merit", "2024-04-06T12:06:21", "l2", "1.2.5", None),
 ])
@@ -349,10 +415,10 @@ def test_create_env_var_configured(instrument, time, level, version, result):
 
 # fmt: off
 @pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
-    ("mission_INS1_l0_2024094-124603_v01.bin", "instrument1", "2024-04-03T12:46:03", "l0", "01", None),
-    ("mission_INS1_l0_2026337-124603_v11.bin", "instrument1", "2026-12-03T12:46:03", "l0", "11", None),
-    ("mission_INS2_l0_2026215-124603_v21.bin", "instrument2", "2026-08-03T12:46:03", "l0", "21", None),
-    ("mission_INS2_l0_2026337-065422_v11.bin", "instrument2", "2026-12-03T06:54:22", "l0", "11", None),
+    ("mission_INS1_l0_2024094-124603_v01.bin", "instrument1", "2024-04-03T12:46:03", "l0", None, None),
+    ("mission_INS1_l0_2026337-124603_v11.bin", "instrument1", "2026-12-03T12:46:03", "l0", None, None),
+    ("mission_INS2_l0_2026215-124603_v21.bin", "instrument2", "2026-08-03T12:46:03", "l0", None, None),
+    ("mission_INS2_l0_2026337-065422_v11.bin", "instrument2", "2026-12-03T06:54:22", "l0", None, None),
     (f"mission_ins1_l1_{time_formatted}_v1.2.3.txt", "instrument1", "2024-04-06T12:06:21", "l1", "1.2.3", None),
     (f"mission_ins2_l2_{time_formatted}_v1.2.5.txt", "instrument2", "2024-04-06T12:06:21", "l2", "1.2.5", None),
 ])
@@ -461,7 +527,7 @@ def test_search_all_attr():
     for result in results:
         assert result["instrument"] == "eea"
         assert result["level"] == "l0"
-        assert result["version"] == "01"
+        assert result["version"] is None
         assert result["time"] == Time("2024-04-03T12:46:03")
 
     # Test search with a query for specific instrument, level, and time

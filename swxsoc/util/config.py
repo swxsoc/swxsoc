@@ -76,6 +76,11 @@ def load_config():
         "inst_targetnames": [
             inst["targetname"] for inst in mission_data.get("instruments", [])
         ],
+        "extra_inst_names": [
+            inst["extra_inst_names"]
+            for inst in mission_data.get("instruments", [])
+            if "extra_inst_names" in inst
+        ],
     }
 
     config["mission"].update(
@@ -95,6 +100,12 @@ def load_config():
                 zip(
                     config["mission"]["inst_names"],
                     config["mission"]["inst_targetnames"],
+                )
+            ),
+            "inst_to_extra_inst_names": dict(
+                zip(
+                    config["mission"]["inst_names"],
+                    config["mission"]["extra_inst_names"],
                 )
             ),
         }

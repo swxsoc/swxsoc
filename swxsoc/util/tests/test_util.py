@@ -348,6 +348,10 @@ def test_parse_env_var_configured(filename, instrument, time, level, version, mo
 @pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
     ("padre_MEDDEA_l0_2025131-192102_v3.bin", "meddea", "2025-05-11 19:21:02", "l0", None, None),
     ("padre_MEDDEA_apid13_2025131-192102.bin", "meddea", "2025-05-11 19:21:02", "l0", None, None),
+    ("padreSP11_250331134058.dat", "sharp", "2025-03-31 13:40:58", "l0", None, None),
+    ("padreSP11_250331134058.idx", "sharp", "2025-03-31 13:40:58", "l0", None, None),
+    ("padreMDA0_000107034739.dat", "meddea", "2000-01-07 03:47:39", "l0", None, None),
+    ("padreMDA0_000107034739.idx", "meddea", "2000-01-07 03:47:39", "l0", None, None),
     ("padre_meddea_l0test_light_20250131T192102_v0.3.0.bin", "meddea", "2025-01-31T19:21:02.000", "l0", None, None),
     ("padre_sharp_ql_20230430T000000_v0.0.1.fits", "sharp", "2023-04-30T00:00:00.000", "ql", "0.0.1", None),
 

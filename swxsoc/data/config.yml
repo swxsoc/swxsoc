@@ -61,10 +61,15 @@ missions_data:
         shortname: meddea
         fullname: MeDDEA
         targetname: MEDDEA
+        extra_inst_names:
+          - mda
       - name: sharp
         shortname: sharp
         fullname:  Solar HARd X-ray Polarimeter
         targetname: SHARP
+        extra_inst_names:
+          - sp
+          - shp
 
 logger:
   # Threshold for the logging messages. Logging messages that are less severe

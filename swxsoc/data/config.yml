@@ -63,6 +63,7 @@ missions_data:
         targetname: MEDDEA
         extra_inst_names:
           - mda
+          - mdu
       - name: sharp
         shortname: sharp
         fullname:  Solar HARd X-ray Polarimeter

@@ -18,7 +18,6 @@ from ndcube import NDCube, NDCollection
 import swxsoc
 from swxsoc.util.schema import SWXSchema
 from swxsoc.util.exceptions import warn_user
-from swxsoc.util.util import VALID_DATA_LEVELS
 
 __all__ = ["SWXData"]
 
@@ -358,9 +357,9 @@ class SWXData:
 
         # Check the Optional Data Level
         if data_level:
-            if data_level not in VALID_DATA_LEVELS:
+            if data_level not in swxsoc.config["mission"]["valid_data_levels"]:
                 raise ValueError(
-                    f"Level, {data_level}, is not recognized. Must be one of {VALID_DATA_LEVELS[1:]}."
+                    f"Level, {data_level}, is not recognized. Must be one of {swxsoc.config['mission']['valid_data_levels']}."
                 )
             # Set the Property
             if data_level != "ql":

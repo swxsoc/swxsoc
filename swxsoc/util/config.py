@@ -66,6 +66,9 @@ def load_config():
             else file_extension
         ),
         "mission_name": selected_mission,
+        "valid_data_levels": mission_data.get(
+            "valid_data_levels", ["raw", "l0", "l1", "ql", "l2", "l3", "l4"]
+        ),
         "inst_names": [inst["name"] for inst in mission_data.get("instruments", [])],
         "inst_shortnames": [
             inst["shortname"] for inst in mission_data.get("instruments", [])

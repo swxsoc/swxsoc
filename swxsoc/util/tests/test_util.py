@@ -262,7 +262,7 @@ good_version = "1.3.4"
         (good_instrument, good_time, good_level, "a.5.6"),
         (good_instrument, good_time, "la", good_version),  # wrong level specifications
         (good_instrument, good_time, "squirrel", good_version),
-        (good_instrument, good_time, "l0", good_version),
+        (good_instrument, good_time, "0l", good_version),
         ("potato", good_time, good_level, good_version),  # wrong instrument names
         ("eeb", good_time, good_level, good_version),
         ("fpi", good_time, good_level, good_version),

@@ -345,49 +345,6 @@ def parse_science_filename(filepath: str) -> dict:
 
     filename = os.path.basename(filepath)
     file_name, file_ext = os.path.splitext(filename)
-    #  reverse the dictionary to look up instrument name from the short name
-    from_shortname = {
-        v: k for k, v in swxsoc.config["mission"]["inst_to_shortname"].items()
-    }
-
-    # Enables flexible parsing for file formats beyond the mission's default `file_extension`
-    # (e.g., CDF, FITS) and allows for more adaptable parsing of the mission name,
-    # instrument name, and timestamp.
-    if file_ext == swxsoc.config["mission"]["file_extension"]:
-        filename_components = file_name.split("_")
-
-        if filename_components[0] != swxsoc.config["mission"]["mission_name"]:
-            raise ValueError(
-                f"File {filename} not recognized. Not a valid mission name."
-            )
-
-        if filename_components[1] not in swxsoc.config["mission"]["inst_shortnames"]:
-            raise ValueError(
-                "File {filename} not recognized. Not a valid instrument name."
-            )
-
-        result["time"] = Time.strptime(filename_components[-2], TIME_FORMAT)
-
-        # mode and descriptor are optional so need to figure out if one or both or none is included
-        if (
-            filename_components[2][0:2]
-            not in swxsoc.config["mission"]["valid_data_levels"]
-        ):
-            # if the first component is not data level then it is mode and the following is data level
-            result["mode"] = filename_components[2]
-            result["level"] = filename_components[3].replace("test", "")
-            if "test" in filename_components[3]:
-                result["test"] = True
-            if len(filename_components) == 7:
-                result["descriptor"] = filename_components[4]
-        else:
-            result["level"] = filename_components[2].replace("test", "")
-            if "test" in filename_components[2]:
-                result["test"] = True
-            if len(filename_components) == 6:
-                result["descriptor"] = filename_components[3]
-        result["instrument"] = from_shortname[filename_components[1]]
-        result["version"] = filename_components[-1][1:]  # remove the v
 
     if file_ext == config["file_extension"]:
         components = file_name.split("_")

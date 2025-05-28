@@ -205,7 +205,7 @@ def _parse_standard_format(filename_components: list, config: dict) -> dict:
     result["test"] = (
         "test" in filename_components[2] or "test" in filename_components[3]
     )
-    if filename_components[2][:2] not in VALID_DATA_LEVELS:
+    if filename_components[2][:2] not in swxsoc.config["mission"]["valid_data_levels"]:
         result["mode"] = filename_components[2]
         result["level"] = filename_components[3].replace("test", "")
         if len(filename_components) == 7:

@@ -346,15 +346,15 @@ def test_parse_env_var_configured(filename, instrument, time, level, version, mo
 
 
 @pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
-    ("padre_MEDDEA_l0_2025131-192102_v3.bin", "meddea", "2025-05-11 19:21:02", "l0", None, None),
-    ("padre_MEDDEA_apid13_2025131-192102.bin", "meddea", "2025-05-11 19:21:02", "l0", None, None),
-    ("padreSP11_250331134058.dat", "sharp", "2025-03-31 13:40:58", "l0", None, None),
-    ("padreSP11_250331134058.idx", "sharp", "2025-03-31 13:40:58", "l0", None, None),
-    ("padreMDA0_000107034739.dat", "meddea", "2000-01-07 03:47:39", "l0", None, None),
-    ("padreMDA0_000107034739.idx", "meddea", "2000-01-07 03:47:39", "l0", None, None),
-    ("padreMDU8_000107034739.dat", "meddea", "2000-01-07 03:47:39", "l0", None, None),
-    ("padreMDU8_000107034739.idx", "meddea", "2000-01-07 03:47:39", "l0", None, None),
-    ("padre_meddea_l0test_light_20250131T192102_v0.3.0.bin", "meddea", "2025-01-31T19:21:02.000", "l0", None, None),
+    ("padre_MEDDEA_l0_2025131-192102_v3.bin", "meddea", "2025-05-11 19:21:02", "raw", None, None),
+    ("padre_MEDDEA_apid13_2025131-192102.bin", "meddea", "2025-05-11 19:21:02", "raw", None, None),
+    ("padreSP11_250331134058.dat", "sharp", "2025-03-31 13:40:58", "raw", None, None),
+    ("padreSP11_250331134058.idx", "sharp", "2025-03-31 13:40:58", "raw", None, None),
+    ("padreMDA0_000107034739.dat", "meddea", "2000-01-07 03:47:39", "raw", None, None),
+    ("padreMDA0_000107034739.idx", "meddea", "2000-01-07 03:47:39", "raw", None, None),
+    ("padreMDU8_000107034739.dat", "meddea", "2000-01-07 03:47:39", "raw", None, None),
+    ("padreMDU8_000107034739.idx", "meddea", "2000-01-07 03:47:39", "raw", None, None),
+    ("padre_meddea_l0test_light_20250131T192102_v0.3.0.bin", "meddea", "2025-01-31T19:21:02.000", "raw", None, None),
     ("padre_sharp_ql_20230430T000000_v0.0.1.fits", "sharp", "2023-04-30T00:00:00.000", "ql", "0.0.1", None),
 
 
@@ -421,10 +421,10 @@ def test_create_env_var_configured(instrument, time, level, version, result):
 
 # fmt: off
 @pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
-    ("mission_INS1_l0_2024094-124603_v01.bin", "instrument1", "2024-04-03T12:46:03", "l0", None, None),
-    ("mission_INS1_l0_2026337-124603_v11.bin", "instrument1", "2026-12-03T12:46:03", "l0", None, None),
-    ("mission_INS2_l0_2026215-124603_v21.bin", "instrument2", "2026-08-03T12:46:03", "l0", None, None),
-    ("mission_INS2_l0_2026337-065422_v11.bin", "instrument2", "2026-12-03T06:54:22", "l0", None, None),
+    ("mission_INS1_l0_2024094-124603_v01.bin", "instrument1", "2024-04-03T12:46:03", "raw", None, None),
+    ("mission_INS1_l0_2026337-124603_v11.bin", "instrument1", "2026-12-03T12:46:03", "raw", None, None),
+    ("mission_INS2_l0_2026215-124603_v21.bin", "instrument2", "2026-08-03T12:46:03", "raw", None, None),
+    ("mission_INS2_l0_2026337-065422_v11.bin", "instrument2", "2026-12-03T06:54:22", "raw", None, None),
     (f"mission_ins1_l1_{time_formatted}_v1.2.3.txt", "instrument1", "2024-04-06T12:06:21", "l1", "1.2.3", None),
     (f"mission_ins2_l2_{time_formatted}_v1.2.5.txt", "instrument2", "2024-04-06T12:06:21", "l2", "1.2.5", None),
 ])

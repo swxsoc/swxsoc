@@ -361,7 +361,7 @@ def parse_science_filename(filepath: str) -> dict:
                     instrument_name.lower(), instrument_name
                 ),
                 "time": parsed_time,
-                "level": "l0",
+                "level": config["valid_data_levels"][0],  # Default to first level
             }
         )
 

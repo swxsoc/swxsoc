@@ -47,8 +47,15 @@ __all__ = [
     "_record_dimension_timestream",
 ]
 
-TIME_FORMAT_L0 = "%Y%j-%H%M%S"
-TIME_FORMAT = "%Y%m%dT%H%M%S"
+# Constants
+L0_TIME_FORMATS = [
+    "%Y%m%dT%H%M%S",  # YYYYMMDDTHHMMSS
+    "%Y%j-%H%M%S",  # YYYYJJJ-HHMMSS
+    "%Y%j_%H%M%S",  # YYYYJJJ_HHMMSS
+    "%y%m%d%H%M%S",  # YYMMDDHHMMSS
+]
+
+TIME_FORMAT = "%Y%m%dT%H%M%S"  # YYYYMMDDTHHMMSS
 
 
 def create_science_filename(
@@ -137,28 +144,195 @@ def create_science_filename(
     return filename + swxsoc.config["mission"]["file_extension"]
 
 
-def parse_science_filename(filepath: str) -> dict:
+def _get_instrument_mapping(config: dict) -> dict:
     """
-    Parses a science filename into its consitutient properties (instrument, mode, test, time, level, version, descriptor).
+    Maps instrument shortnames to their full names and additional names.
+    This is used for parsing filenames and ensuring consistency in naming.
 
     Parameters
     ----------
-    filepath: `str`
-        Fully specificied filepath of an input file
+    config : dict
+        The configuration dictionary containing mission and instrument details.
 
     Returns
     -------
-    result : `dict`
-        A dictionary with each property.
+    dict
+        A dictionary mapping shortnames to full names and additional names.
+    """
+    return {
+        **{s: m for m, s in config["inst_to_shortname"].items()},
+        **{s: m for m, lst in config["inst_to_extra_inst_names"].items() for s in lst},
+    }
+
+
+def _parse_standard_format(filename_components: list, config: dict) -> dict:
+    """
+    Parses the standard filename format and extracts relevant fields.
+    Handles the following format:
+    {mission}_{inst}_{mode}_{level}{test}_{descriptor}_{time}_v{version}.{extension}
+
+    Parameters
+    ----------
+    filename_components : list
+        The components of the filename split by "_".
+    config : dict
+        The configuration dictionary containing mission and instrument details.
+
+    Returns
+    -------
+    dict
+        A dictionary containing the parsed fields.
 
     Raises
     ------
-    ValueError: If the file's mission name is not "swxsoc"
-    ValueError: If the file's instreument name is not one of the mission's instruments
-    ValueError: If the data level >0 for packet files
-    ValueError: If not a CDF File
+    ValueError
+        If the filename does not match the expected format or contains invalid values.
     """
 
+    result = {}
+    mission_name = config["mission_name"]
+    shortnames = config["inst_shortnames"]
+
+    if filename_components[0] != mission_name:
+        raise ValueError(f"Not a valid mission name: {filename_components[0]}")
+    if filename_components[1] not in shortnames:
+        raise ValueError(f"Invalid instrument shortname: {filename_components[1]}")
+
+    result["instrument"] = _get_instrument_mapping(config)[filename_components[1]]
+    result["time"] = Time.strptime(filename_components[-2], TIME_FORMAT)
+
+    # Handle optional fields: mode, test, descriptor
+    result["test"] = (
+        "test" in filename_components[2] or "test" in filename_components[3]
+    )
+    if filename_components[2][:2] not in VALID_DATA_LEVELS:
+        result["mode"] = filename_components[2]
+        result["level"] = filename_components[3].replace("test", "")
+        if len(filename_components) == 7:
+            result["descriptor"] = filename_components[4]
+    else:
+        result["level"] = filename_components[2].replace("test", "")
+        if len(filename_components) == 6:
+            result["descriptor"] = filename_components[3]
+
+    result["version"] = filename_components[-1].lstrip("v")
+    return result
+
+
+def _extract_instrument_name(filename: str, config: dict) -> str:
+    """
+    Extracts the instrument name from the filename using regex patterns.
+
+    Parameters
+    ----------
+    filename : str
+        The filename from which to extract the instrument name.
+    config : dict
+        The configuration dictionary containing mission and instrument details.
+
+    Returns
+    -------
+    str
+        The extracted instrument name.
+
+    Raises
+    ------
+    ValueError
+        If no valid instrument name is found in the filename.
+    """
+
+    all_inst_names = [
+        name.lower()
+        for name in (
+            config["inst_names"]
+            + config["inst_shortnames"]
+            + [n for sublist in config["extra_inst_names"] for n in sublist]
+        )
+    ]
+    mission_name = config["mission_name"].lower()
+    pattern = re.compile(
+        rf"(?:^|[_\-.]|{mission_name})("
+        + "|".join(re.escape(name) for name in all_inst_names)
+        + r"(?:\d+)?)(?:[_\-.]|$|\d)",
+        re.IGNORECASE,
+    )
+    matches = pattern.findall(filename.lower())
+    if not matches:
+        raise ValueError(f"No valid instrument name found in {filename}")
+    if len(matches) > 1:
+        raise ValueError(f"Multiple instrument names found: {matches}")
+    return matches[0]
+
+
+def _extract_time(filename: str) -> Time:
+    """
+    Extracts time from the filename using regex patterns.
+    Handles various formats including ISO 8601 and legacy L0 formats.
+
+    Parameters
+    ----------
+    filename : str
+        The filename from which to extract the time.
+
+    Returns
+    -------
+    Time
+        The extracted time as an astropy Time object.
+
+    Raises
+    ------
+    ValueError
+        If no recognizable time format is found in the filename.
+    """
+
+    TIME_PATTERNS = [
+        re.compile(r"\d{8}[-_ T]?\d{6}"),  # YYYYMMDD-HHMMSS
+        re.compile(r"\d{4}-\d{2}-\d{2}[-_ T]\d{2}:\d{2}:\d{2}"),  # ISO 8601
+        re.compile(r"\d{7}[-_]\d{6}"),  # Legacy L0 formats
+        re.compile(r"\d{12}"),  # YYMMDDhhmmss
+        re.compile(r"\d{8}T\d{6}"),  # YYYYMMDDTHHMMSS (added this line)
+    ]
+
+    for pattern in TIME_PATTERNS:
+        matches = pattern.search(filename)  # Search for time patterns
+        if matches:
+            time_str = matches.group(0)
+            # Try legacy L0 formats first
+            for fmt in L0_TIME_FORMATS:
+                try:
+                    return Time(datetime.strptime(time_str, fmt))
+                except ValueError:
+                    continue
+            # Fall back to ISO 8601 and others
+            try:
+                return Time(sunpy.parse_time(time_str))
+            except Exception:
+                continue
+    raise ValueError(f"No recognizable time format in {filename}")
+
+
+def parse_science_filename(filepath: str) -> dict:
+    """
+    Parses a science filename into its constituent properties.
+
+    Parameters
+    ----------
+    filepath : str
+        Fully qualified filepath of an input file.
+
+    Returns
+    -------
+    dict
+        Parsed fields such as instrument, mode, test, time, level, version, and descriptor.
+
+    Raises
+    ------
+    ValueError
+        If mission name or instrument is not recognized, or time format is invalid.
+    """
+    import swxsoc
+
+    config = swxsoc.config["mission"]
     result = {
         "instrument": None,
         "mode": None,
@@ -215,90 +389,24 @@ def parse_science_filename(filepath: str) -> dict:
         result["instrument"] = from_shortname[filename_components[1]]
         result["version"] = filename_components[-1][1:]  # remove the v
 
+    if file_ext == config["file_extension"]:
+        components = file_name.split("_")
+        parsed = _parse_standard_format(components, config)
+        result.update(parsed)
     else:
-        # Mission name should be picked up from the config (either env or config file)
-        mission_config = swxsoc.config["mission"]
-        mission_name = mission_config["mission_name"].lower()
-        inst_names = [
-            name.lower()
-            for name in mission_config["inst_names"] + mission_config["inst_shortnames"]
-        ]
-
-        swxsoc.log.debug(f"Configured mission name: {mission_name}")
-        swxsoc.log.debug(f"Configured instrument names: {inst_names}")
-
-        # Compile regex patterns
-        inst_pattern = re.compile(
-            r"(?:^|[_\-.])(" + "|".join(inst_names) + r")(?:[_\-.]|$)", re.IGNORECASE
+        instrument_name = _extract_instrument_name(filename, config)
+        parsed_time = _extract_time(filename)
+        from_shortname = _get_instrument_mapping(config)
+        result.update(
+            {
+                "mission": config["mission_name"].lower(),
+                "instrument": from_shortname.get(
+                    instrument_name.lower(), instrument_name
+                ),
+                "time": parsed_time,
+                "level": "l0",
+            }
         )
-        time_patterns = [
-            re.compile(
-                r"\d{8}[-_ T]?\d{6}"
-            ),  # YYYYMMDD-HHMMSS, YYYYMMDD_HHMMSS, YYYYMMDD HHMMSS
-            re.compile(
-                r"\d{4}-\d{2}-\d{2}[-_ T]\d{2}:\d{2}:\d{2}"
-            ),  # ISO 8601 with variants
-            re.compile(r"\d{7}-\d{6}"),  # Legacy L0 format (YYYYJJJ-HHMMSS)
-            re.compile(r"\d{7}_\d{6}"),  # Legacy L0 format v2 (YYYYJJJ_HHMMSS)
-        ]
-
-        # Match instrument name
-        inst_matches = inst_pattern.findall(filename.lower())
-        if not inst_matches:
-            raise ValueError(
-                f"File {filename} not recognized. No valid instrument name found."
-            )
-        elif len(inst_matches) > 1:
-            raise ValueError(
-                f"File {filename} not recognized. Multiple instrument names found: {inst_matches}."
-            )
-
-        instrument_match_found = inst_matches[0].lower()
-        instrument_name_found = from_shortname.get(
-            instrument_match_found, instrument_match_found
-        )
-
-        swxsoc.log.debug(f"Instrument name: {instrument_name_found}")
-        TIME_FORMAT_L0 = "%Y%j-%H%M%S"
-        TIME_FORMAT_L0_v2 = "%Y%j_%H%M%S"
-
-        # Match time
-        parsed_time = None
-        for pattern in time_patterns:
-            time_matches = pattern.findall(filename)
-            if time_matches:
-                try:
-                    parsed_time = sunpy.time.parse_time(time_matches[0])
-                    swxsoc.log.debug(f"Parsed time: {parsed_time}")
-                except ValueError as e:
-                    swxsoc.log.debug(f"Error parsing time {time_matches[0]}: {e}")
-
-                try:
-                    parsed_time = datetime.strptime(time_matches[0], TIME_FORMAT_L0)
-                    swxsoc.log.debug(f"Parsed time: {parsed_time}")
-                except ValueError as e:
-                    swxsoc.log.debug(f"Error parsing time {time_matches[0]}: {e}")
-                try:
-                    parsed_time = datetime.strptime(time_matches[0], TIME_FORMAT_L0_v2)
-                    swxsoc.log.debug(f"Parsed time: {parsed_time}")
-                except ValueError as e:
-                    swxsoc.log.debug(f"Error parsing time {time_matches[0]}: {e}")
-
-                if parsed_time is not None:
-                    break
-
-        if parsed_time is None:
-            raise ValueError(
-                f"File {filename} does not contain a recognizable time format."
-            )
-
-        swxsoc.log.debug(f"Time: {parsed_time}")
-        # Turn the parsed time into a Time object
-
-        result["mission"] = mission_name
-        result["instrument"] = instrument_name_found
-        result["time"] = Time(parsed_time)
-        result["level"] = "l0"
 
     return result
 

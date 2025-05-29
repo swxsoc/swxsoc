@@ -34,7 +34,7 @@ dependencies = [
   'ndcube>=2.2.0',
   'parfive==2.1.0',
   'pyyaml>=5.3.1',
-  'boto3==1.35.26'
+  'boto3>=1.35.26'
 ]
 
 [project.urls]

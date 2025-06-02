@@ -17,6 +17,12 @@ selected_mission: swxsoc
 missions_data:
   swxsoc:
     file_extension: cdf
+    valid_data_levels:
+      - l0
+      - ql
+      - l1
+      - l2
+      - l3
     instruments:
       - name: eea
         shortname: eea
@@ -37,6 +43,12 @@ missions_data:
 
   hermes:
     file_extension: cdf
+    valid_data_levels:
+      - l0
+      - l1
+      - ql
+      - l2
+      - l3
     instruments:
       - name: eea
         shortname: eea
@@ -56,6 +68,13 @@ missions_data:
         targetname: SPANI
   padre:
     file_extension: fits
+    valid_data_levels:
+      - raw
+      - l0
+      - l1
+      - ql
+      - l2
+      - l3
     instruments:
       - name: meddea
         shortname: meddea

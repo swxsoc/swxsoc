@@ -34,7 +34,6 @@ __all__ = [
     "create_science_filename",
     "parse_science_filename",
     "SWXSOCClient",
-    "VALID_DATA_LEVELS",
     "SearchTime",
     "Level",
     "Instrument",
@@ -46,7 +45,6 @@ __all__ = [
     "create_annotation",
     "remove_annotation_by_id",
     "_record_dimension_timestream",
-    "VALID_DATA_LEVELS",
 ]
 
 # Constants
@@ -58,7 +56,6 @@ L0_TIME_FORMATS = [
 ]
 
 TIME_FORMAT = "%Y%m%dT%H%M%S"  # YYYYMMDDTHHMMSS
-VALID_DATA_LEVELS = ["l0", "l1", "ql", "l2", "l3", "l4"]
 
 
 def create_science_filename(
@@ -116,9 +113,9 @@ def create_science_filename(
         raise ValueError(
             f"Instrument, {instrument}, is not recognized. Must be one of {swxsoc.config['mission']['inst_names']}."
         )
-    if level not in VALID_DATA_LEVELS[1:]:
+    if level not in swxsoc.config["mission"]["valid_data_levels"]:
         raise ValueError(
-            f"Level, {level}, is not recognized. Must be one of {VALID_DATA_LEVELS[1:]}."
+            f"Level, {level}, is not recognized. Must be one of {swxsoc.config['mission']['valid_data_levels']}."
         )
     # check that version is in the right format with three parts
     if len(version.split(".")) != 3:
@@ -208,7 +205,7 @@ def _parse_standard_format(filename_components: list, config: dict) -> dict:
     result["test"] = (
         "test" in filename_components[2] or "test" in filename_components[3]
     )
-    if filename_components[2][:2] not in VALID_DATA_LEVELS:
+    if filename_components[2][:2] not in swxsoc.config["mission"]["valid_data_levels"]:
         result["mode"] = filename_components[2]
         result["level"] = filename_components[3].replace("test", "")
         if len(filename_components) == 7:
@@ -364,7 +361,7 @@ def parse_science_filename(filepath: str) -> dict:
                     instrument_name.lower(), instrument_name
                 ),
                 "time": parsed_time,
-                "level": "l0",
+                "level": config["valid_data_levels"][0],  # Default to first level
             }
         )
 
@@ -754,10 +751,10 @@ class SWXSOCClient(BaseClient):
 
         if levels is not None and len(levels) > 0:
             for level in levels:
-                if level not in VALID_DATA_LEVELS:
+                if level not in swxsoc.config["mission"]["valid_data_levels"]:
                     raise ValueError(f"Invalid data level: {level}")
         else:
-            levels = VALID_DATA_LEVELS
+            levels = swxsoc.config["mission"]["valid_data_levels"]
 
         if start_time is None:
             start_time = "2000-01-01"

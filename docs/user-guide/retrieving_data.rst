@@ -147,4 +147,4 @@ Below is an example demonstrating how to download data using the `~swxsoc.util.u
 
     # Start the download
     dl.download()
-    >>> Files Downloaded: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:00<00:00,  2.59file/s]
+    >>> Files Downloaded: 100% 2/2 [00:00<00:00,  2.59file/s]

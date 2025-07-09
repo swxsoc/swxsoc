@@ -4,48 +4,71 @@
 Retrieving and Downloading Data
 **************************************
 
-The `~swxsoc.util.data_access.SWXSOCClient` class in the `swxsoc` package is a FIDO client used for querying and downloading data from the SWxSOC buckets. Below are some examples demonstrating how to use this client for searching and downloading data.
+
+
+The SWxSOC package provides two main FIDO-compatible data access clients for searching and downloading data:
+
+- :class:`~swxsoc.util.data_access.S3DataClient`: For accessing data in the SWxSOC S3 buckets (requires AWS credentials and access).
+- :class:`~swxsoc.util.data_access.HTTPDataClient`: For accessing data in the public SWxSOC HTTP archive (no credentials required).
+
+
+Both clients provide the same interface for searching and downloading data, and can be used interchangeably in your code. 
+The S3 client is primarily intended for automated pipelines and users with AWS access, while the HTTP client is intended for researchers and the general public.
+
+
+**File Management:**
+
+SWxSOC data is distributed as CDF or FITS files. 
+Both clients allow you to search for and download these files. 
+You can use the returned results with your preferred CDF or FITS file readers (e.g., :mod:`spacepy.pycdf`, :mod:`astropy.io.fits`).
+
+
 
 .. warning::
+    To use the :class:`~swxsoc.util.data_access.S3DataClient`, you must have access to the SWxSOC S3 buckets and valid AWS credentials. 
+    If you do not have access, please contact the SWxSOC team. 
+    The :class:`~swxsoc.util.data_access.HTTPDataClient` does not require credentials and is suitable for most research and public use cases.
 
-    To download the data, you must have access to the SWxSOC buckets. If you do not have access, please contact the SWxSOC team. The client utilizes either presigned S3 URLs via the `boto3` package to download the data if you have AWS Credentials or it can download via S3 URLs if you have access to the SWxSOC buckets via allowed IP addresses.
+
 
 Attributes for Searching Data
 =============================
-The `~swxsoc.util.data_access.SWXSOCClient` class supports the following attributes for searching data:
+Both :class:`~swxsoc.util.data_access.S3DataClient` and :class:`~swxsoc.util.data_access.HTTPDataClient` support the following search attributes:
 
-- `Instrument`: The instrument name for the data (e.g., 'EEA', 'SHARP').
-- `Level`: The data level (e.g., 'L1', 'L2').
-- `SearchTime`: The time range for the data (e.g., `('2021-01-01T00:00:00Z', '2021-01-02T00:00:00Z')`).
-- `DevelopmentBucket`: Whether to search in the development bucket (e.g., `True`, `False`).
+- :class:`~swxsoc.util.data_access.Instrument`: The instrument name for the data (e.g., 'EEA', 'SHARP').
+- :class:`~swxsoc.util.data_access.Level`: The data level (e.g., 'L1', 'L2', 'raw', etc.).
+- :class:`~swxsoc.util.data_access.SearchTime`: The time range for the data (e.g., `('2021-01-01T00:00:00Z', '2021-01-02T00:00:00Z')`).
+- :class:`~swxsoc.util.data_access.DataType`: The data type or descriptor (e.g., 'housekeeping', 'spectrum', 'photon').
+- :class:`~swxsoc.util.data_access.DevelopmentBucket`: Whether to search in the development bucket (S3 only; e.g., `True`, `False`).
+
 
 Examples for Searching Data
 ===========================
-Below are some examples demonstrating how to search for data using the `SWXSOCClient` class for different attributes.
+Below are some examples demonstrating how to search for data using either the `S3DataClient` or `HTTPDataClient` classes. The interface is the same for both clients.
+
 
 
 Example 1: Search by a combination of Attributes
 ------------------------------------------------
 
-To search for data based on multiple attributes such as instrument, level, and time::
+To search for data based on multiple attributes such as instrument, level, time, and data type::
 
-    # Import necessary modules
-    from swxsoc.util.data_access import SWXSOCClient, AttrAnd, Instrument, Level, SearchTime, DevelopmentBucket
+    from swxsoc.util.data_access import S3DataClient, HTTPDataClient, AttrAnd, Instrument, Level, SearchTime, DataType, DevelopmentBucket
 
-    # Initialize the FIDO client
-    fido_client = SWXSOCClient()
+    # Choose your client:
+    # For S3 (requires AWS credentials):
+    client = S3DataClient()
+    # For HTTP (public archive):
+    # client = HTTPDataClient()
 
-    # Test search with a query for specific instrument, level, and time
-    query = AttrAnd(
-        [
-            SearchTime("2024-01-01", "2025-01-01"),
-            DevelopmentBucket(False),
-            Level("l0"),
-            Instrument("eea"),
-        ]
-    )
-    # Search for data
-    results = fido_client.search(query)
+    query = AttrAnd([
+        SearchTime("2024-01-01", "2025-01-01"),
+        DevelopmentBucket(False),  # Only for S3DataClient
+        Level("l0"),
+        Instrument("eea"),
+        DataType("housekeeping"),
+    ])
+    results = client.search(query)
     print(results)
     >>> instrument mode  test           time          level version ...   size       bucket                     etag                storage_class    last_modified   
     >>>                                                            ...   byte                                                                                       
@@ -54,19 +77,15 @@ To search for data based on multiple attributes such as instrument, level, and t
     >>> meddea None  True 2024-03-27T13:46:16.000    l1   0.1.0 ... 25920.0 dev-padre-meddea "4b9c15fc55e8d05dd9b8414e146c51c3"      STANDARD 2024-08-09 17:12:24
 
 Example 2: Search by a single Attribute
-----------------------------------------
+---------------------------------------
 
 To search for data based on a single attribute such as instrument::
 
-    # Import necessary modules
-    from swxsoc.util.data_access import SWXSOCClient, AttrAnd, Instrument
+    from swxsoc.util.data_access import HTTPDataClient, AttrAnd, Instrument
 
-    # Initialize the SWxSOC client
-    fido_client = util.SWXSOCClient()
-
-    # Test search with a query for specific instrument
+    client = HTTPDataClient()
     query = AttrAnd([Instrument("meddea")])
-    results = fido_client.search(query)
+    results = client.search(query)
     print(results)
     >>> instrument mode  test           time          level version ...   size      bucket                   etag                storage_class    last_modified   
     >>>                                                             ...   byte                                                                                    
@@ -79,19 +98,16 @@ To search for data based on a single attribute such as instrument::
     >>> meddea None False 2023-04-30T00:00:00.000    ql   0.0.1 ...      0.0 padre-meddea "d41d8cd98f00b204e9800998ecf8427e"      STANDARD 2024-07-01 15:08:05
 
 
+
 Example 3: Search all data
 --------------------------
 
 To search for all data::
 
-    # Import necessary modules
-    from swxsoc.util.data_access import SWXSOCClient
+    from swxsoc.util.data_access import HTTPDataClient
 
-    # Initialize the SWxSOC client
-    fido_client = SWXSOCClient()
-
-    # Test search with a query for all data
-    results = fido_client.search()
+    client = HTTPDataClient()
+    results = client.search()
     print(results)
     >>> instrument mode  test           time          level version ...   size      bucket                   etag                storage_class    last_modified   
     >>>                                                             ...   byte                                                                                    
@@ -109,42 +125,31 @@ To search for all data::
     >>> sharp  None False 2012-04-29T00:00:00.000    ql   0.0.1 ...      0.0 padre-sharp  "d41d8cd98f00b204e9800998ecf8427e"      STANDARD 2024-07-10 18:18:01
     >>> sharp  None False 2023-04-30T00:00:00.000    ql   0.0.1 ...      0.0 padre-sharp  "d41d8cd98f00b204e9800998ecf8427e"      STANDARD 2024-07-01 15:08:05
 
+
 Downloading Data
 ================
-The `~swxsoc.util.data_access.SWXSOCClient` class also supports downloading data from the SWxSOC buckets. Below are some examples demonstrating how to queue the download of data using this client. Note this requires the `~swxsoc.util.data_access.SWXSOCClient` class to have already been used to search for data as well as a parfive Downloader object to be initialized.
+Both `S3DataClient` and `HTTPDataClient` support downloading data using the same interface. Below is an example demonstrating how to queue and download data using either client. Note that you must first search for data and initialize a `parfive.Downloader` object.
 
 For more information on the `parfive` package, see the `parfive documentation <https://parfive.readthedocs.io/en/latest/api/parfive.Downloader.html>`_.
 
 Example to Download Data
 ------------------------
-Below is an example demonstrating how to download data using the `~swxsoc.util.data_access.SWXSOCClient` class::
 
-    # Import necessary modules
-    from swxsoc.util.data_access import SWXSOCClient, AttrAnd, Instrument, Level, SearchTime, DevelopmentBucket
+Below is an example demonstrating how to download data using the client class::
+
+    from swxsoc.util.data_access import HTTPDataClient, AttrAnd, Instrument, Level, SearchTime, DataType
     from parfive import Downloader
 
-    # Initialize the SWxSOC client
-    fido_client = SWXSOCClient()
+    client = HTTPDataClient()
+    query = AttrAnd([
+        SearchTime("2024-01-01", "2025-01-01"),
+        Level("l0"),
+        Instrument("eea"),
+        DataType("housekeeping"),
+    ])
+    results = client.search(query)
 
-    # Test search with a query for specific instrument, level, and time
-    query = AttrAnd(
-        [
-            SearchTime("2024-01-01", "2025-01-01"),
-            DevelopmentBucket(False),
-            Level("l0"),
-            Instrument("eea"),
-        ]
-    )
-
-    # Search for data
-    results = fido_client.search(query)
-
-    # Initialize a parfive Downloader object
     dl = Downloader()
-
-    # Queue the download of the data to specific path
-    fido_client.fetch(query_results=results, downloader=dl, path="path/to/download")
-
-    # Start the download
+    client.fetch(query_results=results, downloader=dl, path="path/to/download")
     dl.download()
     >>> Files Downloaded: 100% 2/2 [00:00<00:00,  2.59file/s]

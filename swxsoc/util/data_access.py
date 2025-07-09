@@ -24,65 +24,22 @@ import swxsoc
 from swxsoc.util.util import parse_science_filename
 
 __all__ = [
-    "SWXSOCClient",
+    "S3DataClient",
+    "HTTPDataClient",
     "SearchTime",
     "Level",
     "Instrument",
+    "DataType",
     "DevelopmentBucket",
 ]
 
 
-# ================================================================================================
-#                                  SWxSOC Data Sources (Strategy Pattern)
-# ================================================================================================
-
-from abc import ABC, abstractmethod
-
-
-class BaseDataSource(ABC):
+class AbsDataClient(BaseClient):
     """
-    Abstract base class for SWxSOC data sources.
-    """
+    Client for interacting with SWXSOC data. This client provides search and fetch functionality for SWXSOC data and is based on the sunpy BaseClient for FIDO.
 
-    @abstractmethod
-    def search(self, query: AttrAnd) -> QueryResponseTable:
-        """
-        Searches for data based on the given query.
+    For more information on the sunpy BaseClient, see: https://docs.sunpy.org/en/stable/generated/api/sunpy.net.base_client.BaseClient.html
 
-        Parameters
-        ----------
-        query : AttrAnd
-            The query object specifying search criteria.
-
-        Returns
-        -------
-        QueryResponseTable
-            A table containing the search results.
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def fetch(self, query_results, *, path, downloader, **kwargs):
-        """
-        Fetches the files based on query results and queues them up to be downloaded to the specified path by your downloader.
-
-        Note: The downloader must be an instance of parfive.Downloader
-
-        Parameters
-        ----------
-        query_results : list
-            The results of the search query.
-        path : str
-            The directory path where files should be saved.
-        downloader : Downloader
-            The parfive downloader instance used for fetching files.
-        """
-        raise NotImplementedError()
-
-
-class S3DataSource(BaseDataSource):
-    """
-    Data source for searching and fetching from S3 buckets.
     """
 
     def search(self, query: AttrAnd) -> QueryResponseTable:
@@ -99,7 +56,51 @@ class S3DataSource(BaseDataSource):
         QueryResponseTable
             A table containing the search results.
         """
-        return S3DataSource._make_search(query)
+        if query is None:
+            query = AttrAnd([])
+
+        queries = walker.create(query)
+        swxsoc.log.info(f"Searching with {queries}")
+
+        results = []
+        for query_parameters in queries:
+            results.extend(self._make_search(query_parameters))
+
+        if results == []:
+            return QueryResponseTable(names=[], rows=[], client=self)
+
+        names = [
+            "instrument",
+            "mode",
+            "test",
+            "time",
+            "level",
+            "version",
+            "descriptor",
+            "key",
+            "size",
+            "bucket",
+            "etag",
+            "storage_class",
+            "last_modified",
+        ]
+        return QueryResponseTable(names=names, rows=results, client=self)
+
+    def _make_search(self, query: dict) -> list:
+        """
+        Abstract method to be implemented by subclasses for performing the actual search.
+
+        Parameters
+        ----------
+        query : dict
+            The query parameters to search for.
+
+        Returns
+        -------
+        list
+            A list of results matching the query.
+        """
+        raise NotImplementedError("Subclasses must implement this method.")
 
     @convert_row_to_table
     def fetch(self, query_results, *, path, downloader, **kwargs):
@@ -118,33 +119,69 @@ class S3DataSource(BaseDataSource):
             The parfive downloader instance used for fetching files.
         """
         if not isinstance(downloader, Downloader):
-            raise ValueError("Downloader must be an instance of parfive.Downloader")
+            raise TypeError("Downloader must be an instance of parfive.Downloader")
 
         if path is None or path == ".":
             path = os.getcwd()
 
-        if os.path.exists(path) and not os.path.isdir(path):
-            raise ValueError(f"Path {path} is not a directory")
+        if not os.path.exists(path) or not os.path.isdir(path):
+            raise FileNotFoundError(f"Path {path} is not a directory")
+        self._make_fetch(query_results, path=path, downloader=downloader, **kwargs)
 
-        for row in query_results:
-            swxsoc.log.info(f"Fetching {row['key']}")
+    def _make_fetch(self, query_results, *, path, downloader, **kwargs):
+        """
+        Abstract method to be implemented by subclasses for performing the actual fetch.
 
-            filepath = S3DataSource._make_filename(path, row)
-
-            presigned_url = S3DataSource.generate_presigned_url(
-                row["bucket"], row["key"]
-            )
-            url = (
-                presigned_url
-                if presigned_url is not None
-                else f'https://{row["bucket"]}.s3.amazonaws.com/{row["key"]}'
-            )
-
-            downloader.enqueue_file(url, filename=filepath)
+        Parameters
+        ----------
+        query_results : list
+            The results of the search query.
+        path : str
+            The directory path where files should be saved.
+        downloader : Downloader
+            The parfive downloader instance used for fetching files.
+        """
+        raise NotImplementedError("Subclasses must implement this method.")
 
     @classmethod
-    def _make_search(cls, query):
-        # Move the logic from SWXSOCClient._make_search here
+    def _can_handle_query(cls, *query):
+        """
+        Determines if the client can handle the given query based on its attributes.
+
+        Parameters
+        ----------
+        query : tuple
+            The query attributes to check.
+
+        Returns
+        -------
+        bool
+            True if the client can handle the query, otherwise False.
+        """
+        query_attrs = set(type(x) for x in query)
+        supported_attrs = {SearchTime, Level, Instrument, DataType, DevelopmentBucket}
+        return supported_attrs.issuperset(query_attrs)
+
+
+class S3DataClient(AbsDataClient):
+    """
+    Data source for searching and fetching from S3 buckets.
+    """
+
+    def _make_search(self, query: dict) -> list:
+        """
+        Abstract method to be implemented by subclasses for performing the actual search.
+
+        Parameters
+        ----------
+        query : dict
+            The query parameters to search for.
+
+        Returns
+        -------
+        list
+            A list of results matching the query.
+        """
         instrument = query.get("instrument")
         levels = query.get("level")
         start_time = query.get("startTime")
@@ -188,14 +225,14 @@ class S3DataSource(BaseDataSource):
 
         swxsoc.log.debug(f"Searching in buckets: {instrument_bucket_to_search}")
 
-        files_in_s3 = S3DataSource.list_files_in_s3(instrument_bucket_to_search)
+        files_in_s3 = S3DataClient.list_files_in_s3(instrument_bucket_to_search)
 
         if levels is not None or start_time is not None or end_time is not None:
             swxsoc.log.info(
                 f"Searching for files with level {levels} between {start_time} and {end_time}"
             )
 
-            prefixes = S3DataSource.generate_prefixes(levels, start_time, end_time)
+            prefixes = S3DataClient.generate_prefixes(levels, start_time, end_time)
 
             files_in_s3 = [
                 f
@@ -234,6 +271,34 @@ class S3DataSource(BaseDataSource):
             rows.append(row)
 
         return rows
+
+    def _make_fetch(self, query_results, *, path, downloader, **kwargs):
+        """
+        Fetches the files based on query results and queues them up to be downloaded to the specified path by your downloader.
+
+        Note: The downloader must be an instance of parfive.Downloader
+
+        Parameters
+        ----------
+        query_results : list
+            The results of the search query.
+        path : str
+            The directory path where files should be saved.
+        downloader : Downloader
+            The parfive downloader instance used for fetching files.
+        """
+        for row in query_results:
+            swxsoc.log.info(f"Fetching {row['key']}")
+            filepath = S3DataClient._make_filename(path, row)
+            presigned_url = S3DataClient.generate_presigned_url(
+                row["bucket"], row["key"]
+            )
+            url = (
+                presigned_url
+                if presigned_url is not None
+                else f'https://{row["bucket"]}.s3.amazonaws.com/{row["key"]}'
+            )
+            downloader.enqueue_file(url, filename=filepath)
 
     @staticmethod
     def list_files_in_s3(bucket_names: list) -> list:
@@ -301,7 +366,6 @@ class S3DataSource(BaseDataSource):
 
     @staticmethod
     def generate_prefixes(levels: list, start_time: str, end_time: str) -> list:
-        # Move the logic from SWXSOCClient.generate_prefixes here
         current_time = datetime.fromisoformat(start_time)
         end_time = datetime.fromisoformat(end_time)
         prefixes = []
@@ -351,7 +415,7 @@ class S3DataSource(BaseDataSource):
         return os.path.join(path, row["key"].split("/")[-1])
 
 
-class HTTPDataSource(BaseDataSource):
+class HTTPDataClient(AbsDataClient):
     """
     Data source for searching and fetching from HTTP file servers.
     """
@@ -360,19 +424,19 @@ class HTTPDataSource(BaseDataSource):
         super().__init__()
         self.base_url = base_url
 
-    def search(self, query: AttrAnd) -> QueryResponseTable:
+    def _make_search(self, query: dict) -> list:
         """
-        Searches for data based on the given query.
+        Abstract method to be implemented by subclasses for performing the actual search.
 
         Parameters
         ----------
-        query : AttrAnd
-            The query object specifying search criteria.
+        query : dict
+            The query parameters to search for.
 
         Returns
         -------
-        QueryResponseTable
-            A table containing the search results.
+        list
+            A list of results matching the query.
         """
         # Extract query parameters
         instrument = query.get("instrument")
@@ -568,7 +632,7 @@ class HTTPDataSource(BaseDataSource):
             swxsoc.log.warning(f"Error processing {url}: {e}")
             return []
 
-    def fetch(self, query_results, *, path, downloader, **kwargs):
+    def _make_fetch(self, query_results, *, path, downloader, **kwargs):
         """
         Fetches the files based on query results and queues them up to be downloaded to the specified path by your downloader.
 
@@ -584,19 +648,19 @@ class HTTPDataSource(BaseDataSource):
             The parfive downloader instance used for fetching files.
         """
         if not isinstance(downloader, Downloader):
-            raise ValueError("Downloader must be an instance of parfive.Downloader")
+            raise TypeError("Downloader must be an instance of parfive.Downloader")
 
         if path is None or path == ".":
             path = os.getcwd()
 
-        if os.path.exists(path) and not os.path.isdir(path):
-            raise ValueError(f"Path {path} is not a directory")
+        if not os.path.exists(path) or not os.path.isdir(path):
+            raise FileNotFoundError(f"Path {path} is not a directory")
         for row in query_results:
             url = row["key"]
             swxsoc.log.info(f"Fetching {url}")
 
             # Create local filepath
-            filepath = HTTPDataSource._make_filename(path, row)
+            filepath = HTTPDataClient._make_filename(path, row)
 
             # Queue the download - HTTP URLs are already complete
             downloader.enqueue_file(url, filename=filepath)
@@ -815,134 +879,3 @@ def apply_development_bucket(wlk, attr, params):
         The parameters dictionary to be updated.
     """
     params.update({"use_development_bucket": attr.value})
-
-
-class SWXSOCClient(BaseClient):
-    """
-    Client for interacting with SWXSOC data. This client provides search and fetch functionality for SWXSOC data and is based on the sunpy BaseClient for FIDO.
-
-    For more information on the sunpy BaseClient, see: https://docs.sunpy.org/en/stable/generated/api/sunpy.net.base_client.BaseClient.html
-
-    """
-
-    size_column = "size"
-
-    def __init__(self, data_source=None, fallback_data_source=None):
-        super().__init__()
-        # Default to S3DataSource if not specified
-        self.primary_data_source = data_source or S3DataSource()
-        self.fallback_data_source = fallback_data_source or HTTPDataSource()
-        self._last_used_data_source = None
-
-    def search(self, query: AttrAnd) -> QueryResponseTable:
-        """
-        Searches for data based on the given query.
-
-        Parameters
-        ----------
-        query : AttrAnd
-            The query object specifying search criteria.
-
-        Returns
-        -------
-        QueryResponseTable
-            A table containing the search results.
-        """
-        if query is None:
-            query = AttrAnd([])
-
-        queries = walker.create(query)
-        swxsoc.log.info(f"Searching with {queries}")
-
-        results = []
-        used_source = None
-
-        try:
-            for query_parameters in queries:
-                results.extend(self.primary_data_source.search(query_parameters))
-            used_source = self.primary_data_source
-        except (ClientError, NoCredentialsError) as e:
-            swxsoc.log.warning(
-                f"Primary data source failed: {e}. Falling back to fallback data source."
-            )
-            results = []
-            for query_parameters in queries:
-                results.extend(self.fallback_data_source.search(query_parameters))
-            used_source = self.fallback_data_source
-
-        if used_source is not None:
-            swxsoc.log.info(f"Search succeeded using {used_source.__class__.__name__}.")
-        else:
-            swxsoc.log.info("No data source was used for search.")
-
-        self._last_used_data_source = used_source
-
-        if results == []:
-            return QueryResponseTable(names=[], rows=[], client=self)
-
-        names = [
-            "instrument",
-            "mode",
-            "test",
-            "time",
-            "level",
-            "version",
-            "descriptor",
-            "key",
-            "size",
-            "bucket",
-            "etag",
-            "storage_class",
-            "last_modified",
-        ]
-        return QueryResponseTable(names=names, rows=results, client=self)
-
-    @classmethod
-    def _can_handle_query(cls, *query):
-        """
-        Determines if the client can handle the given query based on its attributes.
-
-        Parameters
-        ----------
-        query : tuple
-            The query attributes to check.
-
-        Returns
-        -------
-        bool
-            True if the client can handle the query, otherwise False.
-        """
-        query_attrs = set(type(x) for x in query)
-        supported_attrs = {SearchTime, Level, Instrument, DataType, DevelopmentBucket}
-        return supported_attrs.issuperset(query_attrs)
-
-    @convert_row_to_table
-    def fetch(self, query_results, *, path, downloader, **kwargs):
-        """
-        Fetches the files based on query results and queues them up to be downloaded to the specified path by your downloader.
-
-        Note: The downloader must be an instance of parfive.Downloader
-
-        Parameters
-        ----------
-        query_results : list
-            The results of the search query.
-        path : str
-            The directory path where files should be saved.
-        downloader : Downloader
-            The parfive downloader instance used for fetching files.
-        """
-        data_source = self._last_used_data_source or self.primary_data_source
-        try:
-            data_source.fetch(query_results, path=path, downloader=downloader, **kwargs)
-        except Exception as e:
-            swxsoc.log.warning(
-                f"Fetch failed with {data_source.__class__.__name__}: {e}. Trying fallback data source."
-            )
-            # Try fallback if not already tried
-            fallback = (
-                self.fallback_data_source
-                if data_source is self.primary_data_source
-                else self.primary_data_source
-            )
-            fallback.fetch(query_results, path=path, downloader=downloader, **kwargs)

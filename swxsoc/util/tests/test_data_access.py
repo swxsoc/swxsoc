@@ -16,11 +16,11 @@ from swxsoc.util.data_access import (
     AttrAnd,
     DataType,
     DevelopmentBucket,
-    HTTPDataSource,
+    HTTPDataClient,
     Instrument,
     Level,
+    S3DataClient,
     SearchTime,
-    SWXSOCClient,
 )
 
 time = "2024-04-06T12:06:21"
@@ -46,7 +46,7 @@ def test_search_all_attr():
         Body=b"test data 2",
     )
 
-    fido_client = SWXSOCClient()
+    fido_client = S3DataClient()
 
     # Test search with a query for specific instrument, level, and time
     query = AttrAnd(
@@ -133,7 +133,7 @@ def test_search_time_attr():
         Body=b"test data 8",
     )
 
-    fido_client = SWXSOCClient()
+    fido_client = S3DataClient()
 
     # Test search with a query for specific time
     query = AttrAnd([SearchTime("2024-01-01", "2025-01-01")])
@@ -170,7 +170,7 @@ def test_search_instrument_attr():
         Body=b"test data 2",
     )
 
-    fido_client = SWXSOCClient()
+    fido_client = S3DataClient()
 
     # Test search with a query for specific instrument
     query = AttrAnd([Instrument("eea")])
@@ -213,7 +213,7 @@ def test_search_level_attr():
         Body=b"test data 3",
     )
 
-    fido_client = SWXSOCClient()
+    fido_client = S3DataClient()
 
     # Test search with a query for specific level
     query = AttrAnd([Level("l0")])
@@ -262,7 +262,7 @@ def test_search_development_bucket():
             Body=b"test data 1",
         )
 
-    fido_client = SWXSOCClient()
+    fido_client = S3DataClient()
 
     # Test search with a query for in development bucket
     query = AttrAnd([DevelopmentBucket(True)])
@@ -296,7 +296,7 @@ def test_fetch():
         Body=b"test data 2",
     )
 
-    fido_client = SWXSOCClient()
+    fido_client = S3DataClient()
 
     # Test search with a query for specific instrument, level, and time
     query = AttrAnd(
@@ -396,7 +396,7 @@ def http_file_server():
 def test_httpdatasource_search(
     http_file_server, instrument, level, data_type, expected_count
 ):
-    ds = HTTPDataSource(base_url=http_file_server)
+    ds = HTTPDataClient(base_url=http_file_server)
     query = {}
     if instrument:
         query["instrument"] = instrument
@@ -407,7 +407,7 @@ def test_httpdatasource_search(
     # Add a time range that matches the files
     query["startTime"] = "2025-05-04"
     query["endTime"] = "2025-05-04"
-    results = ds.search(query)
+    results = ds._make_search(query)
     assert len(results) == expected_count
     for row in results:
         assert row[0] == (instrument or "meddea")
@@ -419,7 +419,7 @@ def test_httpdatasource_search(
 
 # --- Test SWXSOCClient with HTTPDataSource ---
 def test_swxsocclient_http_search(http_file_server):
-    client = SWXSOCClient(data_source=HTTPDataSource(base_url=http_file_server))
+    client = HTTPDataClient(base_url=http_file_server)
     query = AttrAnd(
         [
             SearchTime("2025-05-04", "2025-05-04"),
@@ -440,7 +440,7 @@ def test_swxsocclient_http_search(http_file_server):
 def test_swxsocclient_http_fetch(http_file_server):
     import parfive
 
-    client = SWXSOCClient(data_source=HTTPDataSource(base_url=http_file_server))
+    client = HTTPDataClient(base_url=http_file_server)
     query = AttrAnd(
         [
             SearchTime("2025-05-04", "2025-05-04"),
@@ -453,3 +453,56 @@ def test_swxsocclient_http_fetch(http_file_server):
     downloader = parfive.Downloader(progress=False, overwrite=True)
     client.fetch(results, path=".", downloader=downloader)
     assert downloader.queued_downloads == 2
+
+
+@mock_aws
+def test_fetch_exceptions_s3():
+    """Test fetch exceptions for S3 data source."""
+    conn = boto3.resource("s3", region_name="us-east-1")
+    bucket_name = "swxsoc-eea"
+    conn.create_bucket(Bucket=bucket_name)
+
+    s3 = boto3.client("s3")
+    s3.put_object(
+        Bucket=bucket_name,
+        Key="l0/2024/04/swxsoc_EEA_l0_2024094-124603_v01.bin",
+        Body=b"test data 1",
+    )
+
+    fido_client = S3DataClient()
+    query = AttrAnd([Instrument("eea"), Level("l0")])
+    results = fido_client.search(query)
+
+    # Test with incorrect downloader
+    with pytest.raises(TypeError):
+        fido_client.fetch(results, path=".", downloader="not a downloader")
+
+    # Test with non-existent path
+    non_existent_path = "/path/does/not/exist/definitely/not"
+    with pytest.raises(FileNotFoundError):
+        downloader = parfive.Downloader(progress=False, overwrite=True)
+        fido_client.fetch(results, path=non_existent_path, downloader=downloader)
+
+
+def test_fetch_exceptions_http(http_file_server):
+    """Test fetch exceptions for HTTP data source."""
+    client = HTTPDataClient(base_url=http_file_server)
+    query = AttrAnd(
+        [
+            SearchTime("2025-05-04", "2025-05-04"),
+            Level("l1"),
+            Instrument("meddea"),
+            DataType("housekeeping"),
+        ]
+    )
+    results = client.search(query)
+
+    # Test with incorrect downloader
+    with pytest.raises(TypeError):
+        client.fetch(results, path=".", downloader="not a downloader")
+
+    # Test with non-existent path
+    non_existent_path = "/path/does/not/exist/definitely/not"
+    with pytest.raises(FileNotFoundError):
+        downloader = parfive.Downloader(progress=False, overwrite=True)
+        client.fetch(results, path=non_existent_path, downloader=downloader)

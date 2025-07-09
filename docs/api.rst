@@ -14,6 +14,8 @@ API Reference
    :no-inheritance-diagram:
 .. automodapi:: swxsoc.util.const
    :no-inheritance-diagram:
+.. automodapi:: swxsoc.util.data_access
+   :no-inheritance-diagram:
 .. automodapi:: swxsoc.util.exceptions
    :no-inheritance-diagram:
 .. automodapi:: swxsoc.util.io

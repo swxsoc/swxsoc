@@ -30,6 +30,7 @@ time_formatted = "20240406T120621"
 #                    Test Abstract Access Client
 # ===================================================================
 
+
 def test_abstract_access_client():
     """Test that the abstract access client raises NotImplementedError."""
     with pytest.raises(NotImplementedError):
@@ -422,15 +423,15 @@ def http_file_server():
         ),
         (
             "meddea",
-            None, # ['raw', 'l0', 'l1', 'ql', 'l2', 'l3']
-            "housekeeping", 
+            None,  # ['raw', 'l0', 'l1', 'ql', 'l2', 'l3']
+            "housekeeping",
             [
                 "padre/padre-meddea/raw/housekeeping/",
-                "padre/padre-meddea/l0/housekeeping/", 
+                "padre/padre-meddea/l0/housekeeping/",
                 "padre/padre-meddea/l1/housekeeping/",
                 "padre/padre-meddea/ql/housekeeping/",
                 "padre/padre-meddea/l2/housekeeping/",
-                "padre/padre-meddea/l3/housekeeping/"
+                "padre/padre-meddea/l3/housekeeping/",
             ],
         ),
         (
@@ -466,7 +467,9 @@ def http_file_server():
         ),
     ],
 )
-def test_get_search_paths_no_time(http_file_server, instruments, levels, data_types, expected_paths):
+def test_get_search_paths_no_time(
+    http_file_server, instruments, levels, data_types, expected_paths
+):
     client = HTTPDataClient()
     paths = client._get_search_paths(
         instruments=instruments,
@@ -553,7 +556,7 @@ def test_httpdatasource_fetch(http_file_server):
     downloader = parfive.Downloader(progress=False, overwrite=True)
     client.fetch(results, path=".", downloader=downloader)
     assert downloader.queued_downloads == 2
-    
+
     query = AttrOr(
         [
             AttrAnd(
@@ -571,7 +574,7 @@ def test_httpdatasource_fetch(http_file_server):
                     Instrument("sharp"),
                     DataType("spectrum"),
                 ]
-            ) 
+            ),
         ]
     )
     results = client.search(query)

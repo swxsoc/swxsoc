@@ -522,7 +522,9 @@ class HTTPDataClient(AbsDataClient):
             for inst in instruments:
                 inst = inst.lower()
                 if inst not in swxsoc.config["mission"]["inst_names"]:
-                    raise ValueError(f"Invalid instrument: {inst} for mission {mission}")
+                    raise ValueError(
+                        f"Invalid instrument: {inst} for mission {mission}"
+                    )
                 instrument_data_types[inst] = []
         else:
             # If no instrument specified, search all known instruments
@@ -564,7 +566,9 @@ class HTTPDataClient(AbsDataClient):
             for instrument in instrument_data_types:
                 for level in levels:
                     for data_type in instrument_data_types.get(instrument, []):
-                        paths.append(f"{mission}/{mission}-{instrument}/{level}/{data_type}/")
+                        paths.append(
+                            f"{mission}/{mission}-{instrument}/{level}/{data_type}/"
+                        )
 
         return paths
 

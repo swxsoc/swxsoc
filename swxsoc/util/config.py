@@ -87,7 +87,7 @@ def load_config():
         "inst_data_types": {
             inst["name"]: inst.get("data_types", [])
             for inst in mission_data.get("instruments", [])
-        }
+        },
     }
 
     config["mission"].update(

@@ -83,6 +83,10 @@ missions_data:
         extra_inst_names:
           - mda
           - mdu
+        data_types:
+          - housekeeping
+          - spectrum
+          - photon
       - name: sharp
         shortname: sharp
         fullname:  Solar HARd X-ray Polarimeter

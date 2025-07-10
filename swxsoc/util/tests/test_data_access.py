@@ -1,5 +1,3 @@
-"""Tests for data_access.py (SWXSOCClient and FIDO attribute classes)"""
-
 import os
 import tempfile
 import threading
@@ -13,7 +11,9 @@ from moto import mock_aws
 
 import swxsoc
 from swxsoc.util.data_access import (
+    AbsDataClient,
     AttrAnd,
+    AttrOr,
     DataType,
     DevelopmentBucket,
     HTTPDataClient,
@@ -25,6 +25,23 @@ from swxsoc.util.data_access import (
 
 time = "2024-04-06T12:06:21"
 time_formatted = "20240406T120621"
+
+# ===================================================================
+#                    Test Abstract Access Client
+# ===================================================================
+
+def test_abstract_access_client():
+    """Test that the abstract access client raises NotImplementedError."""
+    with pytest.raises(NotImplementedError):
+        AbsDataClient().search(None)
+
+    with pytest.raises(NotImplementedError):
+        AbsDataClient().fetch(None, path=".", downloader=parfive.Downloader())
+
+
+# ===================================================================
+#                    Test S3 Data Access Client
+# ===================================================================
 
 
 @mock_aws
@@ -336,27 +353,34 @@ def test_fetch():
     assert downloader.queued_downloads == 2
 
 
-# --- Helper: Temporary HTTP server serving a directory ---
+# ===================================================================
+#                     Test HTTP Data Access Client
+# ===================================================================
+
+
 @pytest.fixture
 def http_file_server():
+    """
+    Helper: Temporary HTTP server serving a directory
+    """
     # Set Config to use the padre mission
     os.environ["SWXSOC_MISSION"] = "padre"
     swxsoc._reconfigure()
     with tempfile.TemporaryDirectory() as tmpdir:
         # Create test files and directories
         os.makedirs(
-            os.path.join(tmpdir, "padre-meddea/l1/housekeeping/2025/05/04"),
+            os.path.join(tmpdir, "padre/padre-meddea/l1/housekeeping/2025/05/04"),
             exist_ok=True,
         )
         file1 = os.path.join(
             tmpdir,
-            "padre-meddea/l1/housekeeping/2025/05/04/padre_meddea_l1_housekeeping_20250504T000000_v0.1.0.fits",
+            "padre/padre-meddea/l1/housekeeping/2025/05/04/padre_meddea_l1_housekeeping_20250504T000000_v0.1.0.fits",
         )
         with open(file1, "w") as f:
             f.write("dummy fits data 1")
         file2 = os.path.join(
             tmpdir,
-            "padre-meddea/l1/housekeeping/2025/05/04/padre_meddea_l1_housekeeping_20250504T000000_v0.2.0.fits",
+            "padre/padre-meddea/l1/housekeeping/2025/05/04/padre_meddea_l1_housekeeping_20250504T000000_v0.2.0.fits",
         )
         with open(file2, "w") as f:
             f.write("dummy fits data 2")
@@ -382,7 +406,78 @@ def http_file_server():
             swxsoc._reconfigure()
 
 
-# --- Parameterized tests for HTTPDataSource.search ---
+@pytest.mark.parametrize(
+    "instruments,levels,data_types,expected_paths",
+    [
+        ("meddea", "l1", "housekeeping", ["padre/padre-meddea/l1/housekeeping/"]),
+        (
+            "meddea",
+            "l1",
+            None,
+            [
+                "padre/padre-meddea/l1/housekeeping/",
+                "padre/padre-meddea/l1/spectrum/",
+                "padre/padre-meddea/l1/photon/",
+            ],
+        ),
+        (
+            "meddea",
+            None, # ['raw', 'l0', 'l1', 'ql', 'l2', 'l3']
+            "housekeeping", 
+            [
+                "padre/padre-meddea/raw/housekeeping/",
+                "padre/padre-meddea/l0/housekeeping/", 
+                "padre/padre-meddea/l1/housekeeping/",
+                "padre/padre-meddea/ql/housekeeping/",
+                "padre/padre-meddea/l2/housekeeping/",
+                "padre/padre-meddea/l3/housekeeping/"
+            ],
+        ),
+        (
+            None,
+            "l1",
+            "housekeeping",
+            ["padre/padre-meddea/l1/housekeeping/"],
+        ),
+        (
+            None,
+            None,
+            None,
+            [
+                "padre/padre-meddea/raw/housekeeping/",
+                "padre/padre-meddea/raw/spectrum/",
+                "padre/padre-meddea/raw/photon/",
+                "padre/padre-meddea/l0/housekeeping/",
+                "padre/padre-meddea/l0/spectrum/",
+                "padre/padre-meddea/l0/photon/",
+                "padre/padre-meddea/l1/housekeeping/",
+                "padre/padre-meddea/l1/spectrum/",
+                "padre/padre-meddea/l1/photon/",
+                "padre/padre-meddea/ql/housekeeping/",
+                "padre/padre-meddea/ql/spectrum/",
+                "padre/padre-meddea/ql/photon/",
+                "padre/padre-meddea/l2/housekeeping/",
+                "padre/padre-meddea/l2/spectrum/",
+                "padre/padre-meddea/l2/photon/",
+                "padre/padre-meddea/l3/housekeeping/",
+                "padre/padre-meddea/l3/spectrum/",
+                "padre/padre-meddea/l3/photon/",
+            ],
+        ),
+    ],
+)
+def test_get_search_paths_no_time(http_file_server, instruments, levels, data_types, expected_paths):
+    client = HTTPDataClient()
+    paths = client._get_search_paths(
+        instruments=instruments,
+        levels=levels,
+        data_types=data_types,
+        start_time=None,
+        end_time=None,
+    )
+    assert sorted(paths) == sorted(expected_paths)
+
+
 @pytest.mark.parametrize(
     "instrument,level,data_type,expected_count",
     [
@@ -396,6 +491,9 @@ def http_file_server():
 def test_httpdatasource_search(
     http_file_server, instrument, level, data_type, expected_count
 ):
+    """
+    Parameterized tests for HTTPDataSource._make_search
+    """
     ds = HTTPDataClient(base_url=http_file_server)
     query = {}
     if instrument:
@@ -417,8 +515,10 @@ def test_httpdatasource_search(
         assert row[7].endswith(".fits")
 
 
-# --- Test SWXSOCClient with HTTPDataSource ---
-def test_swxsocclient_http_search(http_file_server):
+def test_httpdatasource_client(http_file_server):
+    """
+    Parameterized tests for HTTPDataSource client search
+    """
     client = HTTPDataClient(base_url=http_file_server)
     query = AttrAnd(
         [
@@ -436,10 +536,10 @@ def test_swxsocclient_http_search(http_file_server):
         assert row["key"].endswith(".fits")
 
 
-# --- Test fetch queues downloads ---
-def test_swxsocclient_http_fetch(http_file_server):
-    import parfive
-
+def test_httpdatasource_fetch(http_file_server):
+    """
+    Test fetch queues downloads
+    """
     client = HTTPDataClient(base_url=http_file_server)
     query = AttrAnd(
         [
@@ -453,6 +553,36 @@ def test_swxsocclient_http_fetch(http_file_server):
     downloader = parfive.Downloader(progress=False, overwrite=True)
     client.fetch(results, path=".", downloader=downloader)
     assert downloader.queued_downloads == 2
+    
+    query = AttrOr(
+        [
+            AttrAnd(
+                [
+                    SearchTime("2025-05-04", "2025-05-04"),
+                    Level("l1"),
+                    Instrument("meddea"),
+                    DataType("housekeeping"),
+                ]
+            ),
+            AttrAnd(
+                [
+                    SearchTime("2025-05-04", "2025-05-04"),
+                    Level("l1"),
+                    Instrument("sharp"),
+                    DataType("spectrum"),
+                ]
+            ) 
+        ]
+    )
+    results = client.search(query)
+    downloader = parfive.Downloader(progress=False, overwrite=True)
+    client.fetch(results, path=".", downloader=downloader)
+    assert downloader.queued_downloads == 2
+
+
+# ===================================================================
+#                     Exception Testing
+# ===================================================================
 
 
 @mock_aws

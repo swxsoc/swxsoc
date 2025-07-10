@@ -64,7 +64,10 @@ class AbsDataClient(BaseClient):
 
         results = []
         for query_parameters in queries:
-            results.extend(self._make_search(query_parameters))
+            if isinstance(query_parameters, list):
+                results.extend(self._make_search(query_parameters[0]))
+            else:
+                results.extend(self._make_search(query_parameters))
 
         if results == []:
             return QueryResponseTable(names=[], rows=[], client=self)
@@ -420,7 +423,7 @@ class HTTPDataClient(AbsDataClient):
     Data source for searching and fetching from HTTP file servers.
     """
 
-    def __init__(self, base_url="https://umbra.nascom.nasa.gov/padre/"):
+    def __init__(self, base_url="https://umbra.nascom.nasa.gov/"):
         super().__init__()
         self.base_url = base_url
 
@@ -440,14 +443,14 @@ class HTTPDataClient(AbsDataClient):
         """
         # Extract query parameters
         instrument = query.get("instrument")
-        level = query.get("level")
-        data_type = query.get("data_type")  # Extract data_type
+        levels = query.get("level")
+        data_type = query.get("data_type")
         start_time = query.get("startTime")
         end_time = query.get("endTime")
 
         # Get search paths with data_type
         search_paths = self._get_search_paths(
-            instrument, level, data_type, start_time, end_time
+            instrument, levels, data_type, start_time, end_time
         )
         swxsoc.log.info(f"Search paths: {search_paths}")
 
@@ -489,53 +492,81 @@ class HTTPDataClient(AbsDataClient):
 
     def _get_search_paths(
         self,
-        instrument=None,
-        level=None,
-        data_type=None,
+        instruments=None,
+        levels=None,
+        data_types=None,
         start_time=None,
         end_time=None,
     ):
         """Generate HTTP paths to search based on query parameters."""
         paths = []
 
+        # Mission Name
+        mission = swxsoc.config["mission"]["mission_name"]
+
+        # Data Processing Levels
+        if levels is not None and not isinstance(levels, list):
+            levels = [levels]
+        if levels is not None and len(levels) > 0:
+            for level in levels:
+                if level not in swxsoc.config["mission"]["valid_data_levels"]:
+                    raise ValueError(f"Invalid data level: {level}")
+        else:
+            levels = swxsoc.config["mission"]["valid_data_levels"]
+
+        instrument_data_types = {}
         # Handle instrument paths
-        if instrument:
-            instrument_paths = [f"padre-{instrument.lower()}"]
+        if instruments is not None and not isinstance(instruments, list):
+            # instruments is a single string item
+            instruments = [instruments]
+        if instruments is not None and len(instruments) > 0:
+            # instruments is a list of strings
+            for inst in instruments:
+                inst = inst.lower()
+                if inst not in swxsoc.config["mission"]["inst_names"]:
+                    raise ValueError(f"Invalid instrument: {inst} for mission {mission}")
+                instrument_data_types[inst] = []
         else:
             # If no instrument specified, search all known instruments
-            instrument_paths = ["padre-meddea", "padre-sharp"]
-
-        # Handle level paths
-        if level:
-            level_paths = [level.lower()]
-        else:
-            level_paths = ["l0", "l1"]  # Use config values
+            for inst in swxsoc.config["mission"]["inst_names"]:
+                instrument_data_types[inst] = []
 
         # Handle data type paths
-        if data_type:
-            data_type_paths = [data_type.lower()]
+        if data_types is not None and not isinstance(data_types, list):
+            # data_types is a single string item
+            data_types = [data_types]
+        if data_types is not None and len(data_types) > 0:
+            # data_types is a list of strings
+            for data_type in data_types:
+                for instrument in instrument_data_types:
+                    if data_type in swxsoc.config["mission"]["inst_data_types"].get(
+                        instrument, []
+                    ):
+                        instrument_data_types[instrument].append(data_type)
         else:
-            # Default data types to search - could come from config
-            data_type_paths = ["housekeeping", "spectrum", "photon"]
+            # if no data type specified, use all known data types for each instrument
+            for instrument in instrument_data_types:
+                instrument_data_types[instrument] = swxsoc.config["mission"][
+                    "inst_data_types"
+                ].get(instrument, [])
 
         # Generate time-based paths if time range specified
         if start_time and end_time:
             time_paths = self._generate_time_paths(start_time, end_time)
-
             # Combine all path components
-            for instrument_path in instrument_paths:
-                for level_path in level_paths:
-                    for data_type_path in data_type_paths:
+            for instrument in instrument_data_types:
+                for level in levels:
+                    for data_type in instrument_data_types.get(instrument, []):
                         for time_path in time_paths:
                             paths.append(
-                                f"{instrument_path}/{level_path}/{data_type_path}/{time_path}/"
+                                f"{mission}/{mission}-{instrument}/{level}/{data_type}/{time_path}/"
                             )
         else:
             # Without time constraints, include data type in the paths
-            for instrument_path in instrument_paths:
-                for level_path in level_paths:
-                    for data_type_path in data_type_paths:
-                        paths.append(f"{instrument_path}/{level_path}/{data_type_path}")
+            for instrument in instrument_data_types:
+                for level in levels:
+                    for data_type in instrument_data_types.get(instrument, []):
+                        paths.append(f"{mission}/{mission}-{instrument}/{level}/{data_type}/")
 
         return paths
 
@@ -647,14 +678,6 @@ class HTTPDataClient(AbsDataClient):
         downloader : Downloader
             The parfive downloader instance used for fetching files.
         """
-        if not isinstance(downloader, Downloader):
-            raise TypeError("Downloader must be an instance of parfive.Downloader")
-
-        if path is None or path == ".":
-            path = os.getcwd()
-
-        if not os.path.exists(path) or not os.path.isdir(path):
-            raise FileNotFoundError(f"Path {path} is not a directory")
         for row in query_results:
             url = row["key"]
             swxsoc.log.info(f"Fetching {url}")

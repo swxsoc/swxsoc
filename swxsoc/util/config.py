@@ -84,6 +84,10 @@ def load_config():
             for inst in mission_data.get("instruments", [])
             if "extra_inst_names" in inst
         ],
+        "inst_data_types": {
+            inst["name"]: inst.get("data_types", [])
+            for inst in mission_data.get("instruments", [])
+        }
     }
 
     config["mission"].update(

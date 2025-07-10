@@ -305,7 +305,6 @@ class S3DataClient(AbsDataClient):
 
     @staticmethod
     def list_files_in_s3(bucket_names: list) -> list:
-        # Move the logic from SWXSOCClient.list_files_in_s3 here
         content = []
         s3 = boto3.client("s3")
         paginator = s3.get_paginator("list_objects_v2")
@@ -359,11 +358,11 @@ class S3DataClient(AbsDataClient):
                                 }
                                 content.append(metadata)
                     except ClientError as retry_error:
-                        raise ClientError(
+                        raise Exception(
                             f"Unsigned request failed for bucket {bucket_name} (Ensure you have the correct IAM permissions, or are on the VPN)"
                         )
                 else:
-                    raise ClientError(f"Error accessing bucket {bucket_name}: {e}")
+                    raise Exception(f"Error accessing bucket {bucket_name}: {e}")
 
         return content
 
@@ -384,7 +383,6 @@ class S3DataClient(AbsDataClient):
 
     @staticmethod
     def generate_presigned_url(bucket_name, object_key, expiration=3600):
-        # Move the logic from SWXSOCClient.generate_presigned_url here
         try:
             s3_client = boto3.client("s3")
             s3_client.list_objects_v2(Bucket=bucket_name, MaxKeys=1)

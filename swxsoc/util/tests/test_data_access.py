@@ -539,6 +539,24 @@ def test_httpdatasource_client(http_file_server):
         assert row["key"].endswith(".fits")
 
 
+def test_httpdatasource_client_no_time(http_file_server):
+    """
+    Parameterized tests for HTTPDataSource client search
+    """
+    client = HTTPDataClient(base_url=http_file_server)
+    query = AttrAnd(
+        [
+            Level("l1"),
+            Instrument("meddea"),        ]
+    )
+    results = client.search(query)
+    assert len(results) == 2
+    for row in results:
+        assert row["instrument"] == "meddea"
+        assert row["level"] == "l1"
+        assert row["key"].endswith(".fits")
+
+
 def test_httpdatasource_fetch(http_file_server):
     """
     Test fetch queues downloads

@@ -457,7 +457,7 @@ class HTTPDataClient(AbsDataClient):
         for path in search_paths:
             url = urljoin(self.base_url, path)
             swxsoc.log.info(f"Searching HTTP directory: {url}")
-            files = self._crawl_directory(url, max_depth=3)
+            files = self._crawl_directory(url)
             all_files.extend(files)
 
         # Process and return results
@@ -612,7 +612,7 @@ class HTTPDataClient(AbsDataClient):
         )
         return time_paths
 
-    def _crawl_directory(self, url, max_depth=3, file_extension=".fits", base_url=None):
+    def _crawl_directory(self, url, max_depth=4, file_extension=".fits", base_url=None):
         """Directory crawler using only standard library."""
 
         # Track the original base URL on first call

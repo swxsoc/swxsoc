@@ -547,7 +547,8 @@ def test_httpdatasource_client_no_time(http_file_server):
     query = AttrAnd(
         [
             Level("l1"),
-            Instrument("meddea"),        ]
+            Instrument("meddea"),
+        ]
     )
     results = client.search(query)
     assert len(results) == 2

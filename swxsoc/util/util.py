@@ -1010,7 +1010,6 @@ def record_timeseries(
                 else:
                     measure_unit = ""
                     value = ts[this_col][i]
-                print(type(value))
                 measure_record["MeasureValues"].append(
                     {
                         "Name": f"{this_col}_{measure_unit}" if measure_unit else this_col,

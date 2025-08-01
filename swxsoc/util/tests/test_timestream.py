@@ -7,6 +7,8 @@ from moto.core import DEFAULT_ACCOUNT_ID as ACCOUNT_ID
 from moto.timestreamwrite.models import timestreamwrite_backends
 import pytest
 
+import numpy as np
+
 from astropy import units as u
 from astropy.timeseries import TimeSeries
 
@@ -83,6 +85,46 @@ def test_record_timeseries_quantity_1col(mocked_timestream):
         assert temp4_measure is not None, "temp4_deg_C not found in MeasureValues"
         assert temp4_measure["Value"] == str(
             ts["temp4"].value[i]
+        ), "MeasureValue does not match"
+        assert temp4_measure["Type"] == "DOUBLE", "MeasureValueType does not match"
+
+
+def test_record_timeseries_quantity_1col_array(mocked_timestream):
+    timeseries_name = "test_measurements"
+    ts = TimeSeries(
+        time_start="2016-03-22T12:30:31",
+        time_delta=3 * u.s,
+        n_samples=5,
+        meta={"name": timeseries_name},
+    )
+    ts["temp4_arr"] = np.arange(6 * 5).reshape((5, 6))
+    util.record_timeseries(ts, instrument_name="test")
+
+    database_name = "dev-swxsoc_sdc_aws_logs"
+    table_name = "dev-swxsoc_measures_table"
+
+    backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
+    records = backend.databases[database_name].tables[table_name].records
+
+    # Assert that there should be 5 records, one for each timestamp
+    assert len(records) == len(ts["temp4_arr"])
+
+    for i, record in enumerate(records):
+        # Assert the time is correct
+        time = str(int(ts.time[i].to_datetime().timestamp() * 1000))
+        assert record["Time"] == time
+        assert record["MeasureName"] == timeseries_name
+        # Check the MeasureValues
+        measure_values = record["MeasureValues"]
+        assert len(measure_values) == 6  # Only one column of data
+
+        # Assert the measure name, value, and type
+        temp4_measure = next(
+            (mv for mv in measure_values if mv["Name"] == "temp4_arr"), None
+        )
+        assert temp4_measure is not None, "temp4_deg_C not found in MeasureValues"
+        assert temp4_measure["Value"] == str(
+            ts["temp4_arr_val0"].value[i]
         ), "MeasureValue does not match"
         assert temp4_measure["Type"] == "DOUBLE", "MeasureValueType does not match"
 

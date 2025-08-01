@@ -6,6 +6,7 @@ import os
 from datetime import datetime, timezone
 import time
 import re
+import numbers
 
 from astropy.time import Time
 import astropy.units as u
@@ -1009,12 +1010,12 @@ def record_timeseries(
                 else:
                     measure_unit = ""
                     value = ts[this_col][i]
-
+                print(type(value))
                 measure_record["MeasureValues"].append(
                     {
                         "Name": f"{this_col}_{measure_unit}" if measure_unit else this_col,
                         "Value": str(value),
-                        "Type": "DOUBLE" if isinstance(value, (int, float)) else "VARCHAR",
+                        "Type": "DOUBLE" if isinstance(value, numbers.Number) else "VARCHAR",
                     }
                 )
             else:  # the values in the timeseries are arrays
@@ -1022,17 +1023,14 @@ def record_timeseries(
                 if isinstance(values, u.Quantity):
                     values = values.value  # remove the unit
                 values = values.flatten()
-                measure_values = []
                 for i, value in enumerate(values):
-                    measure_values.append(
+                    measure_record["MeasureValues"].append(
                         {
                         'Name': f'{this_col}_val{i}',
                         'Value': str(float(value)),
-                        'Type': "DOUBLE" if isinstance(value, (int, float)) else "VARCHAR",
+                        'Type': "DOUBLE" if isinstance(value, numbers.Number) else "VARCHAR",
                         })
-                measure_record["MeasureValues"].append(measure_values)
         records.append(measure_record)
-
     # Process records in batches of 100 to avoid exceeding the Timestream API limit
     batch_size = 100
     for start in range(0, len(records), batch_size):

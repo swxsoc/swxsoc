@@ -1001,22 +1001,36 @@ def record_timeseries(
             if this_col == "time":
                 continue
 
-            # Handle both Quantity and regular values
-            if isinstance(ts[this_col], u.Quantity):
-                measure_unit = ts[this_col].unit
-                value = ts[this_col].value[i]
-            else:
-                measure_unit = ""
-                value = ts[this_col][i]
+            if len(ts[this_col].shape) == 1:  # usual case, a single value in the column
+                # Handle both Quantity and regular values
+                if isinstance(ts[this_col], u.Quantity):
+                    measure_unit = ts[this_col].unit
+                    value = ts[this_col].value[i]
+                else:
+                    measure_unit = ""
+                    value = ts[this_col][i]
 
-            measure_record["MeasureValues"].append(
-                {
-                    "Name": f"{this_col}_{measure_unit}" if measure_unit else this_col,
-                    "Value": str(value),
-                    "Type": "DOUBLE" if isinstance(value, (int, float)) else "VARCHAR",
-                }
-            )
-
+                measure_record["MeasureValues"].append(
+                    {
+                        "Name": f"{this_col}_{measure_unit}" if measure_unit else this_col,
+                        "Value": str(value),
+                        "Type": "DOUBLE" if isinstance(value, (int, float)) else "VARCHAR",
+                    }
+                )
+            else:  # the values in the timeseries are arrays
+                values = ts[this_col][i]
+                if isinstance(values, u.Quantity):
+                    values = values.value  # remove the unit
+                values = values.flatten()
+                measure_values = []
+                for i, value in enumerate(values):
+                    measure_values.append(
+                        {
+                        'Name': f'{this_col}_val{i}',
+                        'Value': str(float(value)),
+                        'Type': "DOUBLE" if isinstance(value, (int, float)) else "VARCHAR",
+                        })
+                measure_record["MeasureValues"].append(measure_values)
         records.append(measure_record)
 
     # Process records in batches of 100 to avoid exceeding the Timestream API limit

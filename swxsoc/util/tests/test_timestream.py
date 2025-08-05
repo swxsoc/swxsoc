@@ -119,6 +119,7 @@ def test_record_timeseries_quantity_1col_array(mocked_timestream):
         )  # Only one column of data
 
         # Assert the measure name, value, and type
+        # Loop through each column in the array
         for j in range(ts["temp4_arr"].shape[1]):
             measure_name = f"temp4_arr_val{j}"
             temp_measure = next(

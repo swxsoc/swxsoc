@@ -1,8 +1,10 @@
-import pytest
-from unittest.mock import patch, MagicMock
 from datetime import datetime
-from swxsoc.util import util
+from unittest.mock import MagicMock, patch
+
+import pytest
 import requests
+
+from swxsoc.util import util
 
 
 @pytest.fixture

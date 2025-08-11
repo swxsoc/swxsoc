@@ -3,32 +3,29 @@ This module provides general utility functions.
 """
 
 import os
-from datetime import datetime, timezone
-import time
 import re
+import time
+from datetime import datetime, timezone
+from typing import Dict, List, Optional, Union
 
-from astropy.time import Time
 import astropy.units as u
-from astropy.timeseries import TimeSeries
-import requests
-from datetime import datetime
-from typing import List, Dict, Optional, Union
 import boto3
-from botocore.exceptions import NoCredentialsError, ClientError
+import requests
+import sunpy.net.attrs as a
+import sunpy.time
+import sunpy.util.net
+from astropy.time import Time
+from astropy.timeseries import TimeSeries
 from botocore import UNSIGNED
 from botocore.client import Config
-from datetime import datetime
+from botocore.exceptions import ClientError, NoCredentialsError
 from dateutil.relativedelta import relativedelta
 from parfive import Downloader
-import sunpy.util.net
-import sunpy.time
-import sunpy.net.attrs as a
-from sunpy.net.attr import AttrWalker, AttrAnd, AttrOr, SimpleAttr
-from sunpy.net.base_client import BaseClient, QueryResponseTable, convert_row_to_table
-
+from sunpy.net.attr import AttrAnd, AttrOr, AttrWalker, SimpleAttr
+from sunpy.net.base_client import (BaseClient, QueryResponseTable,
+                                   convert_row_to_table)
 
 import swxsoc
-
 
 __all__ = [
     "create_science_filename",

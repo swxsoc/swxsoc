@@ -1,15 +1,14 @@
 """Tests util.py that interact with timestream"""
 
 import os
+
 import boto3
+import pytest
+from astropy import units as u
+from astropy.timeseries import TimeSeries
 from moto import mock_aws
 from moto.core import DEFAULT_ACCOUNT_ID as ACCOUNT_ID
 from moto.timestreamwrite.models import timestreamwrite_backends
-import pytest
-
-from astropy import units as u
-from astropy.timeseries import TimeSeries
-
 
 from swxsoc.util import util
 

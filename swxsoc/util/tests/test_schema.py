@@ -1,17 +1,19 @@
-import pytest
 import tempfile
 from collections import OrderedDict
-import yaml
+
+import astropy.units as u
 import numpy as np
-from numpy.random import random
+import pytest
+import yaml
+from astropy.table import Table
 from astropy.time import Time
 from astropy.timeseries import TimeSeries
-from astropy.table import Table
-import astropy.units as u
+from numpy.random import random
 from spacepy.pycdf import CDF
+
 from swxsoc.swxdata import SWXData
-from swxsoc.util.schema import SWXSchema
 from swxsoc.util import const
+from swxsoc.util.schema import SWXSchema
 
 
 def get_test_sw_data():

@@ -1,19 +1,21 @@
 """Tests for Loading and Saving data from data containers"""
 
+import json
+import tempfile
 from collections import OrderedDict
 from pathlib import Path
-import pytest
-import json
+
 import numpy as np
-from numpy.random import random
-import tempfile
-from astropy.timeseries import TimeSeries
-from astropy.time import Time
-from astropy.units import Quantity
+import pytest
 from astropy.nddata import NDData
+from astropy.time import Time
+from astropy.timeseries import TimeSeries
+from astropy.units import Quantity
 from astropy.wcs import WCS
-from ndcube import NDCube, NDCollection
-from spacepy.pycdf import CDFError, CDF
+from ndcube import NDCollection, NDCube
+from numpy.random import random
+from spacepy.pycdf import CDF, CDFError
+
 from swxsoc.swxdata import SWXData
 from swxsoc.util import const
 

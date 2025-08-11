@@ -90,6 +90,27 @@ missions_data:
         extra_inst_names:
           - sp
           - shp
+  meteorradar:
+    file_extension: cdf
+    valid_data_levels:
+      - l0
+      - ql
+      - l1
+      - l2
+      - l3
+    instruments: # 'rothera', 'leipzig', 'riogrande',
+      - name: rothera
+        shortname: rothera
+        fullname: Rothera Meteor Radar
+        targetname: Rothera
+      - name: leipzig
+        shortname: leipzig
+        fullname: Leipzig Meteor Radar
+        targetname: Leipzig
+      - name: riogrande
+        shortname: riogrande
+        fullname: Rio Grande Meteor Radar
+        targetname: RioGrande
 
 logger:
   # Threshold for the logging messages. Logging messages that are less severe

@@ -5,23 +5,23 @@ This code is based on that provided by SpacePy see
     licenses/SPACEPY.rst
 """
 
-from pathlib import Path
+import math
 from collections import OrderedDict
 from copy import deepcopy
+from pathlib import Path
 from typing import Optional
-import math
-import yaml
 
 import numpy as np
+import yaml
+from astropy import units as u
 from astropy.table import Table
 from astropy.time import Time
-from astropy import units as u
 from ndcube import NDCube
-
 from sammi.cdf_attribute_manager import CdfAttributeManager
+
 import swxsoc
 from swxsoc import log
-from swxsoc.util import util, const
+from swxsoc.util import const, util
 from swxsoc.util.exceptions import warn_user
 
 __all__ = ["SWXSchema"]

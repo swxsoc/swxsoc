@@ -1,21 +1,23 @@
 """Tests for CDF Files to and from data containers"""
 
+import tempfile
 from collections import OrderedDict
 from pathlib import Path
-import pytest
+
+import astropy.units as u
 import numpy as np
-from numpy.random import random
-import tempfile
-from astropy.timeseries import TimeSeries
+import pytest
+from astropy.nddata import NDData
 from astropy.table import Column
 from astropy.time import Time
+from astropy.timeseries import TimeSeries
 from astropy.units import Quantity
-import astropy.units as u
-from astropy.nddata import NDData
 from astropy.wcs import WCS
-from ndcube import NDCube, NDCollection
-from spacepy.pycdf import CDF, CDFError
 from matplotlib.axes import Axes
+from ndcube import NDCollection, NDCube
+from numpy.random import random
+from spacepy.pycdf import CDF, CDFError
+
 from swxsoc.swxdata import SWXData
 from swxsoc.util.schema import SWXSchema
 from swxsoc.util.validation import validate

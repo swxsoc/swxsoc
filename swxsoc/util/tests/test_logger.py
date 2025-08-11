@@ -7,7 +7,6 @@ import os.path
 import warnings
 
 import pytest
-
 from astropy.utils.exceptions import AstropyUserWarning
 
 from swxsoc import config, log

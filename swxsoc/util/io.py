@@ -1,15 +1,16 @@
 from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import Tuple
 from collections import OrderedDict
 from datetime import datetime
-from astropy.timeseries import TimeSeries
-from astropy.time import Time
-from astropy.nddata import NDData
-from astropy.wcs import WCS
+from pathlib import Path
+from typing import Tuple
+
 import astropy.units as u
-from ndcube import NDCollection
-from ndcube import NDCube
+from astropy.nddata import NDData
+from astropy.time import Time
+from astropy.timeseries import TimeSeries
+from astropy.wcs import WCS
+from ndcube import NDCollection, NDCube
+
 import swxsoc
 from swxsoc.swxdata import SWXData
 from swxsoc.util.exceptions import warn_user
@@ -410,7 +411,7 @@ class CDFHandler(SWXIOHandler):
                 name=var_name,
                 data=var_data.data,
                 type=var_data_types[0],
-                recVary=False,
+                recVary=(var_data.meta["VAR_TYPE"] == "data"),
             )
 
             # Add the Variable Attributes

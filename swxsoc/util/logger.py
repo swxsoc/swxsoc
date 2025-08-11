@@ -3,9 +3,9 @@ This code is based on that provided by SunPy and AstroPy see
     licenses/SUNPY.rst and licenses/ASTROPY.rst
 """
 
+import logging
 import os
 import sys
-import logging
 
 from astropy.logger import AstropyLogger
 

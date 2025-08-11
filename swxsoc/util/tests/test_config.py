@@ -11,9 +11,14 @@ import yaml
 
 import swxsoc
 from swxsoc.util import SWXWarning
-from swxsoc.util.config import (CONFIG_DIR, _find_config_files,
-                                _get_user_configdir, _is_writable_dir,
-                                copy_default_config, print_config)
+from swxsoc.util.config import (
+    CONFIG_DIR,
+    _find_config_files,
+    _get_user_configdir,
+    _is_writable_dir,
+    copy_default_config,
+    print_config,
+)
 
 USER = os.path.expanduser("~")
 

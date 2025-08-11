@@ -22,8 +22,7 @@ from botocore.exceptions import ClientError, NoCredentialsError
 from dateutil.relativedelta import relativedelta
 from parfive import Downloader
 from sunpy.net.attr import AttrAnd, AttrOr, AttrWalker, SimpleAttr
-from sunpy.net.base_client import (BaseClient, QueryResponseTable,
-                                   convert_row_to_table)
+from sunpy.net.base_client import BaseClient, QueryResponseTable, convert_row_to_table
 
 import swxsoc
 

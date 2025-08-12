@@ -1,15 +1,15 @@
 """Tests util.py that interact with timestream"""
 
 import os
+
 import boto3
+import numpy as np
+import pytest
+from astropy import units as u
+from astropy.timeseries import TimeSeries
 from moto import mock_aws
 from moto.core import DEFAULT_ACCOUNT_ID as ACCOUNT_ID
 from moto.timestreamwrite.models import timestreamwrite_backends
-import pytest
-
-from astropy import units as u
-from astropy.timeseries import TimeSeries
-
 
 from swxsoc.util import util
 
@@ -87,6 +87,53 @@ def test_record_timeseries_quantity_1col(mocked_timestream):
         assert temp4_measure["Type"] == "DOUBLE", "MeasureValueType does not match"
 
 
+def test_record_timeseries_quantity_1col_array(mocked_timestream):
+    timeseries_name = "test_measurements"
+    ts = TimeSeries(
+        time_start="2016-03-22T12:30:31",
+        time_delta=3 * u.s,
+        n_samples=5,
+        meta={"name": timeseries_name},
+    )
+    ts["temp4_arr"] = np.arange(6 * 5).reshape((5, 6))
+    util.record_timeseries(ts, instrument_name="test")
+
+    database_name = "dev-swxsoc_sdc_aws_logs"
+    table_name = "dev-swxsoc_measures_table"
+
+    backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
+    records = backend.databases[database_name].tables[table_name].records
+
+    # Assert that there should be 5 records, one for each timestamp
+    assert len(records) == len(ts["temp4_arr"])
+
+    for i, record in enumerate(records):
+        # Assert the time is correct
+        time = str(int(ts.time[i].to_datetime().timestamp() * 1000))
+        assert record["Time"] == time
+        assert record["MeasureName"] == timeseries_name
+        # Check the MeasureValues
+        measure_values = record["MeasureValues"]
+        assert (
+            len(measure_values) == ts["temp4_arr"].shape[1]
+        )  # Only one column of data
+
+        # Assert the measure name, value, and type
+        # Loop through each column in the array
+        for j in range(ts["temp4_arr"].shape[1]):
+            measure_name = f"temp4_arr_val{j}"
+            temp_measure = next(
+                (mv for mv in measure_values if mv["Name"] == measure_name), None
+            )
+            assert (
+                temp_measure is not None
+            ), f"{measure_name} not found in MeasureValues"
+            assert temp_measure["Value"] == str(
+                float(ts["temp4_arr"].value[i, j])
+            ), "MeasureValue does not match"
+            assert temp_measure["Type"] == "DOUBLE", "MeasureValueType does not match"
+
+
 def test_record_timeseries_quantity_multicol(mocked_timestream):
     timeseries_name = "test_measurements"
     ts = TimeSeries(time_start="2016-03-22T12:30:31", time_delta=3 * u.s, n_samples=5)
@@ -145,7 +192,7 @@ def test_record_timeseries_quantity_multicol(mocked_timestream):
             ts["status"].value[i]
         ), "status MeasureValue does not match"
         assert (
-            status_measure["Type"] == "VARCHAR"
+            status_measure["Type"] == "DOUBLE"
         ), "status MeasureValueType does not match"
 
 

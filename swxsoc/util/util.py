@@ -566,7 +566,7 @@ def apply_descriptor(wlk, attr, params):
 
 class SWXSOCClient(BaseClient):
     """
-    Client for searching for SWXSOC data on AWS. 
+    Client for searching for SWXSOC data on AWS.
     This client provides search and fetch functionality for SWXSOC data and is based on the sunpy BaseClient for FIDO.
 
     For more information on the sunpy BaseClient, see: https://docs.sunpy.org/en/stable/generated/api/sunpy.net.base_client.BaseClient.html
@@ -577,18 +577,11 @@ class SWXSOCClient(BaseClient):
     --------
     >>> from swxsoc.util import SWXSOCClient, SearchTime, Level, Descriptor, Instrument
     >>> client = SWXSOCClient()
-    >>> results = client.search(AttrAnd(
-                [
-                    SearchTime(
-                        start=Time("2025-07-10T00:00:00"), end=Time("2025-07-11T00:00:00")
-                    ),
-                    Instrument("meddea"),
-                    Level(level),
-                    Descriptor("housekeeping"),
-                ]
-            )
-        )
-    >>> print(results)
+    >>> query = AttrAnd([SearchTime(start=Time("2025-07-10T00:00:00"), end=Time("2025-07-11T00:00:00"),
+    ...    Instrument("meddea"),
+    ...    Level(level),
+    ...    Descriptor("housekeeping")])
+    >>> results = client.search(query)  # doctest: +SKIP
     """
 
     size_column = "size"

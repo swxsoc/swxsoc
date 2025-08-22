@@ -577,7 +577,7 @@ class SWXSOCClient(BaseClient):
     --------
     >>> from swxsoc.util import SWXSOCClient, SearchTime, Level, Descriptor, Instrument
     >>> client = SWXSOCClient()
-    >>> query = AttrAnd([SearchTime(start=Time("2025-07-10T00:00:00"), end=Time("2025-07-11T00:00:00"),
+    >>> query = AttrAnd([SearchTime(start=Time("2025-07-10T00:00:00"), end=Time("2025-07-11T00:00:00")),
     ...    Instrument("meddea"),
     ...    Level(level),
     ...    Descriptor("housekeeping")])

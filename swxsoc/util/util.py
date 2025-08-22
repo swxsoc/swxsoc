@@ -8,6 +8,7 @@ import re
 import time
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Union
+from pathlib import Path
 
 import astropy.units as u
 import boto3
@@ -34,6 +35,7 @@ __all__ = [
     "SearchTime",
     "Level",
     "Instrument",
+    "Descriptor",
     "DevelopmentBucket",
     "record_timeseries",
     "get_dashboard_id",
@@ -408,6 +410,15 @@ class Instrument(a.Instrument):
         The instrument value.
     """
 
+class Descriptor(a.Detector):
+    """
+    Attribute to specify the data type for the search.
+    
+    Attributes
+    ----------
+    value : str
+        The data type
+    """
 
 class DevelopmentBucket(SimpleAttr):
     """
@@ -532,6 +543,23 @@ def apply_development_bucket(wlk, attr, params):
         The parameters dictionary to be updated.
     """
     params.update({"use_development_bucket": attr.value})
+
+
+@walker.add_applier(Descriptor)
+def apply_development_bucket(wlk, attr, params):
+    """
+    Applies 'DevelopmentBucket' attribute to the parameters.
+
+    Parameters
+    ----------
+    wlk : AttrWalker
+        The AttrWalker instance used for applying the attributes.
+    attr : DevelopmentBucket
+        The 'DevelopmentBucket' attribute to be applied.
+    params : dict
+        The parameters dictionary to be updated.
+    """
+    params.update({"descriptor": attr.value})
 
 
 class SWXSOCClient(BaseClient):
@@ -741,6 +769,7 @@ class SWXSOCClient(BaseClient):
         levels = query.get("level")
         start_time = query.get("startTime")
         end_time = query.get("endTime")
+        descriptor = query.get("descriptor")
         use_development_bucket = query.get("use_development_bucket")
 
         if levels is not None and not isinstance(levels, list):
@@ -786,21 +815,32 @@ class SWXSOCClient(BaseClient):
             swxsoc.log.info(
                 f"Searching for files with level {levels} between {start_time} and {end_time}"
             )
+            if descriptor:
+                swxsoc.log.info(
+                f"Searching for files with descriptor: {descriptor}"
+            )
 
-            prefixes = cls.generate_prefixes(levels, start_time, end_time)
+            prefixes = cls.generate_prefixes(levels, start_time, end_time, descriptor)
 
-            files_in_s3 = [
-                f
-                for f in files_in_s3
-                if any(f["Key"].startswith(prefix) for prefix in prefixes)
-            ]
+            matched_files = []
+            for this_s3_file in files_in_s3:
+                for this_prefix_list in prefixes:
+                    if all(this_token in str(Path(this_s3_file["Key"]).parent) for this_token in this_prefix_list):
+                        matched_files.append(this_s3_file)
         else:
             swxsoc.log.info(f"Searching for all files")
-
-        swxsoc.log.info(f"Found {len(files_in_s3)} files in S3")
+        # remove duplicates
+        unique_matched_files = []
+        seen = []
+        for this_file in matched_files:
+            if this_file['Key'] not in seen:
+                seen.append(this_file['Key'])
+                unique_matched_files.append(this_file)
+        matched_files = unique_matched_files
+        swxsoc.log.info(f"Found {len(matched_files)} files in S3")
 
         rows = []
-        for s3_object in files_in_s3:
+        for s3_object in matched_files:
             swxsoc.log.debug(f"Processing S3 object: {s3_object}")
 
             try:
@@ -904,7 +944,7 @@ class SWXSOCClient(BaseClient):
         return content
 
     @staticmethod
-    def generate_prefixes(levels: list, start_time: str, end_time: str) -> list:
+    def generate_prefixes(levels: list, start_time: str, end_time: str, descriptor: str) -> list:
         """
         Generates a list of prefixes based on the level and time range.
 
@@ -916,6 +956,8 @@ class SWXSOCClient(BaseClient):
             The start time in ISO format.
         end_time : str
             The end time in ISO format.
+        descriptor : str
+            The file descriptor
 
         Returns
         -------
@@ -928,10 +970,17 @@ class SWXSOCClient(BaseClient):
 
         while current_time <= end_time:
             for level in levels:
-                prefix = f"{level}/{current_time.year}/{current_time.month:02d}/"
-                prefixes.append(prefix)
+            #    prefix.append
+            #    if level == 'raw':
+            #        prefix.append() = [f"{level}", f"{current_time.year}", f"{current_time.month:02d}"]
+            #    else:
+            #        prefix = f"{level}/*/{current_time.year}/{current_time.month:02d}/"
+                these_tokens = [f"{current_time.year}", f"{current_time.month:02d}", level]
+                if descriptor:
+                    these_tokens.append(descriptor)
+                prefixes.append(these_tokens)
             current_time += relativedelta(months=1)
-            swxsoc.log.debug(f"Generated prefix: {prefix}")
+        swxsoc.log.debug(f"Generated prefix: {prefixes}")
 
         return prefixes
 

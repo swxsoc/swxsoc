@@ -579,7 +579,7 @@ class SWXSOCClient(BaseClient):
     >>> client = SWXSOCClient()
     >>> query = AttrAnd([SearchTime(start=Time("2025-07-10T00:00:00"), end=Time("2025-07-11T00:00:00")),
     ...    Instrument("meddea"),
-    ...    Level(level),
+    ...    Level("l0"),
     ...    Descriptor("housekeeping")])
     >>> results = client.search(query)  # doctest: +SKIP
     """

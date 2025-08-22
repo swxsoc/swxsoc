@@ -410,15 +410,17 @@ class Instrument(a.Instrument):
         The instrument value.
     """
 
+
 class Descriptor(a.Detector):
     """
     Attribute to specify the data type for the search.
-    
+
     Attributes
     ----------
     value : str
         The data type
     """
+
 
 class DevelopmentBucket(SimpleAttr):
     """
@@ -546,7 +548,7 @@ def apply_development_bucket(wlk, attr, params):
 
 
 @walker.add_applier(Descriptor)
-def apply_development_bucket(wlk, attr, params):
+def apply_descriptor(wlk, attr, params):
     """
     Applies 'DevelopmentBucket' attribute to the parameters.
 
@@ -816,16 +818,19 @@ class SWXSOCClient(BaseClient):
                 f"Searching for files with level {levels} between {start_time} and {end_time}"
             )
             if descriptor:
-                swxsoc.log.info(
-                f"Searching for files with descriptor: {descriptor}"
-            )
+                swxsoc.log.info(f"Searching for files with descriptor: {descriptor}")
 
             prefixes = cls.generate_prefixes(levels, start_time, end_time, descriptor)
 
             matched_files = []
             for this_s3_file in files_in_s3:
+                print(this_s3_file)
                 for this_prefix_list in prefixes:
-                    if all(this_token in str(Path(this_s3_file["Key"]).parent) for this_token in this_prefix_list):
+                    #    print(this_prefix_list)
+                    if all(
+                        this_token in str(Path(this_s3_file["Key"]).parent)
+                        for this_token in this_prefix_list
+                    ):
                         matched_files.append(this_s3_file)
         else:
             swxsoc.log.info(f"Searching for all files")
@@ -833,8 +838,8 @@ class SWXSOCClient(BaseClient):
         unique_matched_files = []
         seen = []
         for this_file in matched_files:
-            if this_file['Key'] not in seen:
-                seen.append(this_file['Key'])
+            if this_file["Key"] not in seen:
+                seen.append(this_file["Key"])
                 unique_matched_files.append(this_file)
         matched_files = unique_matched_files
         swxsoc.log.info(f"Found {len(matched_files)} files in S3")
@@ -944,7 +949,9 @@ class SWXSOCClient(BaseClient):
         return content
 
     @staticmethod
-    def generate_prefixes(levels: list, start_time: str, end_time: str, descriptor: str) -> list:
+    def generate_prefixes(
+        levels: list, start_time: str, end_time: str, descriptor: str
+    ) -> list:
         """
         Generates a list of prefixes based on the level and time range.
 
@@ -970,12 +977,11 @@ class SWXSOCClient(BaseClient):
 
         while current_time <= end_time:
             for level in levels:
-            #    prefix.append
-            #    if level == 'raw':
-            #        prefix.append() = [f"{level}", f"{current_time.year}", f"{current_time.month:02d}"]
-            #    else:
-            #        prefix = f"{level}/*/{current_time.year}/{current_time.month:02d}/"
-                these_tokens = [f"{current_time.year}", f"{current_time.month:02d}", level]
+                these_tokens = [
+                    f"{current_time.year}",
+                    f"{current_time.month:02d}",
+                    level,
+                ]
                 if descriptor:
                     these_tokens.append(descriptor)
                 prefixes.append(these_tokens)

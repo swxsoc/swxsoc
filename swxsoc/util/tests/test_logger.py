@@ -2,15 +2,15 @@
 Tests for the logging module
 """
 
+import inspect
 import logging
 import os.path
-import warnings
 import re
+import warnings
 
 import pytest
-
-from astropy.utils.exceptions import AstropyUserWarning
 from astropy.logger import AstropyLogger
+from astropy.utils.exceptions import AstropyUserWarning
 
 from swxsoc import config, log
 from swxsoc.util.exceptions import SWXUserWarning
@@ -141,7 +141,7 @@ def test_log_format_real_output():
     """
     with log.log_to_list() as log_list:
         # Get the line number before logging
-        lineno = logging.currentframe().f_lineno + 1
+        lineno = inspect.currentframe().f_lineno + 1
         log.info("Test message", extra={"origin": "test_module"})
 
     # Get the formatted message as it would appear in the log

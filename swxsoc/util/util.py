@@ -821,7 +821,7 @@ class SWXSOCClient(BaseClient):
             swxsoc.log.info(f"Searching for instrument: {instrument}")
             instrument_bucket_to_search = [instrument_buckets[instrument]]
 
-        swxsoc.log.debug(f"Searching in buckets: {instrument_bucket_to_search}")
+        swxsoc.log.info(f"Searching in buckets: {instrument_bucket_to_search}")
 
         files_in_s3 = cls.list_files_in_s3(instrument_bucket_to_search)
 
@@ -836,9 +836,7 @@ class SWXSOCClient(BaseClient):
 
             matched_files = []
             for this_s3_file in files_in_s3:
-                print(this_s3_file)
                 for this_prefix_list in prefixes:
-                    #    print(this_prefix_list)
                     if all(
                         this_token in str(Path(this_s3_file["Key"]).parent)
                         for this_token in this_prefix_list
@@ -854,7 +852,10 @@ class SWXSOCClient(BaseClient):
                 seen.append(this_file["Key"])
                 unique_matched_files.append(this_file)
         matched_files = unique_matched_files
-        swxsoc.log.info(f"Found {len(matched_files)} files in S3")
+
+        swxsoc.log.info(
+            f"Found {len(matched_files)} files in S3 matching search criteria"
+        )
 
         rows = []
         for s3_object in matched_files:

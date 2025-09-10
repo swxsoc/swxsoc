@@ -738,7 +738,7 @@ def test_search_development_bucket():
     query = util.AttrAnd([util.DevelopmentBucket(True)])
     results = fido_client.search(query)
 
-    assert len(results) == 4
+    assert len(results) == 1
 
     # Test search with a query for not in development bucket
     query = util.AttrAnd([util.DevelopmentBucket(False)])
@@ -802,3 +802,43 @@ def test_fetch():
     fido_client.fetch(results, path=".", downloader=downloader)
 
     assert downloader.queued_downloads == 2
+
+    s3.put_object(
+        Bucket=bucket_name,
+        Key=f"l1/housekeeping/2024/04/swxsoc_eea_l1_{time_formatted}_v1.2.3.cdf",
+        Body=b"test data 2",
+    )
+    s3.put_object(
+        Bucket=bucket_name,
+        Key=f"l1/spectrum/2024/04/swxsoc_eea_l1_{time_formatted}_v1.2.3.cdf",
+        Body=b"test data 2",
+    )
+    query = util.AttrAnd(
+        [
+            util.SearchTime("2024-01-01", "2025-01-01"),
+            util.DevelopmentBucket(False),
+            util.Instrument("eea"),
+            util.Descriptor("housekeeping"),
+        ]
+    )
+    results = fido_client.search(query)
+    assert len(results) == 1
+    query = util.AttrAnd(
+        [
+            util.SearchTime("2024-01-01", "2025-01-01"),
+            util.DevelopmentBucket(False),
+            util.Instrument("eea"),
+            util.Descriptor("spectrum"),
+        ]
+    )
+    results = fido_client.search(query)
+    assert len(results) == 1
+    query = util.AttrAnd(
+        [
+            util.DevelopmentBucket(False),
+            util.Instrument("eea"),
+            util.Level("l1"),
+        ]
+    )
+    results = fido_client.search(query)
+    assert len(results) == 3

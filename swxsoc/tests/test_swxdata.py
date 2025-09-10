@@ -220,10 +220,16 @@ def test_none_attributes():
     test_data.timeseries["time"].meta["none_attr"] = None
 
     with tempfile.TemporaryDirectory() as tmpdirname:
-        with pytest.raises(ValueError):
-            # Throws an error that we cannot have None attribute values
-            tmp_path = Path(tmpdirname)
-            test_data.save(output_path=tmp_path)
+        tmp_path = Path(tmpdirname)
+        # Check that a warning is raised instead of an exception
+        with pytest.warns(UserWarning) as warning_info:
+            output_file = test_data.save(output_path=tmp_path)
+
+        # Verify the warning message contains information about None attribute
+        assert any("none_attr" in str(w.message) for w in warning_info)
+
+        # Verify the file was actually created
+        assert output_file.exists()
 
 
 def test_multidimensional_timeseries():

@@ -1498,7 +1498,13 @@ class SWXSchema(CdfAttributeManager):
             try:
                 import spacepy.pycdf as pycdf
 
-                cdf_lib_version = pycdf.lib.version
+                # Unpack the version tuple
+                lib_version, lib_release, lib_increment, lib_subincrement = (
+                    pycdf.lib.version
+                )
+                cdf_lib_version = (
+                    f"{lib_version}.{lib_release}.{lib_increment}.{lib_subincrement}"
+                )
             except (ImportError, AttributeError) as e:
                 cdf_lib_version = "unknown version"
         else:

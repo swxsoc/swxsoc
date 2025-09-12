@@ -90,27 +90,95 @@ missions_data:
         extra_inst_names:
           - sp
           - shp
-  meteorradar:
+  
+  mrn: # Meteor Radars Network
     file_extension: cdf
     valid_data_levels:
       - l0
-      - ql
       - l1
-      - l2
-      - l3
-    instruments: # 'rothera', 'leipzig', 'riogrande',
-      - name: rothera
-        shortname: rothera
-        fullname: Rothera Meteor Radar
-        targetname: Rothera
+
+    instruments:
+      # SKiYMET Network
+      - name: alaska
+        shortname: alaska
+        fullname: Poker Flat Research Range, Alaska, USA
+        targetname: alaska
+      - name: bearlake
+        shortname: bearlake
+        fullname: Bear Lake Observatory, Utah, USA
+        targetname: bearlake
+      - name: biak
+        shortname: biak
+        fullname: Biak Meteor Radar, West Papua, Indonesia
+        targetname: biak
+      - name: brazil
+        shortname: brazil
+        fullname: Cachoeira Paulista Meteor Radar, Brazil
+        targetname: brazil
+      - name: cariri
+        shortname: cariri
+        fullname: São João do Cariri Meteor Radar, Brazil
+        targetname: cariri
+      - name: culebra
+        shortname: culebra
+        fullname: Culebra Meteor Radar, Puerto Rico
+        targetname: culebra
+      - name: esrange
+        shortname: esrange
+        fullname: Esrange Space Centre, Kiruna station, Sweden
+        targetname: esrange
+      - name: halley-sk
+        shortname: halley-sk
+        fullname: Halley Research Station, Antarctica
+        targetname: halley-sk
       - name: leipzig
         shortname: leipzig
-        fullname: Leipzig Meteor Radar
-        targetname: Leipzig
+        fullname: Collm Meteor Radar, Leipzig, Germany
+        targetname: leipzig
       - name: riogrande
         shortname: riogrande
-        fullname: Rio Grande Meteor Radar
-        targetname: RioGrande
+        fullname: Rio Grande Meteor Radar (Southern Argentina Agile Meteor Radar), Tierra del Fuego, Argentina
+        targetname: riogrande
+      - name: rothera-sk
+        shortname: rothera-sk
+        fullname: Rothera Research Station, Antarctica
+        targetname: rothera-sk
+      - name: sodankyla
+        shortname: sodankyla
+        fullname: Sodankylä Geophysical Observatory, Finland
+        targetname: sodankyla
+      - name: trondheim
+        shortname: trondheim
+        fullname: Trondheim Meteor Radar, Norway
+        targetname: trondheim
+      
+      # ATRAD Network
+      - name: DAV
+        shortname: DAV
+        fullname: Davis Station, Antarctica
+        targetname: DAV
+      - name: KSS
+        shortname: KSS
+        fullname: King Sejong Station, King George Island, Antarctica
+        targetname: KSS
+      - name: SVA
+        shortname: SVA
+        fullname: Svalbard Meteor Radar, Norway
+        targetname: SVA
+      - name: TRO
+        shortname: TRO
+        fullname: Tromsø Meteor Radar, Norway
+        targetname: TRO
+      
+      # SIMONe Network
+      - name: Sevilleta
+        shortname: Sevilleta
+        fullname: Sevilleta Long-Term Ecological Research Site, New Mexico, USA
+        targetname: Sevilleta
+      - name: Wallops
+        shortname: Wallops
+        fullname: Wallops Flight Facility, Virginia, USA
+        targetname: Wallops
 
 logger:
   # Threshold for the logging messages. Logging messages that are less severe

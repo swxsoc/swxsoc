@@ -2,11 +2,14 @@
 Tests for the logging module
 """
 
+import inspect
 import logging
 import os.path
+import re
 import warnings
 
 import pytest
+from astropy.logger import AstropyLogger
 from astropy.utils.exceptions import AstropyUserWarning
 
 from swxsoc import config, log
@@ -33,6 +36,7 @@ def test_logger_name():
 
 def test_is_the_logger_there():
     assert isinstance(log, logging.Logger)
+    assert isinstance(log, AstropyLogger)
     assert isinstance(log, MyLogger)
 
 
@@ -75,14 +79,6 @@ def test_is_log_to_file_configed():
             assert os.path.basename(fh.baseFilename) == os.path.basename(log_file_path)
 
 
-def test_origin():
-    with log.log_to_list() as log_list:
-        log.info("test1")
-
-    # assert log_list[0].origin == "swxsoc.util.tests.test_logger"
-    assert log_list[0].message.startswith("test1")
-
-
 def send_to_log(message, kind="INFO"):
     """
     A simple function to demonstrate the logger generating an origin.
@@ -91,6 +87,79 @@ def send_to_log(message, kind="INFO"):
         log.info(message)
     elif kind.lower() == "debug":
         log.debug(message)
+
+
+def test_log_format():
+    """
+    Test that the log format matches the expected pattern from config.yml:
+    "%(asctime)s, %(origin)s.%(funcName)s():%(lineno)d, %(levelname)s, %(message)s"
+    """
+    # Use log_to_list to capture log messages
+    with log.log_to_list() as log_list:
+        # Define a function that we'll call to generate a log with known function name
+        def test_logging_function():
+            log.info("Testing log format", extra={"origin": "test_module"})
+
+        # Call the function to generate a log entry
+        test_logging_function()
+
+    # We should have captured one log entry
+    assert len(log_list) == 1
+
+    # Check that the log entry has all the required attributes from our format
+    entry = log_list[0]
+
+    # Check timestamp format: YYYY-MM-DD HH:MM:SS,SSS
+    assert hasattr(entry, "asctime")
+    assert re.match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}", entry.asctime)
+
+    # Check origin (module name)
+    assert hasattr(entry, "origin")
+    assert entry.origin == "test_module"
+
+    # Check function name
+    assert hasattr(entry, "funcName")
+    assert entry.funcName == "test_logging_function"
+
+    # Check line number exists and is numeric
+    assert hasattr(entry, "lineno")
+    assert isinstance(entry.lineno, int)
+
+    # Check level name
+    assert hasattr(entry, "levelname")
+    assert entry.levelname == "INFO"
+
+    # Check message
+    assert hasattr(entry, "message")
+    assert entry.message == "Testing log format"
+
+
+def test_log_format_real_output():
+    """
+    Test that when logging something, the output string has the expected format.
+    This tests the actual string formatting rather than just the presence of attributes.
+    """
+    with log.log_to_list() as log_list:
+        # Get the line number before logging
+        lineno = inspect.currentframe().f_lineno + 1
+        log.info("Test message", extra={"origin": "test_module"})
+
+    # Get the formatted message as it would appear in the log
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter(
+        "%(asctime)s, %(origin)s.%(funcName)s():%(lineno)d, %(levelname)s, %(message)s"
+    )
+    handler.setFormatter(formatter)
+
+    # Format the log record ourselves
+    formatted_message = formatter.format(log_list[0])
+
+    # Check that the formatted message matches our expected pattern
+    # The function name should be test_log_format_real_output
+    pattern = rf"\d{{4}}-\d{{2}}-\d{{2}} \d{{2}}:\d{{2}}:\d{{2}},\d{{3}}, test_module.test_log_format_real_output\(\):{lineno}, INFO, Test message"
+    assert re.match(
+        pattern, formatted_message
+    ), f"Expected format not found in: {formatted_message}"
 
 
 # no obvious way to do the following

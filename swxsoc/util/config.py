@@ -7,8 +7,9 @@ This code is based on that provided by SunPy see
 
 import os
 import shutil
-import yaml
 from pathlib import Path
+
+import yaml
 
 import swxsoc
 from swxsoc.util.exceptions import warn_user

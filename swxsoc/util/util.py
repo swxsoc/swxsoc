@@ -7,8 +7,8 @@ import os
 import re
 import time
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Union
 from pathlib import Path
+from typing import Dict, List, Optional, Union
 
 import astropy.units as u
 import boto3

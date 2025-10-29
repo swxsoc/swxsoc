@@ -90,6 +90,12 @@ missions_data:
         extra_inst_names:
           - sp
           - shp
+      - name: spacecraft
+        shortname: craft
+        fullname: PADRE Spacecraft
+        targetname: obc
+        extra_inst_names:
+          - padre_padre-obc
 
 logger:
   # Threshold for the logging messages. Logging messages that are less severe

@@ -18,6 +18,7 @@ from swxsoc.util import util
 
 time = "2024-04-06T12:06:21"
 time_formatted = "20240406T120621"
+time_unix_ms = "1712405181000"
 
 # YAML content as a dictionary
 config_content = {
@@ -307,7 +308,7 @@ def test_science_filename_errors_l1_b():
     ("swxsoc_MERIT_VC_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03"),
     ("swxsoc_SPANI_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03"),
     ("SPANI_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03"),
-    ("spani_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03")
+    ("spani_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03"),
 ])
 def test_parse_l0_filenames(filename, instrument, time):
     """Testing parsing of MOC-generated level 0 files."""
@@ -356,8 +357,10 @@ def test_parse_env_var_configured(filename, instrument, time, level, version, mo
     ("padreMDU8_000107034739.idx", "meddea", "2000-01-07 03:47:39", "raw", None, None),
     ("padre_meddea_l0test_light_20250131T192102_v0.3.0.bin", "meddea", "2025-01-31T19:21:02.000", "raw", None, None),
     ("padre_sharp_ql_20230430T000000_v0.0.1.fits", "sharp", "2023-04-30T00:00:00.000", "ql", "0.0.1", None),
-
-
+    ("padre_processing_FRAME_210_Data_1762019705243_1762198944388.csv", "craft", "2025-11-01T17:55:05.243", "raw", None, None),
+    ("padre_get_EPS2_BP_INST0_CHARGER_XP_Data_1762019652327_1762198944391.csv", "craft", "2025-11-01T17:54:12.327", "raw", None, None),
+    ("padre_get_EPS2_BP_INST0_CHARGER_YP_Data_1762019652327_1762198944391.csv", "craft", "2025-11-01T17:54:12.327", "raw", None, None),
+    ("padre_get_EPS_9_Data_1762008094193_1762187403300.csv", "craft", "2025-11-01T14:41:34.193", "raw", None, None),
 ])
 def test_parse_padre_science_files(filename, instrument, time, level, version, mode):
     """Testing parsing of MOC-generated level 0 files."""
@@ -369,7 +372,7 @@ def test_parse_padre_science_files(filename, instrument, time, level, version, m
     assert result['instrument'] == instrument
     assert result['level'] == level
     assert result['version'] == version
-    assert result['time'] == Time(time)
+    assert result['time'].isot == Time(time).isot  # compare str otherwise breaks for unix time
     assert result['mode'] == mode
 # fmt: on
 

@@ -290,7 +290,7 @@ def _extract_time(filename: str) -> Time:
         re.compile(r"\d{7}[-_]\d{6}"),  # Legacy L0 formats
         re.compile(r"\d{12}"),  # YYMMDDhhmmss
         re.compile(r"\d{8}T\d{6}"),  # YYYYMMDDTHHMMSS (added this line)
-        re.compile(r"\d{13}"), # unix time stamps in milliseconds
+        re.compile(r"\d{13}"),  # unix time stamps in milliseconds
     ]
 
     for pattern in TIME_PATTERNS:
@@ -298,7 +298,7 @@ def _extract_time(filename: str) -> Time:
         if matches:
             time_str = matches.group(0)
             if len(time_str) == 13:
-                return Time(int(time_str) / 1000., format='unix')
+                return Time(int(time_str) / 1000.0, format="unix")
             # Try legacy L0 formats first
             for fmt in L0_TIME_FORMATS:
                 try:

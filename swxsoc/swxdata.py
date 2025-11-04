@@ -351,9 +351,9 @@ class SWXData:
                     f"Instrument, {instr_name}, is not recognized. Must be one of {swxsoc.config['mission']['inst_names']}."
                 )
             # Set the Property
-            meta["Descriptor"] = (
-                f"{instr_name.upper()}>{swxsoc.config['mission']['inst_to_fullname'][instr_name]}"
-            )
+            meta[
+                "Descriptor"
+            ] = f"{instr_name.upper()}>{swxsoc.config['mission']['inst_to_fullname'][instr_name]}"
 
         # Check the Optional Data Level
         if data_level:

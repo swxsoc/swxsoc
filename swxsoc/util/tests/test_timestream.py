@@ -81,9 +81,9 @@ def test_record_timeseries_quantity_1col(mocked_timestream):
             (mv for mv in measure_values if mv["Name"] == "temp4_deg_C"), None
         )
         assert temp4_measure is not None, "temp4_deg_C not found in MeasureValues"
-        assert temp4_measure["Value"] == str(
-            ts["temp4"].value[i]
-        ), "MeasureValue does not match"
+        assert temp4_measure["Value"] == str(ts["temp4"].value[i]), (
+            "MeasureValue does not match"
+        )
         assert temp4_measure["Type"] == "DOUBLE", "MeasureValueType does not match"
 
 
@@ -125,12 +125,12 @@ def test_record_timeseries_quantity_1col_array(mocked_timestream):
             temp_measure = next(
                 (mv for mv in measure_values if mv["Name"] == measure_name), None
             )
-            assert (
-                temp_measure is not None
-            ), f"{measure_name} not found in MeasureValues"
-            assert temp_measure["Value"] == str(
-                float(ts["temp4_arr"].value[i, j])
-            ), "MeasureValue does not match"
+            assert temp_measure is not None, (
+                f"{measure_name} not found in MeasureValues"
+            )
+            assert temp_measure["Value"] == str(float(ts["temp4_arr"].value[i, j])), (
+                "MeasureValue does not match"
+            )
             assert temp_measure["Type"] == "DOUBLE", "MeasureValueType does not match"
 
 
@@ -172,28 +172,28 @@ def test_record_timeseries_quantity_multicol(mocked_timestream):
         )
 
         assert temp4_measure is not None, "temp4_deg_C not found in MeasureValues"
-        assert temp4_measure["Value"] == str(
-            ts["temp4"].value[i]
-        ), "temp4 MeasureValue does not match"
-        assert (
-            temp4_measure["Type"] == "DOUBLE"
-        ), "temp4 MeasureValueType does not match"
+        assert temp4_measure["Value"] == str(ts["temp4"].value[i]), (
+            "temp4 MeasureValue does not match"
+        )
+        assert temp4_measure["Type"] == "DOUBLE", (
+            "temp4 MeasureValueType does not match"
+        )
 
         assert rail5v_measure is not None, "rail5v_V not found in MeasureValues"
-        assert rail5v_measure["Value"] == str(
-            ts["rail5v"].value[i]
-        ), "rail5v MeasureValue does not match"
-        assert (
-            rail5v_measure["Type"] == "DOUBLE"
-        ), "rail5v MeasureValueType does not match"
+        assert rail5v_measure["Value"] == str(ts["rail5v"].value[i]), (
+            "rail5v MeasureValue does not match"
+        )
+        assert rail5v_measure["Type"] == "DOUBLE", (
+            "rail5v MeasureValueType does not match"
+        )
 
         assert status_measure is not None, "status not found in MeasureValues"
-        assert status_measure["Value"] == str(
-            ts["status"].value[i]
-        ), "status MeasureValue does not match"
-        assert (
-            status_measure["Type"] == "DOUBLE"
-        ), "status MeasureValueType does not match"
+        assert status_measure["Value"] == str(ts["status"].value[i]), (
+            "status MeasureValue does not match"
+        )
+        assert status_measure["Type"] == "DOUBLE", (
+            "status MeasureValueType does not match"
+        )
 
 
 def test_record_dimension_timestream(mocked_timestream):
@@ -226,7 +226,6 @@ def test_record_dimension_timestream(mocked_timestream):
 
 
 def test_invalid_record_dimension_timestream(mocked_timestream):
-    instrument_name = "invalid_instrument"
     dimensions = [
         {"Name": "Location", "Value": "Mars"},
         {"Name": "SensorType", "Value": "Temperature"},

@@ -157,9 +157,9 @@ def test_log_format_real_output():
     # Check that the formatted message matches our expected pattern
     # The function name should be test_log_format_real_output
     pattern = rf"\d{{4}}-\d{{2}}-\d{{2}} \d{{2}}:\d{{2}}:\d{{2}},\d{{3}}, test_module.test_log_format_real_output\(\):{lineno}, INFO, Test message"
-    assert re.match(
-        pattern, formatted_message
-    ), f"Expected format not found in: {formatted_message}"
+    assert re.match(pattern, formatted_message), (
+        f"Expected format not found in: {formatted_message}"
+    )
 
 
 # no obvious way to do the following

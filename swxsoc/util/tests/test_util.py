@@ -9,8 +9,6 @@ import boto3
 from pathlib import Path
 import parfive
 
-from astropy import units as u
-from astropy.timeseries import TimeSeries
 from astropy.time import Time
 
 import swxsoc
@@ -229,7 +227,6 @@ def test_parse_science_filename_errors_l0(filename):
     """Test for errors in l0 and above files"""
     with pytest.raises(ValueError):
         # wrong time name
-        f = ""
         util.parse_science_filename(filename)
 
 
@@ -275,7 +272,7 @@ good_version = "1.3.4"
 )
 def test_science_filename_errors_l1_a(instrument, time, level, version):
     """"""
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(ValueError):
         util.create_science_filename(
             instrument, time, level=level, version=version
         )
@@ -329,7 +326,7 @@ def test_parse_l0_filenames(filename, instrument, time):
     ("hermes_NEM_l0_2024094-124603_v01.bin", "nemisis", "2024-04-03T12:46:03", "l0", None, None),
     ("hermes_EEA_l0_2026337-124603_v11.bin", "eea", "2026-12-03T12:46:03", "l0", None, None),
 ])
-def test_parse_env_var_configured(filename, instrument, time, level, version, mode):
+def test_parse_env_var_configured_2(filename, instrument, time, level, version, mode):
     """Testing parsing of MOC-generated level 0 files."""
     # Set SWXSOC_MISSION to 'hermes' mission
     os.environ["SWXSOC_MISSION"] = "hermes"
@@ -342,7 +339,6 @@ def test_parse_env_var_configured(filename, instrument, time, level, version, mo
     assert result['time'] == Time(time)
     assert result['mode'] == mode
 # fmt: on
-
 # fmt: off
 
 
@@ -386,7 +382,7 @@ def test_parse_padre_science_files(filename, instrument, time, level, version, m
     (f"hermes_eea_l1_{time_formatted}_v1.2.3.cdf", "eea", "2024-04-06T12:06:21", "l1", "1.2.3", None),
     (f"hermes_mrt_l2_{time_formatted}_v1.2.5.cdf", "merit", "2024-04-06T12:06:21", "l2", "1.2.5", None),
 ])
-def test_parse_env_var_configured(filename, instrument, time, level, version, mode):
+def test_parse_env_var_configured_1(filename, instrument, time, level, version, mode):
     """Testing parsing of MOC-generated level 0 files."""
     # Set SWXSOC_MISSION to 'hermes' mission
     os.environ["SWXSOC_MISSION"] = "hermes"

@@ -298,7 +298,9 @@ def _extract_time(filename: str) -> Time:
         if matches:
             time_str = matches.group(0)
             if len(time_str) == 13:
-                return Time(int(time_str) / 1000.0, format="unix")
+                t_unix = Time(int(time_str) / 1000.0, format="unix")
+                t_unix.format = "isot"  # fix the string representation
+                return t_unix
             # Try legacy L0 formats first
             for fmt in L0_TIME_FORMATS:
                 try:

@@ -68,6 +68,7 @@ test = [
 
 style = [
   'ruff',
+  'rstcheck==6.2.0',
 ]
 
 [tool.setuptools.package-data]

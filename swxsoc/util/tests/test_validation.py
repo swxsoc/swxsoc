@@ -452,8 +452,8 @@ def test_valid_scale_dimension_mismatch():
         assert 2 == len(errs)
         errs.sort()
         assert [
-            "SCALEMAX element count 3 does not match " "first data dimension size 2.",
-            "SCALEMIN element count 3 does not match " "first data dimension size 2.",
+            "SCALEMAX element count 3 does not match first data dimension size 2.",
+            "SCALEMIN element count 3 does not match first data dimension size 2.",
         ] == errs
 
 

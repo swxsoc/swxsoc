@@ -14,7 +14,7 @@ import astropy.units as u
 from astropy.nddata import NDData
 from astropy.wcs import WCS
 from ndcube import NDCube, NDCollection
-from spacepy.pycdf import CDF, CDFError
+from spacepy.pycdf import CDFError
 from matplotlib.axes import Axes
 from swxsoc.swxdata import SWXData
 from swxsoc.util.schema import SWXSchema
@@ -159,11 +159,11 @@ def test_sw_data_default():
     """
     ts = get_test_timeseries()
 
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(ValueError):
         # We expect this to throw an error that the Instrument is not recognized.
         # The Instrument is one of the attributes required for generating the filename
         # Initialize a CDF File Wrapper
-        test_data = SWXData(ts)
+        SWXData(ts)
 
     # Test Deleting the Writer
     del ts
@@ -497,7 +497,7 @@ def test_sw_data_add_measurement():
     ts = get_test_timeseries()
     # Initialize a CDF File Wrapper
     test_data = SWXData(ts, meta=input_attrs)
-    ts_len = len(test_data.timeseries.columns)
+    # ts_len = len(test_data.timeseries.columns)
 
     # Add non-Quantity
     with pytest.raises(TypeError):

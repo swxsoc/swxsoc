@@ -3,7 +3,6 @@
 from collections import OrderedDict
 from pathlib import Path
 import pytest
-import json
 import numpy as np
 from numpy.random import random
 import tempfile

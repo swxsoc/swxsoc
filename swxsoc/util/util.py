@@ -124,7 +124,7 @@ def create_science_filename(
     # check that version has integers in each part
     for item in version.split("."):
         try:
-            int_value = int(item)
+            int(item)
         except ValueError:
             raise ValueError(f"Version, {version}, is not all integers.")
 
@@ -667,7 +667,7 @@ class SWXSOCClient(BaseClient):
             url = (
                 presigned_url
                 if presigned_url is not None
-                else f'https://{row["bucket"]}.s3.amazonaws.com/{row["key"]}'
+                else f"https://{row['bucket']}.s3.amazonaws.com/{row['key']}"
             )
 
             downloader.enqueue_file(url, filename=filepath)
@@ -817,7 +817,7 @@ class SWXSOCClient(BaseClient):
 
         if instrument is None or instrument not in instrument_buckets:
             swxsoc.log.info(
-                f"No instrument specified or invalid instrument. Searching all instruments."
+                "No instrument specified or invalid instrument. Searching all instruments."
             )
             instrument_bucket_to_search = instrument_buckets.values()
         else:
@@ -846,7 +846,7 @@ class SWXSOCClient(BaseClient):
                     ):
                         matched_files.append(this_s3_file)
         else:
-            swxsoc.log.info(f"Searching for all files")
+            swxsoc.log.info("Searching for all files")
         # remove duplicates
         unique_matched_files = []
         seen = []
@@ -955,7 +955,7 @@ class SWXSOCClient(BaseClient):
                                     "Bucket": bucket_name,
                                 }
                                 content.append(metadata)
-                    except ClientError as retry_error:
+                    except ClientError:
                         raise Exception(
                             f"Unsigned request failed for bucket {bucket_name} (Ensure you have the correct IAM permissions, or are on the VPN)"
                         )

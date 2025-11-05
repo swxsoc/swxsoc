@@ -375,7 +375,7 @@ class CDFValidator(SWXDataValidator):
         list of str
             Description of each validation failure.
         """
-        validscale = "VALID" if rng else "SCALE"
+        #  validscale = "VALID" if rng else "SCALE"
         whichmin, whichmax = (
             ("VALIDMIN", "VALIDMAX") if rng else ("SCALEMIN", "SCALEMAX")
         )

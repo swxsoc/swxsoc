@@ -10,19 +10,15 @@ from collections import OrderedDict
 from copy import deepcopy
 from typing import Optional
 import math
-import yaml
 
 import numpy as np
 from astropy.table import Table
 from astropy.time import Time
 from astropy import units as u
-from ndcube import NDCube
 
 from sammi.cdf_attribute_manager import CdfAttributeManager
 import swxsoc
-from swxsoc import log
 from swxsoc.util import util, const
-from swxsoc.util.exceptions import warn_user
 
 __all__ = ["SWXSchema"]
 
@@ -125,7 +121,6 @@ class SWXSchema(CdfAttributeManager):
         variable_schema_layers: Optional[list[str]] = None,
         use_defaults: Optional[bool] = True,
     ):
-
         # SWxSOC Default Global Schema
         global_schema_path = str(
             Path(swxsoc.__file__).parent / "data" / DEFAULT_GLOBAL_CDF_ATTRS_SCHEMA_FILE
@@ -295,9 +290,9 @@ class SWXSchema(CdfAttributeManager):
         """
         # Strip the Description of New Lines
         for attr_name in self.global_attribute_schema.keys():
-            self.global_attribute_schema[attr_name][
-                "description"
-            ] = self.global_attribute_schema[attr_name]["description"].strip()
+            self.global_attribute_schema[attr_name]["description"] = (
+                self.global_attribute_schema[attr_name]["description"].strip()
+            )
 
         # Get all the Attributes from the Schema
         attribute_names = list(self.global_attribute_schema.keys())
@@ -359,9 +354,9 @@ class SWXSchema(CdfAttributeManager):
 
         # Strip the Description of New Lines
         for attr_name in measurement_attribute_key.keys():
-            measurement_attribute_key[attr_name][
-                "description"
-            ] = measurement_attribute_key[attr_name]["description"].strip()
+            measurement_attribute_key[attr_name]["description"] = (
+                measurement_attribute_key[attr_name]["description"].strip()
+            )
 
         # Create New Column to describe which VAR_TYPE's require the given attribute
         for attr_name in measurement_attribute_key.keys():
@@ -536,11 +531,11 @@ class SWXSchema(CdfAttributeManager):
                         const.CDF_REAL8,
                     ]
                     cutoffs = [
-                        2 ** 7,
-                        2 ** 7,
-                        2 ** 15,
-                        2 ** 31,
-                        2 ** 63,
+                        2**7,
+                        2**7,
+                        2**15,
+                        2**31,
+                        2**63,
                         1.7e38,
                         1.7e38,
                         8e307,
@@ -562,14 +557,14 @@ class SWXSchema(CdfAttributeManager):
                         const.CDF_REAL8,
                     ]
                     cutoffs = [
-                        2 ** 7,
-                        2 ** 7,
-                        2 ** 8,
-                        2 ** 15,
-                        2 ** 16,
-                        2 ** 31,
-                        2 ** 32,
-                        2 ** 63,
+                        2**7,
+                        2**7,
+                        2**8,
+                        2**15,
+                        2**16,
+                        2**31,
+                        2**32,
+                        2**63,
                         1.7e38,
                         1.7e38,
                         8e307,
@@ -794,7 +789,7 @@ class SWXSchema(CdfAttributeManager):
                 for dimension_i in range(num_dimensions):
                     # Attribute Name for the given dimension_i
                     dimension_attr_name = (
-                        f"{attr_root}{dimension_i+1}"  # Dimension Indexed 1-4 vs 0-3
+                        f"{attr_root}{dimension_i + 1}"  # Dimension Indexed 1-4 vs 0-3
                     )
                     # Get the Derivation Function to be used for the given attribute
                     derivation_fn = getattr(self, attr_schema["derivation_fn"])
@@ -919,7 +914,7 @@ class SWXSchema(CdfAttributeManager):
             ):  # unsigned, easy
                 minval = 0
             elif cdftype == const.CDF_BYTE.value:
-                minval = -(2 ** 7)
+                minval = -(2**7)
             else:  # Signed, harder
                 size = next(
                     (
@@ -932,7 +927,7 @@ class SWXSchema(CdfAttributeManager):
             if maxx in var_data.meta:  # Just use max
                 maxval = var_data.meta[maxx]
             elif cdftype == const.CDF_BYTE.value:
-                maxval = 2 ** 7 - 1
+                maxval = 2**7 - 1
             else:
                 size = next(
                     (
@@ -954,7 +949,7 @@ class SWXSchema(CdfAttributeManager):
                         )
                         - 1
                     )
-                maxval = 2 ** size - 1
+                maxval = 2**size - 1
             # Two tricks:
             # -Truncate and add 1 rather than ceil so get
             # powers of 10 (log10(10) = 1 but needs two digits)
@@ -1499,7 +1494,7 @@ class SWXSchema(CdfAttributeManager):
                 import spacepy.pycdf as pycdf
 
                 cdf_lib_version = pycdf.lib.version
-            except (ImportError, AttributeError) as e:
+            except (ImportError, AttributeError):
                 cdf_lib_version = "unknown version"
         else:
             cdf_lib_version = data.meta[attr_name]

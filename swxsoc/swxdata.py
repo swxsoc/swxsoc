@@ -148,7 +148,7 @@ class SWXData:
         # Check Higher-Dimensional Spectra
         if spectra is not None:
             if not isinstance(spectra, NDCollection):
-                raise TypeError(f"Spectra must be an ndcube.NDCollection object")
+                raise TypeError("Spectra must be an ndcube.NDCollection object")
 
         # ================================================
         #         CREATE DATA STRUCTURES
@@ -272,23 +272,23 @@ class SWXData:
         """
         Returns a string representation of the `SWXData` class.
         """
-        str_repr = f"SWXData() Object:\n"
+        str_repr = "SWXData() Object:\n"
         # Global Attributes/Metedata
-        str_repr += f"Global Attrs:\n"
+        str_repr += "Global Attrs:\n"
         for attr_name, attr_value in self._meta.items():
             str_repr += f"\t{attr_name}: {attr_value}\n"
         # TimeSeries Data
-        str_repr += f"TimeSeries Data:\n"
+        str_repr += "TimeSeries Data:\n"
         for epoch_key, ts in self._timeseries.items():
             str_repr += f"\tTimeSeries: {epoch_key}\n"
             for var_name in ts.colnames:
                 str_repr += f"\t\t{var_name}\n"
         # Support Data
-        str_repr += f"Support Data:\n"
+        str_repr += "Support Data:\n"
         for var_name in self._support.keys():
             str_repr += f"\t{var_name}\n"
         # Spectra Data
-        str_repr += f"Spectra Data:\n"
+        str_repr += "Spectra Data:\n"
         for var_name in self._spectra.keys():
             str_repr += f"\t{var_name}\n"
         return str_repr
@@ -351,9 +351,9 @@ class SWXData:
                     f"Instrument, {instr_name}, is not recognized. Must be one of {swxsoc.config['mission']['inst_names']}."
                 )
             # Set the Property
-            meta[
-                "Descriptor"
-            ] = f"{instr_name.upper()}>{swxsoc.config['mission']['inst_to_fullname'][instr_name]}"
+            meta["Descriptor"] = (
+                f"{instr_name.upper()}>{swxsoc.config['mission']['inst_to_fullname'][instr_name]}"
+            )
 
         # Check the Optional Data Level
         if data_level:
@@ -807,14 +807,14 @@ class SWXData:
             for this_ax, this_col in zip(iter_axes, columns):
                 if i == 0:
                     this_ax.set_title(
-                        f'{self.meta["Mission_group"]} {self.meta["Descriptor"]} {self.meta["Data_level"]}'
+                        f"{self.meta['Mission_group']} {self.meta['Descriptor']} {self.meta['Data_level']}"
                     )
                     i += 1
                 this_ax.plot(self.time, self.timeseries[this_col], **plot_args)
                 this_ax.set_ylabel(self.timeseries[this_col].meta["LABLAXIS"])
         else:
             axes.set_title(
-                f'{self.meta["Mission_group"]} {self.meta["Descriptor"]} {self.meta["Data_level"]}'
+                f"{self.meta['Mission_group']} {self.meta['Descriptor']} {self.meta['Data_level']}"
             )
             for this_col in columns:
                 axes.plot(

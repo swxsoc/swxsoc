@@ -285,12 +285,14 @@ def _extract_time(filename: str) -> Time:
     """
 
     TIME_PATTERNS = [
+        re.compile(
+            r"\d{13}"
+        ),  # unix time stamps in milliseconds, check for this first so that it does not get confused with other patterns
         re.compile(r"\d{8}[-_ T]?\d{6}"),  # YYYYMMDD-HHMMSS
         re.compile(r"\d{4}-\d{2}-\d{2}[-_ T]\d{2}:\d{2}:\d{2}"),  # ISO 8601
         re.compile(r"\d{7}[-_]\d{6}"),  # Legacy L0 formats
         re.compile(r"\d{12}"),  # YYMMDDhhmmss
         re.compile(r"\d{8}T\d{6}"),  # YYYYMMDDTHHMMSS (added this line)
-        re.compile(r"\d{13}"),  # unix time stamps in milliseconds
     ]
 
     for pattern in TIME_PATTERNS:
@@ -300,6 +302,8 @@ def _extract_time(filename: str) -> Time:
             if len(time_str) == 13:
                 t_unix = Time(int(time_str) / 1000.0, format="unix")
                 t_unix.format = "isot"  # fix the string representation
+                if t_unix > Time.now():
+                    swxsoc.log.warning(f"Found future time {t_unix}.")
                 return t_unix
             # Try legacy L0 formats first
             for fmt in L0_TIME_FORMATS:

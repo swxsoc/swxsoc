@@ -357,6 +357,7 @@ def test_parse_env_var_configured_2(filename, instrument, time, level, version, 
     ("padre_get_EPS2_BP_INST0_CHARGER_XP_Data_1762019652327_1762198944391.csv", "craft", "2025-11-01T17:54:12.327", "raw", None, None),
     ("padre_get_EPS2_BP_INST0_CHARGER_YP_Data_1762019652327_1762198944391.csv", "craft", "2025-11-01T17:54:12.327", "raw", None, None),
     ("padre_get_EPS_9_Data_1762008094193_1762187403300.csv", "craft", "2025-11-01T14:41:34.193", "raw", None, None),
+    ("padre_get_EPS_9_Data_1763282491281_1836308076540.csv", "craft", "2025-11-16T08:41:31.281", "raw", None, None),
 ])
 def test_parse_padre_science_files(filename, instrument, time, level, version, mode):
     """Testing parsing of MOC-generated level 0 files."""
@@ -372,6 +373,11 @@ def test_parse_padre_science_files(filename, instrument, time, level, version, m
     assert str(result['time']) == str(time)
     assert result['mode'] == mode
 # fmt: on
+
+
+def test_extract_time_warning(caplog):
+    util._extract_time("padre_get_EPS_9_Data_1836308076540_1836308076540.csv")
+    assert "Found future time" in caplog.text
 
 
 # fmt: off

@@ -1181,7 +1181,14 @@ def record_timeseries(
                             "Type": measure_type,
                         }
                     )
-        records.append(measure_record)
+
+        # Only add the record if there are MeasureValues to write
+        if measure_record["MeasureValues"]:
+            records.append(measure_record)
+        else:
+            swxsoc.log.debug(
+                f"Skipping record at time {time_point} for {ts_name} due to all NaN values."
+            )
 
     # Log total NaN values skipped
     if total_nan_count > 0:

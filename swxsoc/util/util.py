@@ -1044,8 +1044,6 @@ def record_timeseries(
 
     Notes
     -----
-    Notes
-    -----
     Records are written in batches of 100 to comply with Timestream API limits.
     Database and table names are automatically prefixed with 'dev-' when not in PRODUCTION environment.
 

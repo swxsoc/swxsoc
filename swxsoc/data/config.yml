@@ -94,6 +94,8 @@ missions_data:
         shortname: craft
         fullname: PADRE Spacecraft
         targetname: get
+        extra_inst_names:
+          - get
 
 logger:
   # Threshold for the logging messages. Logging messages that are less severe

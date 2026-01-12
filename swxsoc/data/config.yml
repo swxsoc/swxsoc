@@ -95,7 +95,6 @@ missions_data:
         fullname: PADRE Spacecraft
         targetname: get
         extra_inst_names:
-          - processing
           - get
 
 logger:

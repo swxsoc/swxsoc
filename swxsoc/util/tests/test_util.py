@@ -1,15 +1,14 @@
 """Tests for util.py"""
 
 import os
-import pytest
-import yaml
-from moto import mock_aws
+from pathlib import Path
 
 import boto3
-from pathlib import Path
 import parfive
-
+import pytest
+import yaml
 from astropy.time import Time
+from moto import mock_aws
 
 import swxsoc
 from swxsoc.util import util

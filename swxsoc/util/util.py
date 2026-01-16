@@ -7,9 +7,9 @@ import os
 import re
 import time
 from datetime import datetime, timezone
-import traceback
-from typing import Dict, List, Optional, Union
 from pathlib import Path
+from typing import Dict, List, Optional, Union
+import traceback
 
 import astropy.units as u
 import boto3

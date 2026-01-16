@@ -2,22 +2,24 @@
 Container class for Measurement Data.
 """
 
-from pathlib import Path
 from collections import OrderedDict
 from copy import deepcopy
+from pathlib import Path
 from typing import Optional, Union
-import numpy as np
+
 import astropy
+import ndcube
+import numpy as np
+from astropy import units as u
+from astropy.nddata import NDData
+from astropy.table import vstack
 from astropy.time import Time
 from astropy.timeseries import TimeSeries
-from astropy.table import vstack
-from astropy.nddata import NDData
-from astropy import units as u
-import ndcube
-from ndcube import NDCube, NDCollection
+from ndcube import NDCollection, NDCube
+
 import swxsoc
-from swxsoc.util.schema import SWXSchema
 from swxsoc.util.exceptions import warn_user
+from swxsoc.util.schema import SWXSchema
 
 __all__ = ["SWXData"]
 

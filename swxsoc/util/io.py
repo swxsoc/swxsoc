@@ -1,15 +1,16 @@
 from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import Tuple
 from collections import OrderedDict
 from datetime import datetime
-from astropy.timeseries import TimeSeries
-from astropy.time import Time
-from astropy.nddata import NDData
-from astropy.wcs import WCS
+from pathlib import Path
+from typing import Tuple
+
 import astropy.units as u
-from ndcube import NDCollection
-from ndcube import NDCube
+from astropy.nddata import NDData
+from astropy.time import Time
+from astropy.timeseries import TimeSeries
+from astropy.wcs import WCS
+from ndcube import NDCollection, NDCube
+
 import swxsoc
 from swxsoc.swxdata import SWXData
 from swxsoc.util.exceptions import warn_user
@@ -408,7 +409,7 @@ class CDFHandler(SWXIOHandler):
                 name=var_name,
                 data=var_data.data,
                 type=var_data_types[0],
-                recVary=False,
+                recVary=(var_data.meta["VAR_TYPE"] == "data"),
             )
 
             # Add the Variable Attributes
@@ -424,13 +425,18 @@ class CDFHandler(SWXIOHandler):
 
     def _convert_variable_attributes_to_cdf(self, var_name, var_data, cdf_file):
         for var_attr_name, var_attr_val in var_data.meta.items():
-            if var_attr_val is None:
-                raise ValueError(
-                    f"Variable {var_name}: Cannot Add vAttr: {var_attr_name}. Value was {str(var_attr_val)}"
+            try:
+                if var_attr_val is None:
+                    raise ValueError(
+                        f"Variable {var_name}: Cannot Add vAttr: {var_attr_name}. Value was {str(var_attr_val)}"
+                    )
+                elif isinstance(var_attr_val, Time):
+                    # Convert the Attribute to Datetime before adding to CDF File
+                    cdf_file[var_name].attrs[var_attr_name] = var_attr_val.to_datetime()
+                else:
+                    # Add the Attribute to the CDF File
+                    cdf_file[var_name].attrs[var_attr_name] = var_attr_val
+            except ValueError as ve:
+                warn_user(
+                    f"Failed to add attribute {var_attr_name} to {var_name} in CDF. Value was {var_attr_val}: {str(ve)}"
                 )
-            elif isinstance(var_attr_val, Time):
-                # Convert the Attribute to Datetime before adding to CDF File
-                cdf_file[var_name].attrs[var_attr_name] = var_attr_val.to_datetime()
-            else:
-                # Add the Attribute to the CDF File
-                cdf_file[var_name].attrs[var_attr_name] = var_attr_val

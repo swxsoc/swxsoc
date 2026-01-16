@@ -5,20 +5,20 @@ This code is based on that provided by SpacePy see
     licenses/SPACEPY.rst
 """
 
-from pathlib import Path
+import math
 from collections import OrderedDict
 from copy import deepcopy
+from pathlib import Path
 from typing import Optional
-import math
 
 import numpy as np
+from astropy import units as u
 from astropy.table import Table
 from astropy.time import Time
-from astropy import units as u
-
 from sammi.cdf_attribute_manager import CdfAttributeManager
+
 import swxsoc
-from swxsoc.util import util, const
+from swxsoc.util import const, util
 
 __all__ = ["SWXSchema"]
 
@@ -1493,7 +1493,13 @@ class SWXSchema(CdfAttributeManager):
             try:
                 import spacepy.pycdf as pycdf
 
-                cdf_lib_version = pycdf.lib.version
+                # Unpack the version tuple
+                lib_version, lib_release, lib_increment, lib_subincrement = (
+                    pycdf.lib.version
+                )
+                cdf_lib_version = (
+                    f"{lib_version}.{lib_release}.{lib_increment}.{lib_subincrement}"
+                )
             except (ImportError, AttributeError):
                 cdf_lib_version = "unknown version"
         else:

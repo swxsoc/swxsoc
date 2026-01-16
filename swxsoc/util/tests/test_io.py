@@ -1,10 +1,8 @@
 """Tests for Loading and Saving data from data containers"""
 
-import json
 import tempfile
 from collections import OrderedDict
 from pathlib import Path
-
 import numpy as np
 import pytest
 from astropy.nddata import NDData

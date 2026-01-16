@@ -90,6 +90,12 @@ missions_data:
         extra_inst_names:
           - sp
           - shp
+      - name: craft
+        shortname: craft
+        fullname: PADRE Spacecraft
+        targetname: get
+        extra_inst_names:
+          - get
   
   mrn: # Meteor Radars Network
     file_extension: cdf

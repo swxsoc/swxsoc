@@ -9,9 +9,11 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Union
+import traceback
 
 import astropy.units as u
 import boto3
+import numpy as np
 import requests
 import sunpy.net.attrs as a
 import sunpy.time
@@ -124,7 +126,7 @@ def create_science_filename(
     # check that version has integers in each part
     for item in version.split("."):
         try:
-            int_value = int(item)
+            int(item)
         except ValueError:
             raise ValueError(f"Version, {version}, is not all integers.")
 
@@ -285,6 +287,9 @@ def _extract_time(filename: str) -> Time:
     """
 
     TIME_PATTERNS = [
+        re.compile(
+            r"\d{13}"
+        ),  # unix time stamps in milliseconds, check for this first so that it does not get confused with other patterns
         re.compile(r"\d{8}[-_ T]?\d{6}"),  # YYYYMMDD-HHMMSS
         re.compile(r"\d{4}-\d{2}-\d{2}[-_ T]\d{2}:\d{2}:\d{2}"),  # ISO 8601
         re.compile(r"\d{7}[-_]\d{6}"),  # Legacy L0 formats
@@ -296,6 +301,12 @@ def _extract_time(filename: str) -> Time:
         matches = pattern.search(filename)  # Search for time patterns
         if matches:
             time_str = matches.group(0)
+            if len(time_str) == 13:
+                t_unix = Time(int(time_str) / 1000.0, format="unix")
+                t_unix.format = "isot"  # fix the string representation
+                if t_unix > Time.now():
+                    swxsoc.log.warning(f"Found future time {t_unix}.")
+                return t_unix
             # Try legacy L0 formats first
             for fmt in L0_TIME_FORMATS:
                 try:
@@ -664,7 +675,7 @@ class SWXSOCClient(BaseClient):
             url = (
                 presigned_url
                 if presigned_url is not None
-                else f'https://{row["bucket"]}.s3.amazonaws.com/{row["key"]}'
+                else f"https://{row['bucket']}.s3.amazonaws.com/{row['key']}"
             )
 
             downloader.enqueue_file(url, filename=filepath)
@@ -814,7 +825,7 @@ class SWXSOCClient(BaseClient):
 
         if instrument is None or instrument not in instrument_buckets:
             swxsoc.log.info(
-                f"No instrument specified or invalid instrument. Searching all instruments."
+                "No instrument specified or invalid instrument. Searching all instruments."
             )
             instrument_bucket_to_search = instrument_buckets.values()
         else:
@@ -843,7 +854,7 @@ class SWXSOCClient(BaseClient):
                     ):
                         matched_files.append(this_s3_file)
         else:
-            swxsoc.log.info(f"Searching for all files")
+            swxsoc.log.info("Searching for all files")
         # remove duplicates
         unique_matched_files = []
         seen = []
@@ -952,7 +963,7 @@ class SWXSOCClient(BaseClient):
                                     "Bucket": bucket_name,
                                 }
                                 content.append(metadata)
-                    except ClientError as retry_error:
+                    except ClientError:
                         raise Exception(
                             f"Unsigned request failed for bucket {bucket_name} (Ensure you have the correct IAM permissions, or are on the VPN)"
                         )
@@ -1012,30 +1023,67 @@ def record_timeseries(
 
     This function requires AWS credentials with permission to write to the AWS Timestream database.
 
-    :param ts: A timeseries with column data to record.
-    :type ts: TimeSeries
-    :param ts_name: The name of the timeseries to record.
-    :type ts_name: str
-    :param instrument_name: Optional. If not provided, uses ts.meta['INSTRUME']
-    :type instrument_name: str
-    :return: None
+    Parameters
+    ----------
+    ts : TimeSeries
+        A timeseries with column data to record. Note that times are assumed to be in UTC.
+    ts_name : str, optional
+        The name of the timeseries to record. If None or empty string, defaults to ts.meta['name']
+        or 'measurement_group'.
+    instrument_name : str, optional
+        The instrument name. If not provided or empty, uses ts.meta['INSTRUME'].
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    ValueError
+        If instrument_name is invalid or not in the configured mission instrument names.
+
+    Notes
+    -----
+    Records are written in batches of 100 to comply with Timestream API limits.
+    Database and table names are automatically prefixed with 'dev-' when not in PRODUCTION environment.
+
+    NaN values are skipped entirely and not written to Timestream. When a NaN is encountered in the
+    timeseries data, that specific measure value is omitted from the record. The function logs the
+    total count of NaN values skipped across all columns and time points.
+
+    Data type inference follows a hierarchical approach to determine the appropriate Timestream type:
+
+    - **BOOLEAN**: Values of type `bool` or `np.bool_` are stored as BOOLEAN type with lowercase
+      string representation ("true" or "false") as required by Timestream.
+    - **DOUBLE**: Numeric values (instances of `numbers.Number`) are stored as DOUBLE type.
+    - **VARCHAR**: All other values default to VARCHAR type for text/string storage.
+
+    The boolean check is performed first since `bool` is a subclass of `int` in Python. This ensures
+    boolean flags are correctly identified and not mistakenly stored as numeric DOUBLE values.
     """
     timestream_client = boto3.client("timestream-write", region_name="us-east-1")
 
-    # Get mission name from environment or default to 'hermes'
+    # Get mission name swxsoc config
     mission_name = swxsoc.config["mission"]["mission_name"]
+
+    # Validate Instrument name
     instrument_name = (
         instrument_name.lower()
         if "INSTRUME" not in ts.meta
         else ts.meta["INSTRUME"].lower()
     )
+    if instrument_name == "" or instrument_name is None:
+        error = f"Invalid instrument name: {instrument_name}. Must be one of {swxsoc.config['mission']['inst_names']}."
+        swxsoc.log.error(error)
+        raise ValueError(error)
 
+    # Validate Timeseries name
     if ts_name is None or ts_name == "":
         ts_name = ts.meta.get("name", "measurement_group")
 
+    # Get the Database and Table names based on Dev / Prod environment
     database_name = f"{mission_name}_sdc_aws_logs"
     table_name = f"{mission_name}_measures_table"
-
     if os.getenv("LAMBDA_ENVIRONMENT") != "PRODUCTION":
         database_name = f"dev-{database_name}"
         table_name = f"dev-{table_name}"
@@ -1043,16 +1091,14 @@ def record_timeseries(
     dimensions = [
         {"Name": "mission", "Value": mission_name},
         {"Name": "source", "Value": os.getenv("LAMBDA_ENVIRONMENT", "DEVELOPMENT")},
+        {"Name": "instrument", "Value": instrument_name},
     ]
 
-    if instrument_name == "" or instrument_name is None:
-        error = f"Invalid instrument name: {instrument_name}. Must be one of {swxsoc.config['mission']['inst_names']}."
-        swxsoc.log.error(error)
-        raise ValueError(error)
-
-    dimensions.append({"Name": "instrument", "Value": instrument_name})
-
+    # Create a list to hold all records to be written
     records = []
+    total_nan_count = 0
+
+    # Loop over each time point in the timeseries, creating a record for each
     for i, time_point in enumerate(ts.time):
         measure_record = {
             "Time": str(int(time_point.to_datetime().timestamp() * 1000)),
@@ -1063,7 +1109,7 @@ def record_timeseries(
         }
 
         for this_col in ts.colnames:
-            if this_col == "time":
+            if this_col == "time":  # skip the time column
                 continue
 
             if len(ts[this_col].shape) == 1:  # usual case, a single value in the column
@@ -1074,15 +1120,32 @@ def record_timeseries(
                 else:
                     measure_unit = ""
                     value = ts[this_col][i]
+
+                # Skip adding NaN values to the record
+                if isinstance(value, numbers.Number) and np.isnan(value):
+                    total_nan_count += 1
+                    continue
+
+                # Determine the appropriate Timestream data type
+                if isinstance(value, (bool, np.bool_)):
+                    measure_type = "BOOLEAN"
+                    measure_value = str(
+                        value
+                    ).lower()  # Timestream expects "true" or "false"
+                elif isinstance(value, numbers.Number):
+                    measure_type = "DOUBLE"
+                    measure_value = str(value)
+                else:
+                    measure_type = "VARCHAR"
+                    measure_value = str(value)
+
                 measure_record["MeasureValues"].append(
                     {
                         "Name": (
                             f"{this_col}_{measure_unit}" if measure_unit else this_col
                         ),
-                        "Value": str(value),
-                        "Type": (
-                            "DOUBLE" if isinstance(value, numbers.Number) else "VARCHAR"
-                        ),
+                        "Value": measure_value,
+                        "Type": measure_type,
                     }
                 )
             else:  # the values in the timeseries are arrays
@@ -1090,19 +1153,47 @@ def record_timeseries(
                 if isinstance(values, u.Quantity):
                     values = values.value  # remove the unit
                 values = values.flatten()
+
+                # Loop over each value in the array and add to MeasureValues
                 for i, value in enumerate(values):
+                    # Skip adding NaN values to the record
+                    if isinstance(value, numbers.Number) and np.isnan(value):
+                        total_nan_count += 1
+                        continue
+
+                    # Determine the appropriate Timestream data type for array values
+                    if isinstance(value, (bool, np.bool_)):
+                        measure_type = "BOOLEAN"
+                        measure_value = str(
+                            value
+                        ).lower()  # Timestream expects "true" or "false"
+                    elif isinstance(value, numbers.Number):
+                        measure_type = "DOUBLE"
+                        measure_value = str(float(value))
+                    else:
+                        measure_type = "VARCHAR"
+                        measure_value = str(value)
+
                     measure_record["MeasureValues"].append(
                         {
                             "Name": f"{this_col}_val{i}",
-                            "Value": str(float(value)),
-                            "Type": (
-                                "DOUBLE"
-                                if isinstance(value, numbers.Number)
-                                else "VARCHAR"
-                            ),
+                            "Value": measure_value,
+                            "Type": measure_type,
                         }
                     )
-        records.append(measure_record)
+
+        # Only add the record if there are MeasureValues to write
+        if measure_record["MeasureValues"]:
+            records.append(measure_record)
+        else:
+            swxsoc.log.debug(
+                f"Skipping record at time {time_point} for {ts_name} due to all NaN values."
+            )
+
+    # Log total NaN values skipped
+    if total_nan_count > 0:
+        swxsoc.log.info(f"Skipped {total_nan_count} NaN values in {ts_name}")
+
     # Process records in batches of 100 to avoid exceeding the Timestream API limit
     batch_size = 100
     for start in range(0, len(records), batch_size):
@@ -1127,6 +1218,8 @@ def record_timeseries(
                     )
         except Exception as err:
             swxsoc.log.error(f"Failed to write to Timestream: {err}")
+            # Log Stack trace for debugging
+            swxsoc.log.error(traceback.format_exc())
 
 
 def _record_dimension_timestream(
@@ -1366,7 +1459,7 @@ def query_annotations(
     Queries annotations within a specific timeframe with optional filters for tags, dashboard, and panel names.
 
     Args:
-        start_time (datetime): Start time of the query.
+        start_time (datetime): Start time of the query in UTC.
         end_time (Optional[datetime]): End time of the query; defaults to start_time if None.
         tags (Optional[List[str]]): List of tags to filter the annotations.
         limit (Optional[int]): Maximum number of annotations to retrieve.
@@ -1443,7 +1536,7 @@ def create_annotation(
     Creates a new annotation for a specified event or time period, with optional filtering by dashboard and panel names.
 
     Args:
-        start_time (datetime): Start time of the annotation.
+        start_time (datetime): Start time of the annotation in UTC.
         text (str): Annotation text to display.
         tags (List[str]): List of tags for categorizing the annotation.
         end_time (Optional[datetime]): End time of the annotation, if applicable.

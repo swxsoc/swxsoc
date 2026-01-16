@@ -7,9 +7,7 @@ import boto3
 import parfive
 import pytest
 import yaml
-from astropy import units as u
 from astropy.time import Time
-from astropy.timeseries import TimeSeries
 from moto import mock_aws
 
 import swxsoc
@@ -17,6 +15,7 @@ from swxsoc.util import util
 
 time = "2024-04-06T12:06:21"
 time_formatted = "20240406T120621"
+time_unix_ms = "1712405181000"
 
 # YAML content as a dictionary
 config_content = {
@@ -227,7 +226,6 @@ def test_parse_science_filename_errors_l0(filename):
     """Test for errors in l0 and above files"""
     with pytest.raises(ValueError):
         # wrong time name
-        f = ""
         util.parse_science_filename(filename)
 
 
@@ -273,7 +271,7 @@ good_version = "1.3.4"
 )
 def test_science_filename_errors_l1_a(instrument, time, level, version):
     """"""
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(ValueError):
         util.create_science_filename(
             instrument, time, level=level, version=version
         )
@@ -306,7 +304,7 @@ def test_science_filename_errors_l1_b():
     ("swxsoc_MERIT_VC_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03"),
     ("swxsoc_SPANI_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03"),
     ("SPANI_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03"),
-    ("spani_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03")
+    ("spani_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03"),
 ])
 def test_parse_l0_filenames(filename, instrument, time):
     """Testing parsing of MOC-generated level 0 files."""
@@ -327,7 +325,7 @@ def test_parse_l0_filenames(filename, instrument, time):
     ("hermes_NEM_l0_2024094-124603_v01.bin", "nemisis", "2024-04-03T12:46:03", "l0", None, None),
     ("hermes_EEA_l0_2026337-124603_v11.bin", "eea", "2026-12-03T12:46:03", "l0", None, None),
 ])
-def test_parse_env_var_configured(filename, instrument, time, level, version, mode):
+def test_parse_env_var_configured_2(filename, instrument, time, level, version, mode):
     """Testing parsing of MOC-generated level 0 files."""
     # Set SWXSOC_MISSION to 'hermes' mission
     os.environ["SWXSOC_MISSION"] = "hermes"
@@ -340,7 +338,6 @@ def test_parse_env_var_configured(filename, instrument, time, level, version, mo
     assert result['time'] == Time(time)
     assert result['mode'] == mode
 # fmt: on
-
 # fmt: off
 
 
@@ -353,10 +350,12 @@ def test_parse_env_var_configured(filename, instrument, time, level, version, mo
     ("padreMDA0_000107034739.idx", "meddea", "2000-01-07 03:47:39", "raw", None, None),
     ("padreMDU8_000107034739.dat", "meddea", "2000-01-07 03:47:39", "raw", None, None),
     ("padreMDU8_000107034739.idx", "meddea", "2000-01-07 03:47:39", "raw", None, None),
-    ("padre_meddea_l0test_light_20250131T192102_v0.3.0.bin", "meddea", "2025-01-31T19:21:02.000", "raw", None, None),
+    ("padre_meddea_l0test_light_20250131T192102_v0.3.0.bin", "meddea", "2025-01-31 19:21:02", "raw", None, None),
     ("padre_sharp_ql_20230430T000000_v0.0.1.fits", "sharp", "2023-04-30T00:00:00.000", "ql", "0.0.1", None),
-
-
+    ("padre_get_EPS2_BP_INST0_CHARGER_XP_Data_1762019652327_1762198944391.csv", "craft", "2025-11-01T17:54:12.327", "raw", None, None),
+    ("padre_get_EPS2_BP_INST0_CHARGER_YP_Data_1762019652327_1762198944391.csv", "craft", "2025-11-01T17:54:12.327", "raw", None, None),
+    ("padre_get_EPS_9_Data_1762008094193_1762187403300.csv", "craft", "2025-11-01T14:41:34.193", "raw", None, None),
+    ("padre_get_EPS_9_Data_1763282491281_1836308076540.csv", "craft", "2025-11-16T08:41:31.281", "raw", None, None),
 ])
 def test_parse_padre_science_files(filename, instrument, time, level, version, mode):
     """Testing parsing of MOC-generated level 0 files."""
@@ -368,9 +367,15 @@ def test_parse_padre_science_files(filename, instrument, time, level, version, m
     assert result['instrument'] == instrument
     assert result['level'] == level
     assert result['version'] == version
-    assert result['time'] == Time(time)
+    assert result['time'].isot == Time(time).isot  # compare str otherwise breaks for unix time
+    assert str(result['time']) == str(time)
     assert result['mode'] == mode
 # fmt: on
+
+
+def test_extract_time_warning(caplog):
+    util._extract_time("padre_get_EPS_9_Data_1836308076540_1836308076540.csv")
+    assert "Found future time" in caplog.text
 
 
 # fmt: off
@@ -382,7 +387,7 @@ def test_parse_padre_science_files(filename, instrument, time, level, version, m
     (f"hermes_eea_l1_{time_formatted}_v1.2.3.cdf", "eea", "2024-04-06T12:06:21", "l1", "1.2.3", None),
     (f"hermes_mrt_l2_{time_formatted}_v1.2.5.cdf", "merit", "2024-04-06T12:06:21", "l2", "1.2.5", None),
 ])
-def test_parse_env_var_configured(filename, instrument, time, level, version, mode):
+def test_parse_env_var_configured_1(filename, instrument, time, level, version, mode):
     """Testing parsing of MOC-generated level 0 files."""
     # Set SWXSOC_MISSION to 'hermes' mission
     os.environ["SWXSOC_MISSION"] = "hermes"

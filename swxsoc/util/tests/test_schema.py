@@ -452,7 +452,7 @@ def test_resolution():
 
     # Get Resolution
     with pytest.raises(ValueError):
-        td = SWXData(timeseries=ts, meta=template)
+        SWXData(timeseries=ts, meta=template)
 
 
 def test_reference_position():

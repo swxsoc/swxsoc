@@ -169,7 +169,6 @@ class CDFHandler(SWXIOHandler):
                 # Extract the Variable's Data
                 var_data = input_file[var_name][...]
                 if input_file[var_name].rv():
-
                     # Find the TimeSeries Epoch for this Record-Varying Variable
                     epoch_key = SWXData.get_timeseres_epoch_key(
                         timeseries, var_data, var_attrs
@@ -260,7 +259,7 @@ class CDFHandler(SWXIOHandler):
         attr_values = []
         for dimension_i in range(naxis):
             dimension_attr_name = (
-                f"{attribute_name}{dimension_i+1}"  # KeynameName Indexed 1-4 vs 0-3
+                f"{attribute_name}{dimension_i + 1}"  # KeynameName Indexed 1-4 vs 0-3
             )
             if dimension_attr_name in var_attrs:
                 attr_values.append(var_attrs[dimension_attr_name])
@@ -374,7 +373,6 @@ class CDFHandler(SWXIOHandler):
                 cdf_file.attrs[attr_name] = attr_value
 
     def _convert_variables_to_cdf(self, data, cdf_file):
-
         # Make sure the Default "Epoch" is present in the CDF
         default_timeseries_key = swxsoc.config["general"]["default_timeseries_key"]
         if default_timeseries_key not in data.data["timeseries"]:

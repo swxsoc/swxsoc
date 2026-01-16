@@ -12,17 +12,13 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
-import yaml
 from astropy import units as u
 from astropy.table import Table
 from astropy.time import Time
-from ndcube import NDCube
 from sammi.cdf_attribute_manager import CdfAttributeManager
 
 import swxsoc
-from swxsoc import log
 from swxsoc.util import const, util
-from swxsoc.util.exceptions import warn_user
 
 __all__ = ["SWXSchema"]
 
@@ -125,7 +121,6 @@ class SWXSchema(CdfAttributeManager):
         variable_schema_layers: Optional[list[str]] = None,
         use_defaults: Optional[bool] = True,
     ):
-
         # SWxSOC Default Global Schema
         global_schema_path = str(
             Path(swxsoc.__file__).parent / "data" / DEFAULT_GLOBAL_CDF_ATTRS_SCHEMA_FILE
@@ -794,7 +789,7 @@ class SWXSchema(CdfAttributeManager):
                 for dimension_i in range(num_dimensions):
                     # Attribute Name for the given dimension_i
                     dimension_attr_name = (
-                        f"{attr_root}{dimension_i+1}"  # Dimension Indexed 1-4 vs 0-3
+                        f"{attr_root}{dimension_i + 1}"  # Dimension Indexed 1-4 vs 0-3
                     )
                     # Get the Derivation Function to be used for the given attribute
                     derivation_fn = getattr(self, attr_schema["derivation_fn"])
@@ -1505,7 +1500,7 @@ class SWXSchema(CdfAttributeManager):
                 cdf_lib_version = (
                     f"{lib_version}.{lib_release}.{lib_increment}.{lib_subincrement}"
                 )
-            except (ImportError, AttributeError) as e:
+            except (ImportError, AttributeError):
                 cdf_lib_version = "unknown version"
         else:
             cdf_lib_version = data.meta[attr_name]

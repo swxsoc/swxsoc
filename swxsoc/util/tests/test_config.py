@@ -44,6 +44,8 @@ def test_load_config_defaults(monkeypatch):
     assert "inst_fullnames" in mission_config
     assert "inst_targetnames" in mission_config
     assert "extra_inst_names" in mission_config
+    # Check file rules
+    assert "inst_file_rules" in mission_config
     # Check mapping dictionaries
     assert "inst_to_shortname" in mission_config
     assert "inst_to_fullname" in mission_config
@@ -71,6 +73,9 @@ def test_load_config_mission_override(monkeypatch):
     assert mission_config["mission_name"] == target_mission
     # Check that it actually loaded hermes-specific data (e.g. instruments)
     assert "eea" in mission_config["inst_names"]
+    # Check that file_rules exists
+    assert "inst_file_rules" in mission_config
+    assert isinstance(mission_config["inst_file_rules"], dict)
 
 
 def test_load_config_lambda_env(monkeypatch):
@@ -103,7 +108,8 @@ def test_load_config_unknown_mission(monkeypatch):
     assert mission_config["inst_fullnames"] == []
     assert mission_config["inst_targetnames"] == []
     assert mission_config["extra_inst_names"] == []
-    # Should have empty dicts for mappings
+    # Should have empty dicts for mappings and file rules
+    assert mission_config["inst_file_rules"] == {}
     assert mission_config["inst_to_shortname"] == {}
     assert mission_config["inst_to_fullname"] == {}
     assert mission_config["inst_to_targetname"] == {}

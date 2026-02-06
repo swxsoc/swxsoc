@@ -15,34 +15,24 @@ general:
 selected_mission: swxsoc
 
 missions_data:
-  swxsoc:
-    file_extension: cdf
-    valid_data_levels:
+  swxsoc: # A generic mission template for testing
+    file_extension: cdf # The File Extension Used for Archive Files and Science File Formats
+    valid_data_levels: # List of Valid Data Levels for this Mission
       - l0
       - ql
       - l1
       - l2
       - l3
-    instruments:
-      - name: eea
-        shortname: eea
-        fullname: Electron Electrostatic Analyzer
-        targetname: EEA
-      - name: nemisis
-        shortname: nem
-        fullname: Noise Eliminating Magnetometer Instrument in a Small Integrated System
-        targetname: NEM
-      - name: merit
-        shortname: mrt
-        fullname: Miniaturized Electron pRoton Telescope
-        targetname: MERIT
-      - name: spani
-        shortname: spn
-        fullname: Solar Probe Analyzer for Ions
-        targetname: SPANI
+    instruments: # List of Instruments for this Mission
+      - name: MyInstrument # The name of the instrument
+        shortname: myinst # The short name of the instrument
+        fullname: My Instrument Full Name # The full name of the instrument (to be used in plots, metadata, etc)
+        targetname: MYINST # The target name of the instrument (to be used in file paths, etc)
 
   hermes:
     file_extension: cdf
+    min_valid_time: 2020-01-01T00:00:00
+    max_valid_time: now
     valid_data_levels:
       - l0
       - l1
@@ -66,8 +56,11 @@ missions_data:
         shortname: spn
         fullname: Solar Probe Analyzer for Ions
         targetname: SPANI
+  
   padre:
     file_extension: fits
+    min_valid_time: 2020-01-01T00:00:00
+    max_valid_time: now
     valid_data_levels:
       - raw
       - l0
@@ -83,6 +76,15 @@ missions_data:
         extra_inst_names:
           - mda
           - mdu
+        file_rules:
+          # Raw Data (specific to .dat files)
+          - levels: [raw]
+            extension: .dat
+            time_format: "%y%m%d%H%M%S"
+          # Processed Files (Science / Standard Format Files)
+          - levels: [l0, l1, ql, l2, l3]
+            extension: .fits
+            time_format: "%Y%m%dT%H%M%S"
       - name: sharp
         shortname: sharp
         fullname:  Solar HARd X-ray Polarimeter
@@ -96,6 +98,11 @@ missions_data:
         targetname: get
         extra_inst_names:
           - get
+        file_rules:
+          # Raw Data (specific to .csv files)
+          - levels: [raw]
+            extension: .csv
+            time_format: "unix_ms"
 
 logger:
   # Threshold for the logging messages. Logging messages that are less severe

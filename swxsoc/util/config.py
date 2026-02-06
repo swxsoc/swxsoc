@@ -54,9 +54,11 @@ def load_config():
     with open(config_path, "r") as file:
         config = yaml.safe_load(file)
 
+    # Loaded either from env var or from config file
     selected_mission = os.getenv("SWXSOC_MISSION", config["selected_mission"])
     missions_data = config.get("missions_data", {})
     mission_data = missions_data.get(selected_mission, {})
+    # The File Extension Used for Archive Files and Science File Formats
     file_extension = mission_data.get("file_extension", "")
 
     config["mission"] = {
@@ -84,6 +86,10 @@ def load_config():
             for inst in mission_data.get("instruments", [])
             if "extra_inst_names" in inst
         ],
+        "inst_file_rules": {
+            inst["name"]: inst.get("file_rules", [])
+            for inst in mission_data.get("instruments", [])
+        },
     }
 
     config["mission"].update(

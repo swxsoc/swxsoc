@@ -30,7 +30,7 @@ def default_test_mission(monkeypatch):
         swxsoc._reconfigure()
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def use_mission(request, monkeypatch):
     """
     Fixture to explicitly set a mission for a test function.
@@ -52,20 +52,27 @@ def use_mission(request, monkeypatch):
         
     Examples
     --------
-    >>> # Single mission test
-    >>> @pytest.mark.parametrize('use_mission', ['padre'], indirect=True)
-    >>> def test_with_padre(use_mission):
-    ...     # Test runs with PADRE mission config
-    ...     assert swxsoc.config['mission']['mission_name'] == 'padre'
-    ...    
-    >>> # Multiple missions
-    >>> @pytest.mark.parametrize('use_mission', ['hermes', 'padre', 'swxsoc'], indirect=True)
-    >>> def test_all_missions(use_mission):
-    ...     # Test runs three times, once for each mission
-    ...     assert swxsoc.config['mission']['mission_name'] == use_mission
+    Single mission test::
+    
+        @pytest.mark.parametrize('use_mission', ['padre'], indirect=True)
+        def test_with_padre(use_mission):
+            # Test runs with PADRE mission config
+            assert swxsoc.config['mission']['mission_name'] == 'padre'
+    
+    Multiple missions::
+
+        @pytest.mark.parametrize('use_mission', ['hermes', 'padre', 'swxsoc'], indirect=True)
+        def test_all_missions(use_mission):
+            # Test runs three times, once for each mission
+            assert swxsoc.config['mission']['mission_name'] == use_mission
     """
     mission = request.param if hasattr(request, "param") else "hermes"
     monkeypatch.setenv("SWXSOC_MISSION", mission)
     swxsoc._reconfigure()
     yield mission
-    # Cleanup happens automatically via monkeypatch
+    # Explicitly reconfigure back to default after test completes
+    # This is necessary because swxsoc.config is module-level state
+    # that persists across tests in the same process
+    # This ensures the config is reset even if monkeypatch cleanup hasn't run yet
+    monkeypatch.setenv("SWXSOC_MISSION", "hermes")
+    swxsoc._reconfigure()

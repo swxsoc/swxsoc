@@ -12,6 +12,9 @@ import sys
 # Set CDF Library Path
 os.environ["CDF_LIB"] = "../cdf/lib"
 
+# Set mission to HERMES for documentation examples
+os.environ["SWXSOC_MISSION"] = "hermes"
+
 sys.path.insert(0, os.path.abspath(".."))
 # -- Project information -----------------------------------------------------
 

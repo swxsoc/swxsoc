@@ -106,19 +106,20 @@ def create_science_filename(
     ValueError: If the data product descriptor or instrument mode do not match the mission's formatting conventions
     """
     test_str = ""
+    mission_config = swxsoc.config["mission"]
 
     if isinstance(time, str):
         time_str = Time(time, format="isot").strftime(TIME_FORMAT)
     else:
         time_str = time.strftime(TIME_FORMAT)
 
-    if instrument not in swxsoc.config["mission"]["inst_names"]:
+    if instrument not in mission_config["inst_names"]:
         raise ValueError(
-            f"Instrument, {instrument}, is not recognized. Must be one of {swxsoc.config['mission']['inst_names']}."
+            f"Instrument, {instrument}, is not recognized. Must be one of {mission_config['inst_names']}."
         )
-    if level not in swxsoc.config["mission"]["valid_data_levels"]:
+    if level not in mission_config["valid_data_levels"]:
         raise ValueError(
-            f"Level, {level}, is not recognized. Must be one of {swxsoc.config['mission']['valid_data_levels']}."
+            f"Level, {level}, is not recognized. Must be one of {mission_config['valid_data_levels']}."
         )
     # check that version is in the right format with three parts
     if len(version.split(".")) != 3:
@@ -141,10 +142,17 @@ def create_science_filename(
             "The underscore symbol _ is not allowed in mode or descriptor."
         )
 
-    filename = f"{swxsoc.config['mission']['mission_name']}_{swxsoc.config['mission']['inst_to_shortname'][instrument]}_{mode}_{level}{test_str}_{descriptor}_{time_str}_v{version}"
+    # Parse Filename and Instrument Name out of the config
+    mission_name = mission_config["mission_name"]
+    instrument_shortname = mission_config["inst_to_shortname"].get(
+        instrument, instrument
+    )
+
+    # Combine Parts into Filename
+    filename = f"{mission_name}_{instrument_shortname}_{mode}_{level}{test_str}_{descriptor}_{time_str}_v{version}"
     filename = filename.replace("__", "_")  # reformat if mode or descriptor not given
 
-    return filename + swxsoc.config["mission"]["file_extension"]
+    return filename + mission_config["file_extension"]
 
 
 def _get_instrument_mapping(config: dict) -> dict:
@@ -195,7 +203,9 @@ def _parse_standard_format(filename: str, mission_config: dict) -> dict:
     result = {}
     mission_name = mission_config["mission_name"]
     shortnames = mission_config["inst_shortnames"]
+
     # Split the filename into components
+    filename = Path(filename).stem
     components = filename.split("_")
 
     if components[0] != mission_name:
@@ -493,7 +503,7 @@ def _validate_time(extracted_time: Time, mission_config: Optional[dict] = None) 
     -------
     Time
         The validated time.
-        
+
     Raises
     ------
     ValueError

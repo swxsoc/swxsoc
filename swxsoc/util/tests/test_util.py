@@ -3,13 +3,12 @@
 import os
 import pytest
 import yaml
-from moto import mock_aws
-
-import boto3
 from pathlib import Path
 import parfive
 
 from astropy.time import Time
+import boto3
+from moto import mock_aws
 
 import swxsoc
 from swxsoc.util import util
@@ -21,6 +20,7 @@ time_unix_ms = "1712405181000"
 # YAML content as a dictionary
 config_content = {
     "general": {"time_format": "%Y-%m-%d %H:%M:%S"},
+    
     "selected_mission": "mission",
     "missions_data": {
         "mission": {
@@ -58,266 +58,154 @@ tmp_file_path = Path("swxsoc/tests/config.yml")
 
 
 # fmt: off
-@pytest.mark.parametrize("instrument,time,level,version,result", [
-    ("eea", time, "l1", "1.2.3", f"swxsoc_eea_l1_{time_formatted}_v1.2.3.cdf"),
-    ("merit", time, "l2", "2.4.5", f"swxsoc_mrt_l2_{time_formatted}_v2.4.5.cdf"),
-    ("nemisis", time, "l2", "1.3.5", f"swxsoc_nem_l2_{time_formatted}_v1.3.5.cdf"),
-    ("spani", time, "l3", "2.4.5", f"swxsoc_spn_l3_{time_formatted}_v2.4.5.cdf"),
-]
-)
-def test_science_filename_output_a(instrument, time, level, version, result):
-    """Test simple cases with expected output"""
-    assert (
-        util.create_science_filename(instrument, time, level=level, version=version)
-        == result
-    )
+@pytest.mark.parametrize("instrument,mode,level,test,descriptor,time_input,version,result", [
+    # Simple cases with string time
+    ("eea", None, "l1", False, None, time, "1.2.3", f"hermes_eea_l1_{time_formatted}_v1.2.3.cdf"),
+    ("merit", None, "l2", False, None, time, "2.4.5", f"hermes_mrt_l2_{time_formatted}_v2.4.5.cdf"),
+    ("nemisis", None, "l2", False, None, time, "1.3.5", f"hermes_nem_l2_{time_formatted}_v1.3.5.cdf"),
+    ("spani", None, "l3", False, None, time, "2.4.5", f"hermes_spn_l3_{time_formatted}_v2.4.5.cdf"),
+    # Complex cases with optional parameters
+    ("spani", "2s", "l3", False, None, time, "2.4.5", f"hermes_spn_2s_l3_{time_formatted}_v2.4.5.cdf"),  # mode
+    ("spani", None, "l1", True, None, time, "2.4.5", f"hermes_spn_l1test_{time_formatted}_v2.4.5.cdf"),  # test
+    ("spani", "2s", "l3", True, "burst", time, "2.4.5", f"hermes_spn_2s_l3test_burst_{time_formatted}_v2.4.5.cdf"),  # all options
+    # Time object instead of str
+    ("spani", "2s", "l3", True, "burst", Time(time), "2.4.5", f"hermes_spn_2s_l3test_burst_{time_formatted}_v2.4.5.cdf"),
+    # Time object created with julian date
+    ("spani", "2s", "l3", True, "burst", Time(2460407.004409722, format="jd"), "2.4.5", f"hermes_spn_2s_l3test_burst_{time_formatted}_v2.4.5.cdf"),
+])
+def test_create_science_filename_hermes(instrument, mode, level, test, descriptor, time_input, version, result):
+    """Test create_science_filename with various parameter combinations"""
+    # Set SWXSOC_MISSION to 'hermes' mission
+    os.environ["SWXSOC_MISSION"] = "hermes"
+    swxsoc._reconfigure()
+    
+    # Build kwargs for optional parameters
+    kwargs = {"level": level, "version": version}
+    if mode is not None:
+        kwargs["mode"] = mode
+    if descriptor is not None:
+        kwargs["descriptor"] = descriptor
+    if test:
+        kwargs["test"] = test
+    
+    # Test the result
+    assert util.create_science_filename(instrument, time_input, **kwargs) == result
 # fmt: on
 
 
-def test_science_filename_output_b():
-    """Test more complex cases of expected output"""
-    # mode
-    assert (
-        util.create_science_filename(
-            "spani", time, level="l3", mode="2s", version="2.4.5"
-        )
-        == f"swxsoc_spn_2s_l3_{time_formatted}_v2.4.5.cdf"
-    )
-    # test
-    assert (
-        util.create_science_filename(
-            "spani", time, level="l1", version="2.4.5", test=True
-        )
-        == f"swxsoc_spn_l1test_{time_formatted}_v2.4.5.cdf"
-    )
-    # all options
-    assert (
-        util.create_science_filename(
-            "spani",
-            time,
-            level="l3",
-            mode="2s",
-            descriptor="burst",
-            version="2.4.5",
-            test=True,
-        )
-        == f"swxsoc_spn_2s_l3test_burst_{time_formatted}_v2.4.5.cdf"
-    )
-    # Time object instead of str
-    assert (
-        util.create_science_filename(
-            "spani",
-            Time(time),
-            level="l3",
-            mode="2s",
-            descriptor="burst",
-            version="2.4.5",
-            test=True,
-        )
-        == f"swxsoc_spn_2s_l3test_burst_{time_formatted}_v2.4.5.cdf"
-    )
-    # Time object but created differently
-    assert (
-        util.create_science_filename(
-            "spani",
-            Time(2460407.004409722, format="jd"),
-            level="l3",
-            mode="2s",
-            descriptor="burst",
-            version="2.4.5",
-            test=True,
-        )
-        == f"swxsoc_spn_2s_l3test_burst_{time_formatted}_v2.4.5.cdf"
-    )
-
-
-def test_parse_science_filename_output():
-    """Test for known outputs"""
-    # all parameters
-    input = {
-        "instrument": "spani",
-        "mode": "2s",
-        "level": "l3",
-        "test": False,
-        "descriptor": "burst",
-        "version": "2.4.5",
-        "time": Time("2024-04-06T12:06:21"),
+# fmt: off
+@pytest.mark.parametrize("instrument,mode,level,test,descriptor,time_input,version", [
+    ("spani", "2s", "l3", False, "burst", Time(time), "2.4.5"),  # all parameters
+    ("nemisis", None, "l3", True, None, Time(time), "2.4.5"),  # test only
+    ("spani", None, "l3", False, "burst", Time(time), "2.4.5"),  # descriptor only
+    ("nemisis", "2s", "l2", False, None, Time(time), "2.7.9"),  # mode only
+])
+def test_parse_science_filename_hermes(instrument, mode, level, test, descriptor, time_input, version):
+    """Test parse_science_filename with various parameter combinations"""
+    # Set SWXSOC_MISSION to 'hermes' mission
+    os.environ["SWXSOC_MISSION"] = "hermes"
+    swxsoc._reconfigure()
+    
+    # Build expected dictionary
+    expected = {
+        "instrument": instrument,
+        "mode": mode,
+        "level": level,
+        "test": test,
+        "descriptor": descriptor,
+        "version": version,
+        "time": time_input,
     }
 
-    f = util.create_science_filename(
-        input["instrument"],
-        input["time"],
-        input["level"],
-        input["version"],
-        test=input["test"],
-        descriptor=input["descriptor"],
-        mode=input["mode"],
-    )
-    assert util.parse_science_filename(f) == input
-
-    # test only
-    input = {
-        "instrument": "nemisis",
-        "level": "l3",
-        "test": True,
-        "version": "2.4.5",
-        "time": Time("2024-04-06T12:06:21"),
-        "mode": None,
-        "descriptor": None,
-    }
-
-    f = util.create_science_filename(
-        input["instrument"],
-        input["time"],
-        input["level"],
-        input["version"],
-        test=input["test"],
-    )
-    assert util.parse_science_filename(f) == input
-
-    # descriptor only
-    input = {
-        "instrument": "spani",
-        "mode": None,
-        "level": "l3",
-        "test": False,
-        "descriptor": "burst",
-        "version": "2.4.5",
-        "time": Time("2024-04-06T12:06:21"),
-    }
-
-    f = util.create_science_filename(
-        input["instrument"],
-        input["time"],
-        input["level"],
-        input["version"],
-        descriptor=input["descriptor"],
-    )
-    assert util.parse_science_filename(f) == input
-
-    # mode only
-    input = {
-        "instrument": "nemisis",
-        "mode": "2s",
-        "level": "l2",
-        "test": False,
-        "descriptor": None,
-        "version": "2.7.9",
-        "time": Time("2024-04-06T12:06:21"),
-    }
-
-    f = util.create_science_filename(
-        input["instrument"],
-        input["time"],
-        input["level"],
-        input["version"],
-        mode=input["mode"],
-    )
-    assert util.parse_science_filename(f) == input
+    # Build kwargs for create_science_filename
+    kwargs = {"level": level, "version": version}
+    if mode is not None:
+        kwargs["mode"] = mode
+    if descriptor is not None:
+        kwargs["descriptor"] = descriptor
+    if test:
+        kwargs["test"] = test
+    
+    f = util.create_science_filename(instrument, time_input, **kwargs)
+    assert util.parse_science_filename(f) == expected
+# fmt: on
 
 
-@pytest.mark.parametrize(
-    "filename",
-    [
-        ("swxsoc_SPANI_VA_l0_2026215ERROR124603_v21.bin"),  # Bad time Value
-        ("swxsoc_FAKE_VA_l0_2026215-124603_v21.bin"),  # Bad Instrument Value
-    ],
-)
-def test_parse_science_filename_errors_l0(filename):
-    """Test for errors in l0 and above files"""
-    with pytest.raises(ValueError):
-        # wrong time name
-        util.parse_science_filename(filename)
-
-
-def test_parse_science_filename_errors_l1():
-    """Test for errors in l1 and above files"""
-    with pytest.raises(ValueError):
-        # wrong mission name
-        f = "veeger_spn_2s_l3test_burst_20240406_120621_v2.4.5"
-        util.parse_science_filename(f)
-
-        # wrong instrument name
-        f = "swxsoc_www_2s_l3test_burst_20240406_120621_v2.4.5"
-        util.parse_science_filename(f)
-
-
+# fmt: off
 good_time = "2025-06-02T12:04:01"
 good_instrument = "eea"
 good_level = "l1"
 good_version = "1.3.4"
-
-# fmt: off
-
-
-@pytest.mark.parametrize(
-    "instrument,time,level,version",
-    [
-        (good_instrument, good_time, good_level, "1.3"),  # bad version specifications
-        (good_instrument, good_time, good_level, "1"),
-        (good_instrument, good_time, good_level, "1.5.6.7"),
-        (good_instrument, good_time, good_level, "1.."),
-        (good_instrument, good_time, good_level, "a.5.6"),
-        (good_instrument, good_time, "la", good_version),  # wrong level specifications
-        (good_instrument, good_time, "squirrel", good_version),
-        (good_instrument, good_time, "0l", good_version),
-        ("potato", good_time, good_level, good_version),  # wrong instrument names
-        ("eeb", good_time, good_level, good_version),
-        ("fpi", good_time, good_level, good_version),
-        (good_instrument, "2023-13-04T12:06:21", good_level, good_version),  # non-existent time
-        (good_instrument, "2023/13/04 12:06:21", good_level, good_version),  # not isot format
-        (good_instrument, "2023/13/04 12:06:21", good_level, good_version),  # not isot format
-        (good_instrument, "12345345", good_level, good_version),  # not valid input for time
-    ]
-)
-def test_science_filename_errors_l1_a(instrument, time, level, version):
-    """"""
-    with pytest.raises(ValueError):
-        util.create_science_filename(
-            instrument, time, level=level, version=version
-        )
+@pytest.mark.parametrize("instrument,time,level,version,mode,descriptor,expected_error", [
+    # Version validation errors
+    (good_instrument, good_time, good_level, "1.3", None, None, "Version.*is not formatted correctly"),
+    (good_instrument, good_time, good_level, "1", None, None, "Version.*is not formatted correctly"),
+    (good_instrument, good_time, good_level, "1.5.6.7", None, None, "Version.*is not formatted correctly"),
+    (good_instrument, good_time, good_level, "1..", None, None, "Version.*is not all integers"),
+    (good_instrument, good_time, good_level, "a.5.6", None, None, "Version.*is not all integers"),
+    # Level validation errors
+    (good_instrument, good_time, "la", good_version, None, None, "Level.*is not recognized"),
+    (good_instrument, good_time, "squirrel", good_version, None, None, "Level.*is not recognized"),
+    (good_instrument, good_time, "0l", good_version, None, None, "Level.*is not recognized"),
+    # Instrument validation errors
+    ("potato", good_time, good_level, good_version, None, None, "Instrument.*is not recognized"),
+    ("eeb", good_time, good_level, good_version, None, None, "Instrument.*is not recognized"),
+    ("fpi", good_time, good_level, good_version, None, None, "Instrument.*is not recognized"),
+    # Time validation errors
+    (good_instrument, "2023-13-04T12:06:21", good_level, good_version, None, None, "Input values did not match"),
+    (good_instrument, "2023/13/04 12:06:21", good_level, good_version, None, None, "Input values did not match"),
+    (good_instrument, "12345345", good_level, good_version, None, None, "Input values did not match"),
+    # Underscore character validation
+    (good_instrument, good_time, good_level, good_version, "o_o", None, "underscore symbol _ is not allowed"),
+    (good_instrument, good_time, good_level, good_version, None, "blue_green", "underscore symbol _ is not allowed"),
+])
+def test_create_science_filename_errors(instrument, time, level, version, mode, descriptor, expected_error):
+    """Test create_science_filename raises appropriate errors for invalid inputs"""
+    # Set SWXSOC_MISSION to 'hermes' mission
+    os.environ["SWXSOC_MISSION"] = "hermes"
+    swxsoc._reconfigure()
+    
+    kwargs = {"level": level, "version": version}
+    if mode is not None:
+        kwargs["mode"] = mode
+    if descriptor is not None:
+        kwargs["descriptor"] = descriptor
+    
+    with pytest.raises(ValueError, match=expected_error):
+        util.create_science_filename(instrument, time, **kwargs)
 # fmt: on
 
 
-def test_science_filename_errors_l1_b():
-    with pytest.raises(ValueError):
-        # _ character in mode
-        util.create_science_filename(
-            "eeb", time="12345345", level=good_level, version=good_version, mode="o_o"
-        )
-    with pytest.raises(ValueError):
-        # _ character in descriptor
-        util.create_science_filename(
-            "eeb",
-            time="12345345",
-            level=good_level,
-            version=good_version,
-            descriptor="blue_green",
-        )
-
-
 # fmt: off
-@pytest.mark.parametrize("filename,instrument,time", [
-    ("swxsoc_NEM_l0_2024094-124603_v01.bin", "nemisis", "2024-04-03T12:46:03"),
-    ("swxsoc_EEA_l0_2026337-124603_v11.bin", "eea", "2026-12-03T12:46:03"),
-    ("swxsoc_MERIT_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03"),
-    ("swxsoc_SPANI_l0_2026337-065422_v11.bin", "spani", "2026-12-03T06:54:22"),
-    ("swxsoc_MERIT_VC_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03"),
-    ("swxsoc_SPANI_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03"),
-    ("SPANI_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03"),
-    ("spani_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03"),
-])
-def test_parse_l0_filenames(filename, instrument, time):
-    """Testing parsing of MOC-generated level 0 files."""
-    # Set SWXSOC_MISSION to 'swxsoc' mission
-    mission_name = "swxsoc"
-    os.environ["SWXSOC_MISSION"] = mission_name
-    result = util.parse_science_filename(filename)
-    assert result['instrument'] == instrument
-    assert result['level'] == "l0"
-    assert result['version'] is None
-    assert result['time'] == Time(time)
-    assert result['mission'] == mission_name
+@pytest.mark.parametrize(
+    "filename,expected_error",
+    [
+        (
+            "hermes_SPANI_VA_l0_2026215ERROR124603_v21.bin",
+            "No recognizable time format",
+        ),  # Bad time value
+        (
+            "hermes_FAKE_VA_l0_2026215-124603_v21.bin",
+            "No valid instrument name found",
+        ),  # Bad instrument value
+        (
+            "veeger_spn_2s_l3test_burst_20240406_120621_v2.4.5.cdf",
+            "Not a valid mission name",
+        ),  # Wrong mission name
+        (
+            "hermes_www_2s_l3test_burst_20240406_120621_v2.4.5.cdf",
+            "Invalid instrument shortname",
+        ),  # Wrong instrument name
+    ],
+)
+def test_parse_science_filename_errors(filename, expected_error):
+    """Test for errors in filename parsing"""
+    # Set SWXSOC_MISSION to 'hermes' mission
+    os.environ["SWXSOC_MISSION"] = "hermes"
+    swxsoc._reconfigure()
+
+    with pytest.raises(ValueError, match=expected_error):
+        util.parse_science_filename(filename)
 # fmt: on
 
 
@@ -325,25 +213,33 @@ def test_parse_l0_filenames(filename, instrument, time):
 @pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
     ("hermes_NEM_l0_2024094-124603_v01.bin", "nemisis", "2024-04-03T12:46:03", "l0", None, None),
     ("hermes_EEA_l0_2026337-124603_v11.bin", "eea", "2026-12-03T12:46:03", "l0", None, None),
+    ("hermes_MERIT_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03", "l0", None, None),
+    ("hermes_SPANI_l0_2026337-065422_v11.bin", "spani", "2026-12-03T06:54:22", "l0", None, None),
+    ("hermes_MERIT_VC_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03", "l0", None, None),
+    ("hermes_SPANI_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03", "l0", None, None),
+    ("SPANI_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03", "l0", None, None),
+    ("spani_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03", "l0", None, None),
 ])
-def test_parse_env_var_configured_2(filename, instrument, time, level, version, mode):
+def test_parse_l0_filenames_hermes(filename, instrument, time, level, version, mode):
     """Testing parsing of MOC-generated level 0 files."""
     # Set SWXSOC_MISSION to 'hermes' mission
-    os.environ["SWXSOC_MISSION"] = "hermes"
-
+    mission_name = "hermes"
+    os.environ["SWXSOC_MISSION"] = mission_name
     swxsoc._reconfigure()
+    
     result = util.parse_science_filename(filename)
     assert result['instrument'] == instrument
     assert result['level'] == level
     assert result['version'] == version
     assert result['time'] == Time(time)
     assert result['mode'] == mode
+    assert result['mission'] == mission_name
 # fmt: on
+
+
 # fmt: off
-
-
 @pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
-    ("padre_MEDDEA_l0_2025131-192102_v3.bin", "meddea", "2025-05-11 19:21:02", "raw", None, None),
+    ("padre_MEDDEA_l0_2025131-192102_v3.bin", "meddea", "2025-05-11 19:21:02", "l0", None, None),
     ("padre_MEDDEA_apid13_2025131-192102.bin", "meddea", "2025-05-11 19:21:02", "raw", None, None),
     ("padreSP11_250331134058.dat", "sharp", "2025-03-31 13:40:58", "raw", None, None),
     ("padreSP11_250331134058.idx", "sharp", "2025-03-31 13:40:58", "raw", None, None),
@@ -360,10 +256,10 @@ def test_parse_env_var_configured_2(filename, instrument, time, level, version, 
 ])
 def test_parse_padre_science_files(filename, instrument, time, level, version, mode):
     """Testing parsing of MOC-generated level 0 files."""
-    # Set SWXSOC_MISSION to 'hermes' mission
+    # Set SWXSOC_MISSION to 'padre' mission
     os.environ["SWXSOC_MISSION"] = "padre"
-
     swxsoc._reconfigure()
+    
     result = util.parse_science_filename(filename)
     assert result['instrument'] == instrument
     assert result['level'] == level
@@ -374,62 +270,12 @@ def test_parse_padre_science_files(filename, instrument, time, level, version, m
 # fmt: on
 
 
-def test_extract_time_warning(caplog):
-    util._extract_time("padre_get_EPS_9_Data_1836308076540_1836308076540.csv")
-    assert "Found future time" in caplog.text
-
-
 # fmt: off
 @pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
-    ("hermes_NEM_l0_2024094-124603_v01.bin", "nemisis", "2024-04-03T12:46:03", "l0", None, None),
-    ("hermes_EEA_l0_2026337-124603_v11.bin", "eea", "2026-12-03T12:46:03", "l0", None, None),
-    ("hermes_MERIT_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03", "l0", None, None),
-    ("hermes_SPANI_l0_2026337-065422_v11.bin", "spani", "2026-12-03T06:54:22", "l0", None, None),
-    (f"hermes_eea_l1_{time_formatted}_v1.2.3.cdf", "eea", "2024-04-06T12:06:21", "l1", "1.2.3", None),
-    (f"hermes_mrt_l2_{time_formatted}_v1.2.5.cdf", "merit", "2024-04-06T12:06:21", "l2", "1.2.5", None),
-])
-def test_parse_env_var_configured_1(filename, instrument, time, level, version, mode):
-    """Testing parsing of MOC-generated level 0 files."""
-    # Set SWXSOC_MISSION to 'hermes' mission
-    os.environ["SWXSOC_MISSION"] = "hermes"
-
-    swxsoc._reconfigure()
-    result = util.parse_science_filename(filename)
-    assert result['instrument'] == instrument
-    assert result['level'] == level
-    assert result['version'] == version
-    assert result['time'] == Time(time)
-    assert result['mode'] == mode
-# fmt: on
-
-
-# fmt: off
-@pytest.mark.parametrize("instrument,time,level,version,result", [
-    ("eea", time, "l1", "1.2.3", f"hermes_eea_l1_{time_formatted}_v1.2.3.cdf"),
-    ("merit", time, "l2", "2.4.5", f"hermes_mrt_l2_{time_formatted}_v2.4.5.cdf"),
-    ("nemisis", time, "l2", "1.3.5", f"hermes_nem_l2_{time_formatted}_v1.3.5.cdf"),
-    ("spani", time, "l3", "2.4.5", f"hermes_spn_l3_{time_formatted}_v2.4.5.cdf"),
-]
-)
-def test_create_env_var_configured(instrument, time, level, version, result):
-    """Test simple cases with expected output"""
-    # Set SWXSOC_MISSION to 'hermes' mission
-    os.environ["SWXSOC_MISSION"] = "hermes"
-    # Import the 'util' submodule from 'swxsoc.util'
-    swxsoc._reconfigure()
-    assert (
-        util.create_science_filename(instrument, time, level=level, version=version)
-        == result
-    )
-# fmt: on
-
-
-# fmt: off
-@pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
-    ("mission_INS1_l0_2024094-124603_v01.bin", "instrument1", "2024-04-03T12:46:03", "raw", None, None),
-    ("mission_INS1_l0_2026337-124603_v11.bin", "instrument1", "2026-12-03T12:46:03", "raw", None, None),
-    ("mission_INS2_l0_2026215-124603_v21.bin", "instrument2", "2026-08-03T12:46:03", "raw", None, None),
-    ("mission_INS2_l0_2026337-065422_v11.bin", "instrument2", "2026-12-03T06:54:22", "raw", None, None),
+    ("mission_INS1_l0_2024094-124603_v01.bin", "instrument1", "2024-04-03T12:46:03", "l0", None, None),
+    ("mission_INS1_l0_2026337-124603_v11.bin", "instrument1", "2026-12-03T12:46:03", "l0", None, None),
+    ("mission_INS2_l0_2026215-124603_v21.bin", "instrument2", "2026-08-03T12:46:03", "l0", None, None),
+    ("mission_INS2_l0_2026337-065422_v11.bin", "instrument2", "2026-12-03T06:54:22", "l0", None, None),
     (f"mission_ins1_l1_{time_formatted}_v1.2.3.txt", "instrument1", "2024-04-06T12:06:21", "l1", "1.2.3", None),
     (f"mission_ins2_l2_{time_formatted}_v1.2.5.txt", "instrument2", "2024-04-06T12:06:21", "l2", "1.2.5", None),
 ])
@@ -503,22 +349,32 @@ def test_create_configdir_configured(instrument, time, level, version, result):
 # fmt: on
 
 
+def test_extract_time_warning(caplog):
+    util._extract_time("padre_get_EPS_9_Data_1836308076540_1836308076540.csv")
+    assert "Found future time" in caplog.text
+
+
+
 @mock_aws
 def test_search_all_attr():
+    # Set SWXSOC_MISSION to 'hermes' mission
+    os.environ["SWXSOC_MISSION"] = "hermes"
+    swxsoc._reconfigure()
+    
     conn = boto3.resource("s3", region_name="us-east-1")
 
-    bucket_name = "swxsoc-eea"
+    bucket_name = "hermes-eea"
     conn.create_bucket(Bucket=bucket_name)
 
     s3 = boto3.client("s3")
     s3.put_object(
         Bucket=bucket_name,
-        Key="l0/2024/04/swxsoc_EEA_l0_2024094-124603_v01.bin",
+        Key="l0/2024/04/hermes_EEA_l0_2024094-124603_v01.bin",
         Body=b"test data 1",
     )
     s3.put_object(
         Bucket=bucket_name,
-        Key=f"l1/2024/04/swxsoc_eea_l1_{time_formatted}_v1.2.3.cdf",
+        Key=f"l1/2024/04/hermes_eea_l1_{time_formatted}_v1.2.3.cdf",
         Body=b"test data 2",
     )
 
@@ -560,9 +416,13 @@ def test_search_all_attr():
 
 @mock_aws
 def test_search_time_attr():
+    # Set SWXSOC_MISSION to 'hermes' mission
+    os.environ["SWXSOC_MISSION"] = "hermes"
+    swxsoc._reconfigure()
+    
     conn = boto3.resource("s3", region_name="us-east-1")
 
-    buckets = ["swxsoc-eea", "swxsoc-nemisis", "swxsoc-merit", "swxsoc-spani"]
+    buckets = ["hermes-eea", "hermes-nemisis", "hermes-merit", "hermes-spani"]
 
     for bucket in buckets:
         conn.create_bucket(Bucket=bucket)
@@ -570,42 +430,42 @@ def test_search_time_attr():
     s3 = boto3.client("s3")
     s3.put_object(
         Bucket=buckets[0],
-        Key="l0/2024/04/swxsoc_EEA_l0_2024094-124603_v01.bin",
+        Key="l0/2024/04/hermes_EEA_l0_2024094-124603_v01.bin",
         Body=b"test data 1",
     )
     s3.put_object(
         Bucket=buckets[0],
-        Key=f"l1/2024/04/swxsoc_eea_l1_{time_formatted}_v1.2.3.cdf",
+        Key=f"l1/2024/04/hermes_eea_l1_{time_formatted}_v1.2.3.cdf",
         Body=b"test data 2",
     )
     s3.put_object(
         Bucket=buckets[1],
-        Key="l0/2024/04/swxsoc_NEM_l0_2024094-124603_v01.bin",
+        Key="l0/2024/04/hermes_NEM_l0_2024094-124603_v01.bin",
         Body=b"test data 3",
     )
     s3.put_object(
         Bucket=buckets[1],
-        Key=f"l3/2024/04/swxsoc_nem_l3_{time_formatted}_v1.2.3.cdf",
+        Key=f"l3/2024/04/hermes_nem_l3_{time_formatted}_v1.2.3.cdf",
         Body=b"test data 4",
     )
     s3.put_object(
         Bucket=buckets[2],
-        Key="l0/2024/04/swxsoc_MERIT_l0_2024094-124603_v01.bin",
+        Key="l0/2024/04/hermes_MERIT_l0_2024094-124603_v01.bin",
         Body=b"test data 5",
     )
     s3.put_object(
         Bucket=buckets[2],
-        Key=f"l3/2024/04/swxsoc_mrt_l3_{time_formatted}_v1.2.3.cdf",
+        Key=f"l3/2024/04/hermes_mrt_l3_{time_formatted}_v1.2.3.cdf",
         Body=b"test data 6",
     )
     s3.put_object(
         Bucket=buckets[3],
-        Key="l0/2024/04/swxsoc_SPANI_l0_2024094-124603_v01.bin",
+        Key="l0/2024/04/hermes_SPANI_l0_2024094-124603_v01.bin",
         Body=b"test data 7",
     )
     s3.put_object(
         Bucket=buckets[3],
-        Key=f"l3/2024/04/swxsoc_spn_l3_{time_formatted}_v1.2.3.cdf",
+        Key=f"l3/2024/04/hermes_spn_l3_{time_formatted}_v1.2.3.cdf",
         Body=b"test data 8",
     )
 
@@ -627,9 +487,13 @@ def test_search_time_attr():
 
 @mock_aws
 def test_search_instrument_attr():
+    # Set SWXSOC_MISSION to 'hermes' mission
+    os.environ["SWXSOC_MISSION"] = "hermes"
+    swxsoc._reconfigure()
+    
     conn = boto3.resource("s3", region_name="us-east-1")
 
-    buckets = ["swxsoc-eea", "swxsoc-nemisis", "swxsoc-merit", "swxsoc-spani"]
+    buckets = ["hermes-eea", "hermes-nemisis", "hermes-merit", "hermes-spani"]
 
     for bucket in buckets:
         conn.create_bucket(Bucket=bucket)
@@ -637,12 +501,12 @@ def test_search_instrument_attr():
     s3 = boto3.client("s3")
     s3.put_object(
         Bucket=buckets[0],
-        Key="l0/2024/04/swxsoc_EEA_l0_2024094-124603_v01.bin",
+        Key="l0/2024/04/hermes_EEA_l0_2024094-124603_v01.bin",
         Body=b"test data 1",
     )
     s3.put_object(
         Bucket=buckets[0],
-        Key=f"l1/2024/04/swxsoc_eea_l1_{time_formatted}_v1.2.3.cdf",
+        Key=f"l1/2024/04/hermes_eea_l1_{time_formatted}_v1.2.3.cdf",
         Body=b"test data 2",
     )
 
@@ -665,9 +529,13 @@ def test_search_instrument_attr():
 
 @mock_aws
 def test_search_level_attr():
+    # Set SWXSOC_MISSION to 'hermes' mission
+    os.environ["SWXSOC_MISSION"] = "hermes"
+    swxsoc._reconfigure()
+    
     conn = boto3.resource("s3", region_name="us-east-1")
 
-    buckets = ["swxsoc-eea", "swxsoc-nemisis", "swxsoc-merit", "swxsoc-spani"]
+    buckets = ["hermes-eea", "hermes-nemisis", "hermes-merit", "hermes-spani"]
 
     for bucket in buckets:
         conn.create_bucket(Bucket=bucket)
@@ -675,17 +543,17 @@ def test_search_level_attr():
     s3 = boto3.client("s3")
     s3.put_object(
         Bucket=buckets[0],
-        Key="l0/2024/04/swxsoc_EEA_l0_2024094-124603_v01.bin",
+        Key="l0/2024/04/hermes_EEA_l0_2024094-124603_v01.bin",
         Body=b"test data 1",
     )
     s3.put_object(
         Bucket=buckets[0],
-        Key=f"l1/2024/04/swxsoc_eea_l1_{time_formatted}_v1.2.3.cdf",
+        Key=f"l1/2024/04/hermes_eea_l1_{time_formatted}_v1.2.3.cdf",
         Body=b"test data 2",
     )
     s3.put_object(
         Bucket=buckets[1],
-        Key="l0/2024/04/swxsoc_NEM_l0_2024094-124603_v01.bin",
+        Key="l0/2024/04/hermes_NEM_l0_2024094-124603_v01.bin",
         Body=b"test data 3",
     )
 
@@ -714,15 +582,19 @@ def test_search_level_attr():
 
 @mock_aws
 def test_search_development_bucket():
+    # Set SWXSOC_MISSION to 'hermes' mission
+    os.environ["SWXSOC_MISSION"] = "hermes"
+    swxsoc._reconfigure()
+    
     conn = boto3.resource("s3", region_name="us-east-1")
 
     dev_buckets = [
-        "dev-swxsoc-eea",
-        "dev-swxsoc-nemisis",
-        "dev-swxsoc-merit",
-        "dev-swxsoc-spani",
+        "dev-hermes-eea",
+        "dev-hermes-nemisis",
+        "dev-hermes-merit",
+        "dev-hermes-spani",
     ]
-    buckets = ["swxsoc-eea", "swxsoc-nemisis", "swxsoc-merit", "swxsoc-spani"]
+    buckets = ["hermes-eea", "hermes-nemisis", "hermes-merit", "hermes-spani"]
 
     for bucket in dev_buckets:
         conn.create_bucket(Bucket=bucket)
@@ -734,7 +606,7 @@ def test_search_development_bucket():
     for bucket in dev_buckets:
         s3.put_object(
             Bucket=bucket,
-            Key="l0/2024/04/swxsoc_EEA_l0_2024094-124603_v01.bin",
+            Key="l0/2024/04/hermes_EEA_l0_2024094-124603_v01.bin",
             Body=b"test data 1",
         )
 
@@ -755,20 +627,24 @@ def test_search_development_bucket():
 
 @mock_aws
 def test_fetch():
+    # Set SWXSOC_MISSION to 'hermes' mission
+    os.environ["SWXSOC_MISSION"] = "hermes"
+    swxsoc._reconfigure()
+    
     conn = boto3.resource("s3", region_name="us-east-1")
 
-    bucket_name = "swxsoc-eea"
+    bucket_name = "hermes-eea"
     conn.create_bucket(Bucket=bucket_name)
 
     s3 = boto3.client("s3")
     s3.put_object(
         Bucket=bucket_name,
-        Key="l0/2024/04/swxsoc_EEA_l0_2024094-124603_v01.bin",
+        Key="l0/2024/04/hermes_EEA_l0_2024094-124603_v01.bin",
         Body=b"test data 1",
     )
     s3.put_object(
         Bucket=bucket_name,
-        Key=f"l1/2024/04/swxsoc_eea_l1_{time_formatted}_v1.2.3.cdf",
+        Key=f"l1/2024/04/hermes_eea_l1_{time_formatted}_v1.2.3.cdf",
         Body=b"test data 2",
     )
 
@@ -811,12 +687,12 @@ def test_fetch():
 
     s3.put_object(
         Bucket=bucket_name,
-        Key=f"l1/housekeeping/2024/04/swxsoc_eea_l1_{time_formatted}_v1.2.3.cdf",
+        Key=f"l1/housekeeping/2024/04/hermes_eea_l1_{time_formatted}_v1.2.3.cdf",
         Body=b"test data 2",
     )
     s3.put_object(
         Bucket=bucket_name,
-        Key=f"l1/spectrum/2024/04/swxsoc_eea_l1_{time_formatted}_v1.2.3.cdf",
+        Key=f"l1/spectrum/2024/04/hermes_eea_l1_{time_formatted}_v1.2.3.cdf",
         Body=b"test data 2",
     )
     query = util.AttrAnd(

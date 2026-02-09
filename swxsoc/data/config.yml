@@ -12,10 +12,10 @@ general:
   # as the default and primary time variable key
   default_timeseries_key: Epoch
 
-selected_mission: swxsoc
+selected_mission: demo
 
 missions_data:
-  swxsoc: # A generic mission template for testing
+  demo: # A generic mission template for testing
     file_extension: cdf # The File Extension Used for Archive Files and Science File Formats
     valid_data_levels: # List of Valid Data Levels for this Mission
       - l0

@@ -14,6 +14,22 @@ from moto.timestreamwrite.models import timestreamwrite_backends
 from swxsoc.util import util
 
 
+def get_test_db_names():
+    """
+    Get mission-specific database and table names for testing.
+    
+    Returns
+    -------
+    tuple
+        (database_name, table_name) using current mission config
+    """
+    import swxsoc
+    mission_name = swxsoc.config["mission"]["mission_name"]
+    database_name = f"dev-{mission_name}_sdc_aws_logs"
+    table_name = f"dev-{mission_name}_measures_table"
+    return database_name, table_name
+
+
 @pytest.fixture(scope="function")
 def aws_credentials():
     """Mocked AWS Credentials for moto."""
@@ -27,13 +43,17 @@ def aws_credentials():
 @pytest.fixture(scope="function")
 def mocked_timestream(aws_credentials):
     """
-    Return a mocked S3 client
+    Return a mocked Timestream client with database and table created.
+    
+    Creates the database/table using the current mission name from swxsoc.config,
+    matching the naming convention used by record_timeseries.
     """
     with mock_aws():
-        """Fixture to mock Timestream database and table."""
         client = boto3.client("timestream-write", region_name="us-east-1")
-        database_name = "dev-swxsoc_sdc_aws_logs"
-        table_name = "dev-swxsoc_measures_table"
+        
+        # Get mission-specific database/table names
+        database_name, table_name = get_test_db_names()
+        
         client.create_database(DatabaseName=database_name)
 
         client.create_table(
@@ -58,9 +78,7 @@ def test_record_timeseries_quantity_1col(mocked_timestream):
     ts["temp4"] = [1.0, 4.0, 5.0, 6.0, 4.0] * u.deg_C
     util.record_timeseries(ts, instrument_name="test")
 
-    database_name = "dev-swxsoc_sdc_aws_logs"
-    table_name = "dev-swxsoc_measures_table"
-
+    database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
     records = backend.databases[database_name].tables[table_name].records
 
@@ -98,9 +116,7 @@ def test_record_timeseries_quantity_1col_array(mocked_timestream):
     ts["temp4_arr"] = np.arange(6 * 5).reshape((5, 6))
     util.record_timeseries(ts, instrument_name="test")
 
-    database_name = "dev-swxsoc_sdc_aws_logs"
-    table_name = "dev-swxsoc_measures_table"
-
+    database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
     records = backend.databases[database_name].tables[table_name].records
 
@@ -142,9 +158,7 @@ def test_record_timeseries_quantity_multicol(mocked_timestream):
     ts["status"] = [0, 1, 1, 1, 2]
     util.record_timeseries(ts, ts_name=timeseries_name, instrument_name="test")
 
-    database_name = "dev-swxsoc_sdc_aws_logs"
-    table_name = "dev-swxsoc_measures_table"
-
+    database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
     records = backend.databases[database_name].tables[table_name].records
 
@@ -211,9 +225,7 @@ def test_record_timeseries_with_nan_values(mocked_timestream):
 
     util.record_timeseries(ts, instrument_name="test")
 
-    database_name = "dev-swxsoc_sdc_aws_logs"
-    table_name = "dev-swxsoc_measures_table"
-
+    database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
     records = backend.databases[database_name].tables[table_name].records
 
@@ -288,9 +300,7 @@ def test_record_timeseries_with_nan_in_arrays(mocked_timestream):
 
     util.record_timeseries(ts, instrument_name="test")
 
-    database_name = "dev-swxsoc_sdc_aws_logs"
-    table_name = "dev-swxsoc_measures_table"
-
+    database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
     records = backend.databases[database_name].tables[table_name].records
 
@@ -329,9 +339,7 @@ def test_record_timeseries_with_boolean_values(mocked_timestream):
 
     util.record_timeseries(ts, instrument_name="test")
 
-    database_name = "dev-swxsoc_sdc_aws_logs"
-    table_name = "dev-swxsoc_measures_table"
-
+    database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
     records = backend.databases[database_name].tables[table_name].records
 
@@ -382,9 +390,7 @@ def test_record_timeseries_with_numpy_boolean(mocked_timestream):
 
     util.record_timeseries(ts, instrument_name="test")
 
-    database_name = "dev-swxsoc_sdc_aws_logs"
-    table_name = "dev-swxsoc_measures_table"
-
+    database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
     records = backend.databases[database_name].tables[table_name].records
 
@@ -417,9 +423,7 @@ def test_record_timeseries_with_mixed_types(mocked_timestream):
 
     util.record_timeseries(ts, instrument_name="test")
 
-    database_name = "dev-swxsoc_sdc_aws_logs"
-    table_name = "dev-swxsoc_measures_table"
-
+    database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
     records = backend.databases[database_name].tables[table_name].records
 
@@ -463,9 +467,7 @@ def test_record_timeseries_all_nan_column(mocked_timestream):
 
     util.record_timeseries(ts, instrument_name="test")
 
-    database_name = "dev-swxsoc_sdc_aws_logs"
-    table_name = "dev-swxsoc_measures_table"
-
+    database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
     records = backend.databases[database_name].tables[table_name].records
 
@@ -503,10 +505,11 @@ def test_record_dimension_timestream(mocked_timestream):
         measure_value_type=measure_value_type,
     )
 
+    database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
     records = (
-        backend.databases["dev-swxsoc_sdc_aws_logs"]
-        .tables["dev-swxsoc_measures_table"]
+        backend.databases[database_name]
+        .tables[table_name]
         .records
     )
 
@@ -524,10 +527,11 @@ def test_invalid_record_dimension_timestream(mocked_timestream):
         dimensions=dimensions,
     )
 
+    database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
     record = (
-        backend.databases["dev-swxsoc_sdc_aws_logs"]
-        .tables["dev-swxsoc_measures_table"]
+        backend.databases[database_name]
+        .tables[table_name]
         .records[0]
     )
 
@@ -541,10 +545,11 @@ def test_invalid_instrument_record_dimension_timestream(mocked_timestream):
 
     util._record_dimension_timestream(dimensions=dimensions)
 
+    database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
     records = (
-        backend.databases["dev-swxsoc_sdc_aws_logs"]
-        .tables["dev-swxsoc_measures_table"]
+        backend.databases[database_name]
+        .tables[table_name]
         .records
     )
 

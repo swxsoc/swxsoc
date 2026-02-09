@@ -1,0 +1,65 @@
+"""
+Shared pytest fixtures for all swxsoc tests.
+
+These fixtures are automatically available to all test modules in the package.
+"""
+
+import os
+import pytest
+import swxsoc
+
+
+@pytest.fixture(autouse=True, scope="function")
+def default_test_mission(monkeypatch):
+    """
+    Automatically set HERMES as the default mission for all tests.
+    
+    This fixture runs automatically before each test function and ensures
+    that tests have a consistent mission configuration (HERMES) unless
+    explicitly overridden by the test itself or the use_mission fixture.
+    
+    The autouse=True makes this fixture apply to all tests without explicit declaration.
+    The monkeypatch ensures environment changes are cleaned up after each test.
+    
+    Note: This does NOT affect doctests. Doctests must explicitly set the
+    mission in their example code if they need a specific mission configuration.
+    """
+    # Only set if not already set (allows tests to override)
+    if "SWXSOC_MISSION" not in os.environ:
+        monkeypatch.setenv("SWXSOC_MISSION", "hermes")
+        swxsoc._reconfigure()
+
+
+@pytest.fixture
+def use_mission(request, monkeypatch):
+    """
+    Fixture to explicitly set a mission for a test.
+    
+    This fixture allows tests to specify which mission configuration to use
+    via indirect parametrization. It overrides the default_test_mission fixture.
+    
+    Usage:
+        # Single mission test
+        @pytest.mark.parametrize('use_mission', ['padre'], indirect=True)
+        def test_with_padre(use_mission):
+            # Test runs with PADRE mission config
+            assert swxsoc.config['mission']['mission_name'] == 'padre'
+        
+        # Multiple missions
+        @pytest.mark.parametrize('use_mission', ['hermes', 'padre', 'swxsoc'], indirect=True)
+        def test_all_missions(use_mission):
+            # Test runs three times, once for each mission
+            assert swxsoc.config['mission']['mission_name'] == use_mission
+    
+    Args:
+        request: pytest request object containing the parameter
+        monkeypatch: pytest monkeypatch fixture for environment modification
+    
+    Yields:
+        str: The name of the mission that was configured
+    """
+    mission = request.param if hasattr(request, "param") else "hermes"
+    monkeypatch.setenv("SWXSOC_MISSION", mission)
+    swxsoc._reconfigure()
+    yield mission
+    # Cleanup happens automatically via monkeypatch

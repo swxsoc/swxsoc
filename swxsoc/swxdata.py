@@ -40,13 +40,18 @@ class SWXData:
 
     Examples
     --------
+    >>> import os
     >>> import numpy as np
     >>> import astropy.units as u
     >>> from astropy.timeseries import TimeSeries
     >>> from ndcube import NDCube, NDCollection
     >>> from astropy.wcs import WCS
     >>> from astropy.nddata import NDData
+    >>> import swxsoc
     >>> from swxsoc.swxdata import SWXData
+    >>> # Set mission to HERMES for this example (eea is a HERMES instrument)
+    >>> os.environ["SWXSOC_MISSION"] = "hermes"
+    >>> swxsoc._reconfigure()
     >>> # Create a TimeSeries structure
     >>> data = u.Quantity([1, 2, 3, 4], "gauss", dtype=np.uint16)
     >>> ts = TimeSeries(time_start="2016-03-22T12:30:31", time_delta=3 * u.s, data={"Bx": data})

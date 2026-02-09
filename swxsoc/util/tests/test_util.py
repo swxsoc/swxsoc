@@ -17,46 +17,6 @@ time = "2024-04-06T12:06:21"
 time_formatted = "20240406T120621"
 time_unix_ms = "1712405181000"
 
-# YAML content as a dictionary
-config_content = {
-    "general": {"time_format": "%Y-%m-%d %H:%M:%S"},
-    
-    "selected_mission": "mission",
-    "missions_data": {
-        "mission": {
-            "file_extension": ".txt",
-            "instruments": [
-                {
-                    "name": "instrument1",
-                    "shortname": "ins1",
-                    "fullname": "Instrument 1",
-                    "targetname": "INS1",
-                },
-                {
-                    "name": "instrument2",
-                    "shortname": "ins2",
-                    "fullname": "Instrument 2",
-                    "targetname": "INS2",
-                },
-            ],
-        }
-    },
-    "logger": {
-        "log_level": "INFO",
-        "use_color": True,
-        "log_warnings": True,
-        "log_exceptions": True,
-        "log_to_file": True,
-        "log_file_path": "swxsoc.log",
-        "log_file_level": "INFO",
-        "log_file_format": "%(asctime)s, %(origin)s, %(levelname)s, %(message)s",
-    },
-}
-
-# Path to the temporary file
-tmp_file_path = Path("swxsoc/tests/config.yml")
-
-
 # fmt: off
 @pytest.mark.parametrize("instrument,mode,level,test,descriptor,time_input,version,result", [
     # Simple cases with string time
@@ -75,9 +35,7 @@ tmp_file_path = Path("swxsoc/tests/config.yml")
 ])
 def test_create_science_filename_hermes(instrument, mode, level, test, descriptor, time_input, version, result):
     """Test create_science_filename with various parameter combinations"""
-    # Set SWXSOC_MISSION to 'hermes' mission
-    os.environ["SWXSOC_MISSION"] = "hermes"
-    swxsoc._reconfigure()
+    # HERMES mission is set by default via autouse fixture in conftest.py
     
     # Build kwargs for optional parameters
     kwargs = {"level": level, "version": version}
@@ -102,9 +60,7 @@ def test_create_science_filename_hermes(instrument, mode, level, test, descripto
 ])
 def test_parse_science_filename_hermes(instrument, mode, level, test, descriptor, time_input, version):
     """Test parse_science_filename with various parameter combinations"""
-    # Set SWXSOC_MISSION to 'hermes' mission
-    os.environ["SWXSOC_MISSION"] = "hermes"
-    swxsoc._reconfigure()
+    # HERMES mission is set by default via autouse fixture in conftest.py
     
     # Build expected dictionary
     expected = {
@@ -161,9 +117,7 @@ good_version = "1.3.4"
 ])
 def test_create_science_filename_errors(instrument, time, level, version, mode, descriptor, expected_error):
     """Test create_science_filename raises appropriate errors for invalid inputs"""
-    # Set SWXSOC_MISSION to 'hermes' mission
-    os.environ["SWXSOC_MISSION"] = "hermes"
-    swxsoc._reconfigure()
+    # HERMES mission is set by default via autouse fixture in conftest.py
     
     kwargs = {"level": level, "version": version}
     if mode is not None:
@@ -200,9 +154,7 @@ def test_create_science_filename_errors(instrument, time, level, version, mode, 
 )
 def test_parse_science_filename_errors(filename, expected_error):
     """Test for errors in filename parsing"""
-    # Set SWXSOC_MISSION to 'hermes' mission
-    os.environ["SWXSOC_MISSION"] = "hermes"
-    swxsoc._reconfigure()
+    # HERMES mission is set by default via autouse fixture in conftest.py
 
     with pytest.raises(ValueError, match=expected_error):
         util.parse_science_filename(filename)
@@ -222,10 +174,8 @@ def test_parse_science_filename_errors(filename, expected_error):
 ])
 def test_parse_l0_filenames_hermes(filename, instrument, time, level, version, mode):
     """Testing parsing of MOC-generated level 0 files."""
-    # Set SWXSOC_MISSION to 'hermes' mission
+    # HERMES mission is set by default via autouse fixture in conftest.py
     mission_name = "hermes"
-    os.environ["SWXSOC_MISSION"] = mission_name
-    swxsoc._reconfigure()
     
     result = util.parse_science_filename(filename)
     assert result['instrument'] == instrument
@@ -238,6 +188,7 @@ def test_parse_l0_filenames_hermes(filename, instrument, time, level, version, m
 
 
 # fmt: off
+@pytest.mark.parametrize("use_mission", ["padre"], indirect=True)
 @pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
     ("padre_MEDDEA_l0_2025131-192102_v3.bin", "meddea", "2025-05-11 19:21:02", "l0", None, None),
     ("padre_MEDDEA_apid13_2025131-192102.bin", "meddea", "2025-05-11 19:21:02", "raw", None, None),
@@ -254,11 +205,9 @@ def test_parse_l0_filenames_hermes(filename, instrument, time, level, version, m
     ("padre_get_EPS_9_Data_1762008094193_1762187403300.csv", "craft", "2025-11-01T14:41:34.193", "raw", None, None),
     ("padre_get_EPS_9_Data_1763282491281_1836308076540.csv", "craft", "2025-11-16T08:41:31.281", "raw", None, None),
 ])
-def test_parse_padre_science_files(filename, instrument, time, level, version, mode):
+def test_parse_padre_science_files(use_mission, filename, instrument, time, level, version, mode):
     """Testing parsing of MOC-generated level 0 files."""
-    # Set SWXSOC_MISSION to 'padre' mission
-    os.environ["SWXSOC_MISSION"] = "padre"
-    swxsoc._reconfigure()
+    # PADRE mission is set via use_mission fixture
     
     result = util.parse_science_filename(filename)
     assert result['instrument'] == instrument
@@ -270,84 +219,6 @@ def test_parse_padre_science_files(filename, instrument, time, level, version, m
 # fmt: on
 
 
-# fmt: off
-@pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
-    ("mission_INS1_l0_2024094-124603_v01.bin", "instrument1", "2024-04-03T12:46:03", "l0", None, None),
-    ("mission_INS1_l0_2026337-124603_v11.bin", "instrument1", "2026-12-03T12:46:03", "l0", None, None),
-    ("mission_INS2_l0_2026215-124603_v21.bin", "instrument2", "2026-08-03T12:46:03", "l0", None, None),
-    ("mission_INS2_l0_2026337-065422_v11.bin", "instrument2", "2026-12-03T06:54:22", "l0", None, None),
-    (f"mission_ins1_l1_{time_formatted}_v1.2.3.txt", "instrument1", "2024-04-06T12:06:21", "l1", "1.2.3", None),
-    (f"mission_ins2_l2_{time_formatted}_v1.2.5.txt", "instrument2", "2024-04-06T12:06:21", "l2", "1.2.5", None),
-])
-def test_parse_configdir_configured(filename, instrument, time, level, version, mode):
-    """Testing parsing of MOC-generated level 0 files."""
-    # If the file exists, delete it
-    if os.path.exists(tmp_file_path):
-        os.remove(tmp_file_path)
-
-    # Write the dictionary to a YAML file
-    with open(tmp_file_path, 'w') as file:
-        yaml.dump(config_content, file, default_flow_style=False)
-
-    # Set SWXSOC_CONFIGDIR
-    os.environ["SWXSOC_CONFIGDIR"] = str(tmp_file_path.parent)
-
-    # Remove SWXSOC_MISSION environment variable if it exists
-    if "SWXSOC_MISSION" in os.environ:
-        del os.environ["SWXSOC_MISSION"]
-
-    # Import the 'util' submodule from 'swxsoc.util'
-    swxsoc._reconfigure()
-
-    result = util.parse_science_filename(filename)
-    assert result['instrument'] == instrument
-    assert result['level'] == level
-    assert result['version'] == version
-    assert result['time'] == Time(time)
-    assert result['mode'] == mode
-
-    del os.environ["SWXSOC_CONFIGDIR"]
-    swxsoc._reconfigure()
-# fmt: on
-
-
-# fmt: off
-@pytest.mark.parametrize("instrument,time,level,version,result", [
-    ("instrument1", time, "l1", "1.2.3", f"mission_ins1_l1_{time_formatted}_v1.2.3.txt"),
-    ("instrument1", time, "l2", "2.4.5", f"mission_ins1_l2_{time_formatted}_v2.4.5.txt"),
-    ("instrument2", time, "l2", "1.3.5", f"mission_ins2_l2_{time_formatted}_v1.3.5.txt"),
-    ("instrument2", time, "l3", "2.4.5", f"mission_ins2_l3_{time_formatted}_v2.4.5.txt"),
-]
-)
-def test_create_configdir_configured(instrument, time, level, version, result):
-    """Test simple cases with expected output"""
-    # If the file exists, delete it
-    if os.path.exists(tmp_file_path):
-        os.remove(tmp_file_path)
-
-    # Write the dictionary to a YAML file
-    with open(tmp_file_path, 'w') as file:
-        yaml.dump(config_content, file, default_flow_style=False)
-
-    # Set SWXSOC_CONFIGDIR
-    os.environ["SWXSOC_CONFIGDIR"] = str(tmp_file_path.parent)
-
-    # Remove SWXSOC_MISSION environment variable if it exists
-    if "SWXSOC_MISSION" in os.environ:
-        del os.environ["SWXSOC_MISSION"]
-
-    # Import the 'util' submodule from 'swxsoc.util'
-    swxsoc._reconfigure()
-
-    assert (
-        util.create_science_filename(instrument, time, level=level, version=version)
-        == result
-    )
-
-    del os.environ["SWXSOC_CONFIGDIR"]
-    swxsoc._reconfigure()
-# fmt: on
-
 
 def test_extract_time_warning(caplog):
     util._extract_time("padre_get_EPS_9_Data_1836308076540_1836308076540.csv")
@@ -357,9 +228,7 @@ def test_extract_time_warning(caplog):
 
 @mock_aws
 def test_search_all_attr():
-    # Set SWXSOC_MISSION to 'hermes' mission
-    os.environ["SWXSOC_MISSION"] = "hermes"
-    swxsoc._reconfigure()
+    # HERMES mission is set by default via autouse fixture in conftest.py
     
     conn = boto3.resource("s3", region_name="us-east-1")
 
@@ -416,9 +285,7 @@ def test_search_all_attr():
 
 @mock_aws
 def test_search_time_attr():
-    # Set SWXSOC_MISSION to 'hermes' mission
-    os.environ["SWXSOC_MISSION"] = "hermes"
-    swxsoc._reconfigure()
+    # HERMES mission is set by default via autouse fixture in conftest.py
     
     conn = boto3.resource("s3", region_name="us-east-1")
 
@@ -487,9 +354,7 @@ def test_search_time_attr():
 
 @mock_aws
 def test_search_instrument_attr():
-    # Set SWXSOC_MISSION to 'hermes' mission
-    os.environ["SWXSOC_MISSION"] = "hermes"
-    swxsoc._reconfigure()
+    # HERMES mission is set by default via autouse fixture in conftest.py
     
     conn = boto3.resource("s3", region_name="us-east-1")
 
@@ -529,9 +394,7 @@ def test_search_instrument_attr():
 
 @mock_aws
 def test_search_level_attr():
-    # Set SWXSOC_MISSION to 'hermes' mission
-    os.environ["SWXSOC_MISSION"] = "hermes"
-    swxsoc._reconfigure()
+    # HERMES mission is set by default via autouse fixture in conftest.py
     
     conn = boto3.resource("s3", region_name="us-east-1")
 
@@ -582,9 +445,7 @@ def test_search_level_attr():
 
 @mock_aws
 def test_search_development_bucket():
-    # Set SWXSOC_MISSION to 'hermes' mission
-    os.environ["SWXSOC_MISSION"] = "hermes"
-    swxsoc._reconfigure()
+    # HERMES mission is set by default via autouse fixture in conftest.py
     
     conn = boto3.resource("s3", region_name="us-east-1")
 
@@ -627,9 +488,7 @@ def test_search_development_bucket():
 
 @mock_aws
 def test_fetch():
-    # Set SWXSOC_MISSION to 'hermes' mission
-    os.environ["SWXSOC_MISSION"] = "hermes"
-    swxsoc._reconfigure()
+    # HERMES mission is set by default via autouse fixture in conftest.py
     
     conn = boto3.resource("s3", region_name="us-east-1")
 

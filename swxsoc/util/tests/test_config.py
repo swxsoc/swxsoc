@@ -4,12 +4,12 @@ Tests for the config module
 
 import os
 
+import astropy.units as u
+import pytest
+from astropy.time import Time
 
 import swxsoc
-from swxsoc.util.config import (
-    _is_writable_dir,
-    load_config,
-)
+from swxsoc.util.config import _is_writable_dir, load_config
 
 USER = os.path.expanduser("~")
 
@@ -38,6 +38,8 @@ def test_load_config_defaults(monkeypatch):
     assert "mission_name" in mission_config
     assert "file_extension" in mission_config
     assert "valid_data_levels" in mission_config
+    assert "min_valid_time" in mission_config
+    assert "max_valid_time" in mission_config
     # Check instrument lists
     assert "inst_names" in mission_config
     assert "inst_shortnames" in mission_config
@@ -59,23 +61,40 @@ def test_load_config_defaults(monkeypatch):
     assert len(mission_config["inst_names"]) > 0
 
 
-def test_load_config_mission_override(monkeypatch):
+def test_load_config_mission_override():
     """
     Test overriding the selected mission via environment variable.
     """
-    # Assuming 'hermes' is defined in the default config.yml
-    target_mission = "hermes"
-    monkeypatch.setenv("SWXSOC_MISSION", target_mission)
-
+    # HERMES mission is set by default via autouse fixture in conftest.py
     config = load_config()
 
     mission_config = config["mission"]
-    assert mission_config["mission_name"] == target_mission
+    assert mission_config["mission_name"] == "hermes"
     # Check that it actually loaded hermes-specific data (e.g. instruments)
     assert "eea" in mission_config["inst_names"]
     # Check that file_rules exists
     assert "inst_file_rules" in mission_config
     assert isinstance(mission_config["inst_file_rules"], dict)
+    # Check that valid_time fields are loaded for hermes
+    assert isinstance(mission_config["min_valid_time"], Time)
+    assert mission_config["min_valid_time"] == Time("2020-01-01T00:00:00")
+    assert isinstance(mission_config["max_valid_time"], Time)
+    # Check that max_valid_time is close to now (within 1 second)
+    assert mission_config["max_valid_time"].isclose(Time.now(), atol=1.0 * u.s)
+
+
+@pytest.mark.parametrize("use_mission", ["demo"], indirect=True)
+def test_load_config_missing_valid_time_fields(use_mission):
+    """
+    Test that missions without min_valid_time and max_valid_time have None values.
+    """
+    config = load_config()
+    mission_config = config["mission"]
+
+    assert "min_valid_time" in mission_config
+    assert "max_valid_time" in mission_config
+    assert mission_config["min_valid_time"] is None
+    assert mission_config["max_valid_time"] is None
 
 
 def test_load_config_lambda_env(monkeypatch):

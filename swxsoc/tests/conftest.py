@@ -5,7 +5,9 @@ These fixtures are automatically available to all test modules in the package.
 """
 
 import os
+
 import pytest
+
 import swxsoc
 
 

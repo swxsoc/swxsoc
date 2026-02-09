@@ -6,10 +6,10 @@ import numbers
 import os
 import re
 import time
-from datetime import datetime, timezone
 import traceback
-from typing import Dict, List, Optional, Union
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Dict, List, Optional, Union
 
 import astropy.units as u
 import boto3
@@ -355,7 +355,7 @@ def _extract_time(
     for parser in time_parsers:
         result = parser(filename, expected_format)
         if result:
-            return _validate_time(result, mission_config)
+            return _validate_time(result, mission_config=mission_config)
     raise ValueError(f"No recognizable time format in {filename}")
 
 
@@ -529,34 +529,20 @@ def _validate_time(extracted_time: Time, mission_config: Optional[dict] = None) 
         return extracted_time
 
     # Get configured time constraints
-    min_valid_str = mission_config.get("min_valid_time")
-    max_valid_str = mission_config.get("max_valid_time")
+    min_valid_time = mission_config.get("min_valid_time")
+    max_valid_time = mission_config.get("max_valid_time")
 
     # Validate minimum time
-    if min_valid_str:
-        try:
-            min_valid_time = Time(min_valid_str)
-            if extracted_time < min_valid_time:
-                raise ValueError(
-                    f"Extracted time {extracted_time} is before mission minimum valid time {min_valid_time}."
-                )
-        except Exception as e:
-            swxsoc.log.warning(f"Could not parse min_valid_time '{min_valid_str}': {e}")
+    if min_valid_time and extracted_time < min_valid_time:
+        raise ValueError(
+            f"Extracted time {extracted_time} is before mission minimum valid time {min_valid_time}."
+        )
 
     # Validate maximum time
-    if max_valid_str:
-        try:
-            # Handle special "now" value
-            max_valid_time = (
-                Time.now() if max_valid_str.lower() == "now" else Time(max_valid_str)
-            )
-            if extracted_time > max_valid_time:
-                raise ValueError(
-                    f"Extracted time {extracted_time} is after mission maximum valid time "
-                    f"{'current time' if max_valid_str.lower() == 'now' else max_valid_time}."
-                )
-        except Exception as e:
-            swxsoc.log.warning(f"Could not parse max_valid_time '{max_valid_str}': {e}")
+    if max_valid_time and extracted_time > max_valid_time:
+        raise ValueError(
+            f"Extracted time {extracted_time} is after mission maximum valid time {max_valid_time}."
+        )
 
     return extracted_time
 

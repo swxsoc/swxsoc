@@ -1,10 +1,9 @@
 """Tests for util.py"""
 
-import pytest
-import parfive
-
-from astropy.time import Time
 import boto3
+import parfive
+import pytest
+from astropy.time import Time
 from moto import mock_aws
 
 from swxsoc.util import util
@@ -147,6 +146,11 @@ def test_create_science_filename_errors(instrument, time, level, version, mode, 
             "hermes_www_2s_l3test_burst_20240406_120621_v2.4.5.cdf",
             "Invalid instrument shortname",
         ),  # Wrong instrument name
+        (
+          "hermes_eea_l0_nemisis_20240406_120621.bin",
+          "Multiple instrument names found",
+          # Multiple Instruments listed in Raw filename  
+        ),
     ],
 )
 def test_parse_science_filename_errors(filename, expected_error):
@@ -161,13 +165,13 @@ def test_parse_science_filename_errors(filename, expected_error):
 # fmt: off
 @pytest.mark.parametrize("filename,instrument,time,level,version,mode", [
     ("hermes_NEM_l0_2024094-124603_v01.bin", "nemisis", "2024-04-03T12:46:03", "l0", None, None),
-    ("hermes_EEA_l0_2026337-124603_v11.bin", "eea", "2026-12-03T12:46:03", "l0", None, None),
-    ("hermes_MERIT_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03", "l0", None, None),
-    ("hermes_SPANI_l0_2026337-065422_v11.bin", "spani", "2026-12-03T06:54:22", "l0", None, None),
-    ("hermes_MERIT_VC_l0_2026215-124603_v21.bin", "merit", "2026-08-03T12:46:03", "l0", None, None),
-    ("hermes_SPANI_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03", "l0", None, None),
-    ("SPANI_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03", "l0", None, None),
-    ("spani_VA_l0_2026215-124603_v21.bin", "spani", "2026-08-03T12:46:03", "l0", None, None),
+    ("hermes_EEA_l0_2025337-124603_v11.bin", "eea", "2025-12-03T12:46:03", "l0", None, None),
+    ("hermes_MERIT_l0_2025215-124603_v21.bin", "merit", "2025-08-03T12:46:03", "l0", None, None),
+    ("hermes_SPANI_l0_2025337-065422_v11.bin", "spani", "2025-12-03T06:54:22", "l0", None, None),
+    ("hermes_MERIT_VC_l0_2025215-124603_v21.bin", "merit", "2025-08-03T12:46:03", "l0", None, None),
+    ("hermes_SPANI_VA_l0_2025215-124603_v21.bin", "spani", "2025-08-03T12:46:03", "l0", None, None),
+    ("SPANI_VA_l0_2025215-124603_v21.bin", "spani", "2025-08-03T12:46:03", "l0", None, None),
+    ("spani_VA_l0_2025215-124603_v21.bin", "spani", "2025-08-03T12:46:03", "l0", None, None),
 ])
 def test_parse_l0_filenames_hermes(filename, instrument, time, level, version, mode):
     """Testing parsing of MOC-generated level 0 files."""
@@ -191,10 +195,10 @@ def test_parse_l0_filenames_hermes(filename, instrument, time, level, version, m
     ("padre_MEDDEA_apid13_2025131-192102.bin", "meddea", "2025-05-11 19:21:02", "raw", None, None),
     ("padreSP11_250331134058.dat", "sharp", "2025-03-31 13:40:58", "raw", None, None),
     ("padreSP11_250331134058.idx", "sharp", "2025-03-31 13:40:58", "raw", None, None),
-    ("padreMDA0_000107034739.dat", "meddea", "2000-01-07 03:47:39", "raw", None, None),
-    ("padreMDA0_000107034739.idx", "meddea", "2000-01-07 03:47:39", "raw", None, None),
-    ("padreMDU8_000107034739.dat", "meddea", "2000-01-07 03:47:39", "raw", None, None),
-    ("padreMDU8_000107034739.idx", "meddea", "2000-01-07 03:47:39", "raw", None, None),
+    ("padreMDA0_240107034739.dat", "meddea", "2024-01-07 03:47:39", "raw", None, None),
+    ("padreMDA0_240107034739.idx", "meddea", "2024-01-07 03:47:39", "raw", None, None),
+    ("padreMDU8_240107034739.dat", "meddea", "2024-01-07 03:47:39", "raw", None, None),
+    ("padreMDU8_240107034739.idx", "meddea", "2024-01-07 03:47:39", "raw", None, None),
     ("padre_meddea_l0test_light_20250131T192102_v0.3.0.bin", "meddea", "2025-01-31 19:21:02", "raw", None, None),
     ("padre_sharp_ql_20230430T000000_v0.0.1.fits", "sharp", "2023-04-30T00:00:00.000", "ql", "0.0.1", None),
     ("padre_get_EPS2_BP_INST0_CHARGER_XP_Data_1762019652327_1762198944391.csv", "craft", "2025-11-01T17:54:12.327", "raw", None, None),
@@ -216,9 +220,49 @@ def test_parse_padre_science_files(use_mission, filename, instrument, time, leve
 # fmt: on
 
 
-def test_extract_time_warning(caplog):
-    util._extract_time("padre_get_EPS_9_Data_1836308076540_1836308076540.csv")
-    assert "Found future time" in caplog.text
+@pytest.mark.parametrize("use_mission", ["padre"], indirect=True)
+@pytest.mark.parametrize(
+    "filename,expected_error",
+    [
+        (
+            "padre_get_EPS_9_Data_1546344000000_1546344000000.csv",
+            "before mission minimum valid time",
+        ),  # Too old: 2019-01-01
+        (
+            "padre_get_EPS_9_Data_1836302400000_1836302400000.csv",
+            "after mission maximum valid time",
+        ),  # Too new: 2028-03-10 Note: This test will fail after 2028-03-10
+    ],
+)
+def test_extract_time_errors(use_mission, filename, expected_error):
+    """Test that Time Parsing raises appropriate errors for out-of-range times"""
+    import swxsoc
+
+    mission_config = swxsoc.config["mission"]
+    with pytest.raises(ValueError, match=expected_error):
+        util._extract_time(filename, mission_config=mission_config)
+
+
+@pytest.mark.parametrize("use_mission", ["padre"], indirect=True)
+@pytest.mark.parametrize(
+    "filename,expected_warning",
+    [
+        (
+            "padre_get_EPS_9_Data_1836302400000_1836302400000.csv",
+            "Found future time",
+        ),  # Too new: 2028-03-10 Note: This test will fail after 2028-03-10
+        (
+            "padre_meddea_l0_1969-06-01T12:00:00_v0.0.1.bin",
+            "Found suspiciously old time",
+        ),  # Old: 1969-06-01 (before 1970)
+    ],
+)
+def test_extract_time_warnings(use_mission, filename, expected_warning, caplog):
+    """Test that Time Parsing raises appropriate warnings when mission_config is None"""
+
+    # Pass None for mission_config to test warning behavior instead of error raising
+    util._extract_time(filename, mission_config=None)
+    assert expected_warning in caplog.text
 
 
 @mock_aws

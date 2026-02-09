@@ -1,21 +1,18 @@
 """Tests for util.py"""
 
-import os
 import pytest
-import yaml
-from pathlib import Path
 import parfive
 
 from astropy.time import Time
 import boto3
 from moto import mock_aws
 
-import swxsoc
 from swxsoc.util import util
 
 time = "2024-04-06T12:06:21"
 time_formatted = "20240406T120621"
 time_unix_ms = "1712405181000"
+
 
 # fmt: off
 @pytest.mark.parametrize("instrument,mode,level,test,descriptor,time_input,version,result", [
@@ -219,17 +216,15 @@ def test_parse_padre_science_files(use_mission, filename, instrument, time, leve
 # fmt: on
 
 
-
 def test_extract_time_warning(caplog):
     util._extract_time("padre_get_EPS_9_Data_1836308076540_1836308076540.csv")
     assert "Found future time" in caplog.text
 
 
-
 @mock_aws
 def test_search_all_attr():
     # HERMES mission is set by default via autouse fixture in conftest.py
-    
+
     conn = boto3.resource("s3", region_name="us-east-1")
 
     bucket_name = "hermes-eea"
@@ -286,7 +281,7 @@ def test_search_all_attr():
 @mock_aws
 def test_search_time_attr():
     # HERMES mission is set by default via autouse fixture in conftest.py
-    
+
     conn = boto3.resource("s3", region_name="us-east-1")
 
     buckets = ["hermes-eea", "hermes-nemisis", "hermes-merit", "hermes-spani"]
@@ -355,7 +350,7 @@ def test_search_time_attr():
 @mock_aws
 def test_search_instrument_attr():
     # HERMES mission is set by default via autouse fixture in conftest.py
-    
+
     conn = boto3.resource("s3", region_name="us-east-1")
 
     buckets = ["hermes-eea", "hermes-nemisis", "hermes-merit", "hermes-spani"]
@@ -395,7 +390,7 @@ def test_search_instrument_attr():
 @mock_aws
 def test_search_level_attr():
     # HERMES mission is set by default via autouse fixture in conftest.py
-    
+
     conn = boto3.resource("s3", region_name="us-east-1")
 
     buckets = ["hermes-eea", "hermes-nemisis", "hermes-merit", "hermes-spani"]
@@ -446,7 +441,7 @@ def test_search_level_attr():
 @mock_aws
 def test_search_development_bucket():
     # HERMES mission is set by default via autouse fixture in conftest.py
-    
+
     conn = boto3.resource("s3", region_name="us-east-1")
 
     dev_buckets = [
@@ -489,7 +484,7 @@ def test_search_development_bucket():
 @mock_aws
 def test_fetch():
     # HERMES mission is set by default via autouse fixture in conftest.py
-    
+
     conn = boto3.resource("s3", region_name="us-east-1")
 
     bucket_name = "hermes-eea"

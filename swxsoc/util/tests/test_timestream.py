@@ -17,13 +17,14 @@ from swxsoc.util import util
 def get_test_db_names():
     """
     Get mission-specific database and table names for testing.
-    
+
     Returns
     -------
     tuple
         (database_name, table_name) using current mission config
     """
     import swxsoc
+
     mission_name = swxsoc.config["mission"]["mission_name"]
     database_name = f"dev-{mission_name}_sdc_aws_logs"
     table_name = f"dev-{mission_name}_measures_table"
@@ -44,16 +45,16 @@ def aws_credentials():
 def mocked_timestream(aws_credentials):
     """
     Return a mocked Timestream client with database and table created.
-    
+
     Creates the database/table using the current mission name from swxsoc.config,
     matching the naming convention used by record_timeseries.
     """
     with mock_aws():
         client = boto3.client("timestream-write", region_name="us-east-1")
-        
+
         # Get mission-specific database/table names
         database_name, table_name = get_test_db_names()
-        
+
         client.create_database(DatabaseName=database_name)
 
         client.create_table(
@@ -507,11 +508,7 @@ def test_record_dimension_timestream(mocked_timestream):
 
     database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
-    records = (
-        backend.databases[database_name]
-        .tables[table_name]
-        .records
-    )
+    records = backend.databases[database_name].tables[table_name].records
 
     assert len(records) == 1
 
@@ -529,11 +526,7 @@ def test_invalid_record_dimension_timestream(mocked_timestream):
 
     database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
-    record = (
-        backend.databases[database_name]
-        .tables[table_name]
-        .records[0]
-    )
+    record = backend.databases[database_name].tables[table_name].records[0]
 
     record_dimensions = record["Dimensions"]
 
@@ -547,10 +540,6 @@ def test_invalid_instrument_record_dimension_timestream(mocked_timestream):
 
     database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
-    records = (
-        backend.databases[database_name]
-        .tables[table_name]
-        .records
-    )
+    records = backend.databases[database_name].tables[table_name].records
 
     assert len(records) == 0

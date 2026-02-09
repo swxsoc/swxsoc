@@ -50,12 +50,12 @@ __all__ = [
 TIME_FORMAT = "%Y%m%dT%H%M%S"  # YYYYMMDDTHHMMSS
 
 TIME_PATTERNS = {
-    "unix_ms": re.compile(r"\d{13}"),  # unix time stamps in milliseconds
+    "unix_ms": re.compile(r"(?<!\d)\d{13}(?!\d)"),  # unix time stamps in milliseconds
     "%Y-%m-%dT%H:%M:%S": re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"),  # ISO 8601
     "%Y%m%d-%H%M%S": re.compile(r"\d{8}-\d{6}"),  # YYYYMMDD-HHMMSS
     "%Y%m%dT%H%M%S": re.compile(r"\d{8}T\d{6}"),  # YYYYMMDDTHHMMSS
-    "%Y%m%d%H%M%S": re.compile(r"\d{14}"),  # YYYYMMDDHHMMSS
-    "%y%m%d%H%M%S": re.compile(r"\d{12}"),  # YYMMDDHHMMSS
+    "%Y%m%d%H%M%S": re.compile(r"(?<!\d)\d{14}(?!\d)"),  # YYYYMMDDHHMMSS
+    "%y%m%d%H%M%S": re.compile(r"(?<!\d)\d{12}(?!\d)"),  # YYMMDDHHMMSS
     "%Y%j-%H%M%S": re.compile(r"\d{7}-\d{6}"),  # YYYYJJJ-HHMMSS
     "%Y%j_%H%M%S": re.compile(r"\d{7}_\d{6}"),  # YYYYJJJ_HHMMSS
 }
@@ -184,8 +184,8 @@ def _parse_standard_format(filename: str, mission_config: dict) -> dict:
 
     Parameters
     ----------
-    filename_components : list
-        The components of the filename split by "_".
+    filename : str
+        The filename to parse (with or without path).
     mission_config : dict
         The configuration dictionary containing mission and instrument details.
 
@@ -379,6 +379,10 @@ def _try_parse_with_expected_format(
     >>> _try_parse_with_expected_format("padre_get_EPS_9_Data_1673785845000.csv", "unix_ms")
     <Time object: scale='utc' format='isot' value=2023-01-15T12:30:45.000>
     """
+    # Return early if no expected format is provided
+    if not expected_format:
+        return None
+
     # Get the regex pattern for the expected format
     pattern = TIME_PATTERNS.get(expected_format)
     if not pattern:
@@ -489,36 +493,31 @@ def _parse_unix_timestamp(time_str: str) -> Time:
 def _validate_time(extracted_time: Time, mission_config: Optional[dict] = None) -> Time:
     """
     Validate the extracted time against configured mission constraints.
-    Issues warnings for times outside the valid range.
+
+    When mission_config is provided, raises ValueError for times outside the valid range.
+    When mission_config is None, issues warnings for suspicious times but does not raise.
 
     Parameters
     ----------
     extracted_time : Time
         The extracted time to validate.
-    mission_config : Optional[dict]
-        The configuration dictionary containing mission details.
-        Used to check for configured min and max allowed times.
+    mission_config : Optional[dict], optional
+        The configuration dictionary containing mission details with 'min_valid_time'
+        and 'max_valid_time' keys. If None, performs basic validation with warnings only.
 
     Returns
     -------
     Time
-        The validated time.
+        The validated time (same as input).
 
     Raises
     ------
     ValueError
-        If the extracted time is before the configured minimum valid time.
+        If mission_config is provided and the extracted time is before the configured
+        minimum valid time (mission_config['min_valid_time']).
     ValueError
-        If the extracted time is after the configured maximum valid time.
-
-    Notes
-    -----
-    If mission_config is not provided, falls back to basic validation:
-    - Warns if time is in the future
-    - Warns if time is before 1970-01-01
-
-    If mission_config is provided, uses configured min_valid_time and max_valid_time.
-    The max_valid_time can be set to "now" to validate against the current time.
+        If mission_config is provided and the extracted time is after the configured
+        maximum valid time (mission_config['max_valid_time']).
     """
     if mission_config is None:
         # Fallback to basic validation when no config provided

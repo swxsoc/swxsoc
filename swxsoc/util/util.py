@@ -6,10 +6,10 @@ import numbers
 import os
 import re
 import time
-from datetime import datetime, timezone
 import traceback
-from typing import Dict, List, Optional, Union
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Dict, List, Optional, Union
 
 import astropy.units as u
 import boto3
@@ -17,7 +17,6 @@ import numpy as np
 import requests
 import sunpy.net.attrs as a
 import sunpy.time
-import sunpy.util.net
 from astropy.time import Time
 from astropy.timeseries import TimeSeries
 from botocore import UNSIGNED
@@ -48,15 +47,18 @@ __all__ = [
     "_record_dimension_timestream",
 ]
 
-# Constants
-L0_TIME_FORMATS = [
-    "%Y%m%dT%H%M%S",  # YYYYMMDDTHHMMSS
-    "%Y%j-%H%M%S",  # YYYYJJJ-HHMMSS
-    "%Y%j_%H%M%S",  # YYYYJJJ_HHMMSS
-    "%y%m%d%H%M%S",  # YYMMDDHHMMSS
-]
-
 TIME_FORMAT = "%Y%m%dT%H%M%S"  # YYYYMMDDTHHMMSS
+
+TIME_PATTERNS = {
+    "unix_ms": re.compile(r"(?<!\d)\d{13}(?!\d)"),  # unix time stamps in milliseconds
+    "%Y-%m-%dT%H:%M:%S": re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"),  # ISO 8601
+    "%Y%m%d-%H%M%S": re.compile(r"\d{8}-\d{6}"),  # YYYYMMDD-HHMMSS
+    "%Y%m%dT%H%M%S": re.compile(r"\d{8}T\d{6}"),  # YYYYMMDDTHHMMSS
+    "%Y%m%d%H%M%S": re.compile(r"(?<!\d)\d{14}(?!\d)"),  # YYYYMMDDHHMMSS
+    "%y%m%d%H%M%S": re.compile(r"(?<!\d)\d{12}(?!\d)"),  # YYMMDDHHMMSS
+    "%Y%j-%H%M%S": re.compile(r"\d{7}-\d{6}"),  # YYYYJJJ-HHMMSS
+    "%Y%j_%H%M%S": re.compile(r"\d{7}_\d{6}"),  # YYYYJJJ_HHMMSS
+}
 
 
 def create_science_filename(
@@ -104,19 +106,20 @@ def create_science_filename(
     ValueError: If the data product descriptor or instrument mode do not match the mission's formatting conventions
     """
     test_str = ""
+    mission_config = swxsoc.config["mission"]
 
     if isinstance(time, str):
         time_str = Time(time, format="isot").strftime(TIME_FORMAT)
     else:
         time_str = time.strftime(TIME_FORMAT)
 
-    if instrument not in swxsoc.config["mission"]["inst_names"]:
+    if instrument not in mission_config["inst_names"]:
         raise ValueError(
-            f"Instrument, {instrument}, is not recognized. Must be one of {swxsoc.config['mission']['inst_names']}."
+            f"Instrument, {instrument}, is not recognized. Must be one of {mission_config['inst_names']}."
         )
-    if level not in swxsoc.config["mission"]["valid_data_levels"]:
+    if level not in mission_config["valid_data_levels"]:
         raise ValueError(
-            f"Level, {level}, is not recognized. Must be one of {swxsoc.config['mission']['valid_data_levels']}."
+            f"Level, {level}, is not recognized. Must be one of {mission_config['valid_data_levels']}."
         )
     # check that version is in the right format with three parts
     if len(version.split(".")) != 3:
@@ -139,10 +142,17 @@ def create_science_filename(
             "The underscore symbol _ is not allowed in mode or descriptor."
         )
 
-    filename = f"{swxsoc.config['mission']['mission_name']}_{swxsoc.config['mission']['inst_to_shortname'][instrument]}_{mode}_{level}{test_str}_{descriptor}_{time_str}_v{version}"
+    # Parse Filename and Instrument Name out of the config
+    mission_name = mission_config["mission_name"]
+    instrument_shortname = mission_config["inst_to_shortname"].get(
+        instrument, instrument
+    )
+
+    # Combine Parts into Filename
+    filename = f"{mission_name}_{instrument_shortname}_{mode}_{level}{test_str}_{descriptor}_{time_str}_v{version}"
     filename = filename.replace("__", "_")  # reformat if mode or descriptor not given
 
-    return filename + swxsoc.config["mission"]["file_extension"]
+    return filename + mission_config["file_extension"]
 
 
 def _get_instrument_mapping(config: dict) -> dict:
@@ -166,7 +176,7 @@ def _get_instrument_mapping(config: dict) -> dict:
     }
 
 
-def _parse_standard_format(filename_components: list, config: dict) -> dict:
+def _parse_standard_format(filename: str, mission_config: dict) -> dict:
     """
     Parses the standard filename format and extracts relevant fields.
     Handles the following format:
@@ -174,9 +184,9 @@ def _parse_standard_format(filename_components: list, config: dict) -> dict:
 
     Parameters
     ----------
-    filename_components : list
-        The components of the filename split by "_".
-    config : dict
+    filename : str
+        The filename to parse (with or without path).
+    mission_config : dict
         The configuration dictionary containing mission and instrument details.
 
     Returns
@@ -191,36 +201,44 @@ def _parse_standard_format(filename_components: list, config: dict) -> dict:
     """
 
     result = {}
-    mission_name = config["mission_name"]
-    shortnames = config["inst_shortnames"]
+    mission_name = mission_config["mission_name"]
+    shortnames = mission_config["inst_shortnames"]
 
-    if filename_components[0] != mission_name:
-        raise ValueError(f"Not a valid mission name: {filename_components[0]}")
-    if filename_components[1] not in shortnames:
-        raise ValueError(f"Invalid instrument shortname: {filename_components[1]}")
+    # Split the filename into components
+    filename = Path(filename).stem
+    components = filename.split("_")
 
-    result["instrument"] = _get_instrument_mapping(config)[filename_components[1]]
-    result["time"] = Time.strptime(filename_components[-2], TIME_FORMAT)
+    if components[0] != mission_name:
+        raise ValueError(
+            f"Not a valid mission name: {components[0]}. Expected: {mission_name}"
+        )
+    if components[1] not in shortnames:
+        raise ValueError(
+            f"Invalid instrument shortname: {components[1]}. Expected one of {shortnames}"
+        )
+
+    inst_name = components[1]
+    mapping = _get_instrument_mapping(mission_config)
+    result["instrument"] = mapping.get(inst_name.lower(), inst_name)
+    result["time"] = Time.strptime(components[-2], TIME_FORMAT)
 
     # Handle optional fields: mode, test, descriptor
-    result["test"] = (
-        "test" in filename_components[2] or "test" in filename_components[3]
-    )
-    if filename_components[2][:2] not in swxsoc.config["mission"]["valid_data_levels"]:
-        result["mode"] = filename_components[2]
-        result["level"] = filename_components[3].replace("test", "")
-        if len(filename_components) == 7:
-            result["descriptor"] = filename_components[4]
+    result["test"] = "test" in components[2] or "test" in components[3]
+    if components[2][:2] not in mission_config["valid_data_levels"]:
+        result["mode"] = components[2]
+        result["level"] = components[3].replace("test", "")
+        if len(components) == 7:
+            result["descriptor"] = components[4]
     else:
-        result["level"] = filename_components[2].replace("test", "")
-        if len(filename_components) == 6:
-            result["descriptor"] = filename_components[3]
+        result["level"] = components[2].replace("test", "")
+        if len(components) == 6:
+            result["descriptor"] = components[3]
 
-    result["version"] = filename_components[-1].lstrip("v")
+    result["version"] = components[-1].lstrip("v")
     return result
 
 
-def _extract_instrument_name(filename: str, config: dict) -> str:
+def _extract_instrument_name(filename: str, mission_config: dict) -> str:
     """
     Extracts the instrument name from the filename using regex patterns.
 
@@ -228,7 +246,7 @@ def _extract_instrument_name(filename: str, config: dict) -> str:
     ----------
     filename : str
         The filename from which to extract the instrument name.
-    config : dict
+    mission_config : dict
         The configuration dictionary containing mission and instrument details.
 
     Returns
@@ -245,16 +263,18 @@ def _extract_instrument_name(filename: str, config: dict) -> str:
     all_inst_names = [
         name.lower()
         for name in (
-            config["inst_names"]
-            + config["inst_shortnames"]
-            + [n for sublist in config["extra_inst_names"] for n in sublist]
+            mission_config["inst_names"]
+            + mission_config["inst_shortnames"]
+            + [n for sublist in mission_config["extra_inst_names"] for n in sublist]
         )
     ]
-    mission_name = config["mission_name"].lower()
+    mission_name = mission_config["mission_name"].lower()
     pattern = re.compile(
-        rf"(?:^|[_\-.]|{mission_name})("
-        + "|".join(re.escape(name) for name in all_inst_names)
-        + r"(?:\d+)?)(?:[_\-.]|$|\d)",
+        rf"(?:^|[_\-.]|{mission_name})("  # Group 1: Prefix
+        + "|".join(
+            re.escape(name) for name in all_inst_names
+        )  # Group 2: Instrument name
+        + r"(?:\d+)?)(?:[_\-.]|$|\d)",  # Group 3: Suffix,
         re.IGNORECASE,
     )
     matches = pattern.findall(filename.lower())
@@ -265,7 +285,43 @@ def _extract_instrument_name(filename: str, config: dict) -> str:
     return matches[0]
 
 
-def _extract_time(filename: str) -> Time:
+def _extract_data_level(filename: str, possible_levels: List[str]) -> str:
+    """
+    Extracts the data level from the filename using regex patterns. If no data level is found, then the first possible level is returned.
+
+    Parameters
+    ----------
+    filename : str
+        The filename from which to extract the data level.
+    possible_levels : List[str]
+        A list of possible data levels to search for.
+
+    Returns
+    -------
+    str
+        The extracted data level.
+    """
+    if len(possible_levels) == 1:
+        # Exact match (e.g. 'raw')
+        return possible_levels[0]
+
+    # Grouped levels (L0-L3): Extract from filename
+    # Search filename for 'l0', 'l1', etc.
+    found_level = None
+    for lvl in possible_levels:
+        # Simple check: is 'l1' sandwiched by delimiters?
+        if re.search(rf"[_\-.]{lvl}[_\-.]", filename, re.IGNORECASE):
+            found_level = lvl
+            break
+
+    return found_level if found_level else possible_levels[0]
+
+
+def _extract_time(
+    filename: str,
+    expected_format: Optional[str] = None,
+    mission_config: Optional[dict] = None,
+) -> Time:
     """
     Extracts time from the filename using regex patterns.
     Handles various formats including ISO 8601 and legacy L0 formats.
@@ -274,6 +330,10 @@ def _extract_time(filename: str) -> Time:
     ----------
     filename : str
         The filename from which to extract the time.
+    expected_format : Optional[str]
+        The expected time format to use for parsing.
+    mission_config : Optional[dict]
+        The configuration dictionary containing mission details.
 
     Returns
     -------
@@ -284,41 +344,206 @@ def _extract_time(filename: str) -> Time:
     ------
     ValueError
         If no recognizable time format is found in the filename.
+    ValueError
+        If the extracted time is outside the valid range defined in the mission configuration.
     """
-
-    TIME_PATTERNS = [
-        re.compile(
-            r"\d{13}"
-        ),  # unix time stamps in milliseconds, check for this first so that it does not get confused with other patterns
-        re.compile(r"\d{8}[-_ T]?\d{6}"),  # YYYYMMDD-HHMMSS
-        re.compile(r"\d{4}-\d{2}-\d{2}[-_ T]\d{2}:\d{2}:\d{2}"),  # ISO 8601
-        re.compile(r"\d{7}[-_]\d{6}"),  # Legacy L0 formats
-        re.compile(r"\d{12}"),  # YYMMDDhhmmss
-        re.compile(r"\d{8}T\d{6}"),  # YYYYMMDDTHHMMSS (added this line)
+    time_parsers = [
+        _try_parse_with_expected_format,
+        _try_all_patterns,
     ]
-
-    for pattern in TIME_PATTERNS:
-        matches = pattern.search(filename)  # Search for time patterns
-        if matches:
-            time_str = matches.group(0)
-            if len(time_str) == 13:
-                t_unix = Time(int(time_str) / 1000.0, format="unix")
-                t_unix.format = "isot"  # fix the string representation
-                if t_unix > Time.now():
-                    swxsoc.log.warning(f"Found future time {t_unix}.")
-                return t_unix
-            # Try legacy L0 formats first
-            for fmt in L0_TIME_FORMATS:
-                try:
-                    return Time(datetime.strptime(time_str, fmt))
-                except ValueError:
-                    continue
-            # Fall back to ISO 8601 and others
-            try:
-                return Time(sunpy.parse_time(time_str))
-            except Exception:
-                continue
+    # Use Strategy Pattern to try different parsers
+    for parser in time_parsers:
+        result = parser(filename, expected_format)
+        if result:
+            return _validate_time(result, mission_config=mission_config)
     raise ValueError(f"No recognizable time format in {filename}")
+
+
+def _try_parse_with_expected_format(
+    filename: str, expected_format: str
+) -> Optional[Time]:
+    """
+    Try to parse time using the expected format.
+
+    Parameters
+    ----------
+    filename : str
+        The filename from which to extract the time.
+    expected_format : str
+        The expected time format to use for parsing.
+
+    Examples
+    --------
+    >>> _try_parse_with_expected_format("swxsoc_eea_l1_20230115T123045_v1.0.0.cdf", "%Y%m%dT%H%M%S")
+    <Time object: scale='utc' format='datetime' value=2023-01-15 12:30:45>
+    >>> _try_parse_with_expected_format("padre_get_EPS_9_Data_1673785845000.csv", "unix_ms")
+    <Time object: scale='utc' format='isot' value=2023-01-15T12:30:45.000>
+    """
+    # Return early if no expected format is provided
+    if not expected_format:
+        return None
+
+    # Get the regex pattern for the expected format
+    pattern = TIME_PATTERNS.get(expected_format)
+    if not pattern:
+        swxsoc.log.warning(
+            f"No regex pattern found for expected time format '{expected_format}'. "
+            "Falling back to all patterns."
+        )
+        return None
+
+    # Look for a match in the filename using the expected format
+    match = pattern.search(filename)
+    if not match:
+        return None
+
+    time_str = match.group(0)
+    return _parse_time_string(time_str, expected_format)
+
+
+def _try_all_patterns(filename: str, *args, **kwargs) -> Optional[Time]:
+    """
+    Try to parse time using all known patterns.
+
+    Parameters
+    ----------
+    filename : str
+        The filename from which to extract the time.
+
+    Returns
+    -------
+    Time
+        The extracted time as an astropy Time object, or None if not found.
+
+    Examples
+    --------
+    >>> _try_all_patterns("swxsoc_eea_l1_20230115T123045_v1.0.0.cdf")
+    <Time object: scale='utc' format='datetime' value=2023-01-15 12:30:45>
+    """
+    for format_str, pattern in TIME_PATTERNS.items():
+        match = pattern.search(filename)
+        if match:
+            time_str = match.group(0)
+            parsed_time = _parse_time_string(time_str, format_str)
+            if parsed_time:
+                return parsed_time
+    return None
+
+
+def _parse_time_string(time_str: str, format_str: str) -> Optional[Time]:
+    """
+    Parse a time string with a specific format.
+
+    Parameters
+    ----------
+    time_str : str
+        The time string to parse.
+    format_str : str
+        The format string to use for parsing.
+
+    Examples
+    --------
+    >>> _parse_time_string("2023-01-15 12:30:45", "%Y-%m-%d %H:%M:%S")
+    <Time object: scale='utc' format='datetime' value=2023-01-15 12:30:45>
+    >>> _parse_time_string("1673785845000", "unix_ms")
+    <Time object: scale='utc' format='isot' value=2023-01-15T12:30:45.000>
+    >>> _parse_time_string("invalid", "%Y-%m-%d")
+    """
+    # Special case for unix time
+    if format_str == "unix_ms":
+        return _parse_unix_timestamp(time_str)
+
+    # Try datetime string formatters
+    try:
+        return Time(datetime.strptime(time_str, format_str))
+    except ValueError:
+        pass
+
+    # Fall back to sunpy parser as last resort
+    try:
+        return Time(sunpy.time.parse_time(time_str))
+    except Exception:
+        return None
+
+
+def _parse_unix_timestamp(time_str: str) -> Time:
+    """
+    Parse Unix timestamp in milliseconds.
+
+    Parameters
+    ----------
+    time_str : str
+        The Unix timestamp string in milliseconds.
+
+    Returns
+    -------
+    Time
+        The parsed time as an astropy Time object.
+
+    Examples
+    --------
+    >>> _parse_unix_timestamp("1673785845000")
+    <Time object: scale='utc' format='isot' value=2023-01-15T12:30:45.000>
+    """
+    t_unix = Time(int(time_str) / 1000.0, format="unix")
+    t_unix.format = "isot"  # Need to set format to isot for consistency
+    return t_unix
+
+
+def _validate_time(extracted_time: Time, mission_config: Optional[dict] = None) -> Time:
+    """
+    Validate the extracted time against configured mission constraints.
+
+    When mission_config is provided, raises ValueError for times outside the valid range.
+    When mission_config is None, issues warnings for suspicious times but does not raise.
+
+    Parameters
+    ----------
+    extracted_time : Time
+        The extracted time to validate.
+    mission_config : Optional[dict], optional
+        The configuration dictionary containing mission details with 'min_valid_time'
+        and 'max_valid_time' keys. If None, performs basic validation with warnings only.
+
+    Returns
+    -------
+    Time
+        The validated time (same as input).
+
+    Raises
+    ------
+    ValueError
+        If mission_config is provided and the extracted time is before the configured
+        minimum valid time (mission_config['min_valid_time']).
+    ValueError
+        If mission_config is provided and the extracted time is after the configured
+        maximum valid time (mission_config['max_valid_time']).
+    """
+    if mission_config is None:
+        # Fallback to basic validation when no config provided
+        if extracted_time > Time.now():
+            swxsoc.log.warning(f"Found future time {extracted_time}.")
+        if extracted_time < Time("1970-01-01"):
+            swxsoc.log.warning(f"Found suspiciously old time {extracted_time}.")
+        return extracted_time
+
+    # Get configured time constraints
+    min_valid_time = mission_config.get("min_valid_time")
+    max_valid_time = mission_config.get("max_valid_time")
+
+    # Validate minimum time
+    if min_valid_time and extracted_time < min_valid_time:
+        raise ValueError(
+            f"Extracted time {extracted_time} is before mission minimum valid time {min_valid_time}."
+        )
+
+    # Validate maximum time
+    if max_valid_time and extracted_time > max_valid_time:
+        raise ValueError(
+            f"Extracted time {extracted_time} is after mission maximum valid time {max_valid_time}."
+        )
+
+    return extracted_time
 
 
 def parse_science_filename(filepath: str) -> dict:
@@ -342,7 +567,11 @@ def parse_science_filename(filepath: str) -> dict:
     """
     import swxsoc
 
-    config = swxsoc.config["mission"]
+    # setup defaults
+    mission_config = swxsoc.config["mission"]
+    filepath = Path(filepath)
+    filename = filepath.name
+    file_ext = filepath.suffix
     result = {
         "instrument": None,
         "mode": None,
@@ -353,25 +582,60 @@ def parse_science_filename(filepath: str) -> dict:
         "descriptor": None,
     }
 
-    filename = os.path.basename(filepath)
-    file_name, file_ext = os.path.splitext(filename)
-
-    if file_ext == config["file_extension"]:
-        components = file_name.split("_")
-        parsed = _parse_standard_format(components, config)
+    # Case 1: The file is in a standard format used for archive/science files
+    if file_ext == mission_config["file_extension"]:
+        parsed = _parse_standard_format(filename, mission_config)
         result.update(parsed)
-    else:
-        instrument_name = _extract_instrument_name(filename, config)
-        parsed_time = _extract_time(filename)
-        from_shortname = _get_instrument_mapping(config)
+        return result
+
+    # Extract instrument name for file rule matching
+    try:
+        inst_name_raw = _extract_instrument_name(filename, mission_config)
+        mapping = _get_instrument_mapping(mission_config)
+        inst_name = mapping.get(inst_name_raw.lower(), inst_name_raw)
+        result["instrument"] = inst_name
+    except ValueError as e:
+        raise ValueError(f"Error extracting instrument name: {e}")
+
+    # Check for specific File Rules
+    matched_rule = None
+    mission_rules = mission_config.get("inst_file_rules", {})
+    inst_rules = mission_rules.get(inst_name, [])
+    for rule in inst_rules:
+        # Check Extension
+        if file_ext.lower() == rule["extension"].lower():
+            matched_rule = rule
+            break
+
+    # Case 2: The file is in a non-standard format, but matches a known rule
+    if matched_rule:
+        # Extract Data Level
+        data_level = _extract_data_level(filename, matched_rule["levels"])
+        # Get the expected time format based on rule definition
+        expected_format = matched_rule.get("time_format")
+        # Parse time using the expected format
+        parsed_time = _extract_time(
+            filename, expected_format=expected_format, mission_config=mission_config
+        )
         result.update(
             {
-                "mission": config["mission_name"].lower(),
-                "instrument": from_shortname.get(
-                    instrument_name.lower(), instrument_name
-                ),
+                "mission": mission_config["mission_name"].lower(),
+                "level": data_level,
                 "time": parsed_time,
-                "level": config["valid_data_levels"][0],  # Default to first level
+            }
+        )
+
+    # Case 3: The file does not match any known format
+    else:
+        parsed_time = _extract_time(filename, mission_config=mission_config)
+        result.update(
+            {
+                "mission": mission_config["mission_name"].lower(),
+                "instrument": inst_name,  # At least we got the instrument from the filename
+                "time": parsed_time,
+                "level": _extract_data_level(
+                    filename, mission_config["valid_data_levels"]
+                ),
             }
         )
 

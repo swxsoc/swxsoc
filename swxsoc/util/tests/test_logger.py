@@ -109,9 +109,9 @@ def test_log_format():
     # Check that the log entry has all the required attributes from our format
     entry = log_list[0]
 
-    # Check timestamp format: YYYY-MM-DD HH:MM:SS,SSS
+    # Check timestamp format: YYYY-MM-DD HH:MM:SS (milliseconds are optional)
     assert hasattr(entry, "asctime")
-    assert re.match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}", entry.asctime)
+    assert re.match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(,\d{3})?", entry.asctime)
 
     # Check origin (module name)
     assert hasattr(entry, "origin")

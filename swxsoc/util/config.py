@@ -7,8 +7,10 @@ This code is based on that provided by SunPy see
 
 import os
 import shutil
-import yaml
 from pathlib import Path
+
+import yaml
+from astropy.time import Time
 
 import swxsoc
 from swxsoc.util.exceptions import warn_user
@@ -54,10 +56,22 @@ def load_config():
     with open(config_path, "r") as file:
         config = yaml.safe_load(file)
 
+    # Loaded either from env var or from config file
     selected_mission = os.getenv("SWXSOC_MISSION", config["selected_mission"])
     missions_data = config.get("missions_data", {})
     mission_data = missions_data.get(selected_mission, {})
+    # The File Extension Used for Archive Files and Science File Formats
     file_extension = mission_data.get("file_extension", "")
+
+    # Parse time values if they exist, otherwise set to None
+    min_valid_time = mission_data.get("min_valid_time", None)
+    max_valid_time = mission_data.get("max_valid_time", None)
+
+    # Convert time values to Time objects, handling special "now" value
+    if min_valid_time is not None:
+        min_valid_time = Time.now() if min_valid_time == "now" else Time(min_valid_time)
+    if max_valid_time is not None:
+        max_valid_time = Time.now() if max_valid_time == "now" else Time(max_valid_time)
 
     config["mission"] = {
         "file_extension": (
@@ -66,6 +80,8 @@ def load_config():
             else file_extension
         ),
         "mission_name": selected_mission,
+        "min_valid_time": min_valid_time,
+        "max_valid_time": max_valid_time,
         "valid_data_levels": mission_data.get(
             "valid_data_levels", ["raw", "l0", "l1", "ql", "l2", "l3", "l4"]
         ),
@@ -84,6 +100,10 @@ def load_config():
             for inst in mission_data.get("instruments", [])
             if "extra_inst_names" in inst
         ],
+        "inst_file_rules": {
+            inst["name"]: inst.get("file_rules", [])
+            for inst in mission_data.get("instruments", [])
+        },
     }
 
     config["mission"].update(

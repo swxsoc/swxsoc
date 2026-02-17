@@ -104,6 +104,28 @@ missions_data:
             extension: .csv
             time_format: "unix_ms"
 
+
+  swxsoc_pipeline: # A special "mission" for SWxSOC affiliated instruments. 
+  # This is a collection of multuple instruments and missions grouped together for convenience.
+    file_extension: cdf
+    valid_data_levels:
+      - raw
+      - l0
+      - ql
+      - l1
+      - l2
+      - l3
+    instruments:
+      - name: reach
+        shortname: reach
+        fullname: REACH
+        targetname: REACH
+        file_rules:
+          # SWxSOC Input Data (JSON Files) is already processed to a Level 
+          - levels: [l1]
+            extension: .json
+            time_format: "%Y%m%d"
+
 logger:
   # Threshold for the logging messages. Logging messages that are less severe
   # than this level will be ignored. The levels are 'DEBUG', 'INFO', 'WARNING', 'ERROR'

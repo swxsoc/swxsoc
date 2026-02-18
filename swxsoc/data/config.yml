@@ -121,9 +121,9 @@ missions_data:
         fullname: REACH
         targetname: REACH
         file_rules:
-          # SWxSOC Input Data (JSON Files) is already processed to a Level 
+          # SWxSOC Input Data (CSV Files) is already processed to a Level 1
           - levels: [l1]
-            extension: .json
+            extension: .csv
             time_format: "%Y%m%d"
 
 logger:

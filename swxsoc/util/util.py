@@ -58,6 +58,7 @@ TIME_PATTERNS = {
     "%y%m%d%H%M%S": re.compile(r"(?<!\d)\d{12}(?!\d)"),  # YYMMDDHHMMSS
     "%Y%j-%H%M%S": re.compile(r"\d{7}-\d{6}"),  # YYYYJJJ-HHMMSS
     "%Y%j_%H%M%S": re.compile(r"\d{7}_\d{6}"),  # YYYYJJJ_HHMMSS
+    "%Y%m%d": re.compile(r"(?<!\d)\d{8}(?!\d)"),  # YYYYMMDD
 }
 
 
@@ -208,31 +209,41 @@ def _parse_standard_format(filename: str, mission_config: dict) -> dict:
     filename = Path(filename).stem
     components = filename.split("_")
 
-    if components[0] != mission_name:
+    # Handle mission names that contain underscores (e.g. "swxsoc_pipeline")
+    # by joining the appropriate number of leading components
+    mission_name_parts = mission_name.split("_")
+    n_mission_parts = len(mission_name_parts)
+    parsed_mission_name = "_".join(components[:n_mission_parts])
+
+    if parsed_mission_name != mission_name:
         raise ValueError(
-            f"Not a valid mission name: {components[0]}. Expected: {mission_name}"
-        )
-    if components[1] not in shortnames:
-        raise ValueError(
-            f"Invalid instrument shortname: {components[1]}. Expected one of {shortnames}"
+            f"Not a valid mission name: {parsed_mission_name}. Expected: {mission_name}"
         )
 
-    inst_name = components[1]
+    # Strip mission name parts so remaining components start with instrument
+    components = components[n_mission_parts:]
+
+    if components[0] not in shortnames:
+        raise ValueError(
+            f"Invalid instrument shortname: {components[0]}. Expected one of {shortnames}"
+        )
+
+    inst_name = components[0]
     mapping = _get_instrument_mapping(mission_config)
     result["instrument"] = mapping.get(inst_name.lower(), inst_name)
     result["time"] = Time.strptime(components[-2], TIME_FORMAT)
 
     # Handle optional fields: mode, test, descriptor
-    result["test"] = "test" in components[2] or "test" in components[3]
-    if components[2][:2] not in mission_config["valid_data_levels"]:
-        result["mode"] = components[2]
-        result["level"] = components[3].replace("test", "")
-        if len(components) == 7:
-            result["descriptor"] = components[4]
-    else:
+    result["test"] = "test" in components[1] or "test" in components[2]
+    if components[1][:2] not in mission_config["valid_data_levels"]:
+        result["mode"] = components[1]
         result["level"] = components[2].replace("test", "")
         if len(components) == 6:
             result["descriptor"] = components[3]
+    else:
+        result["level"] = components[1].replace("test", "")
+        if len(components) == 5:
+            result["descriptor"] = components[2]
 
     result["version"] = components[-1].lstrip("v")
     return result

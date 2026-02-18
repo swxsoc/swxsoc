@@ -220,6 +220,30 @@ def test_parse_padre_science_files(use_mission, filename, instrument, time, leve
 # fmt: on
 
 
+# fmt: off
+@pytest.mark.parametrize("use_mission", ["swxsoc_pipeline"], indirect=True)
+@pytest.mark.parametrize("filename,instrument,time,level,version,mode,descriptor", [
+    # Standard format CDF file with underscore in mission name
+    ("swxsoc_pipeline_reach_all_l1_20251201T000000_v2.0.0.cdf", "reach", "2025-12-01T00:00:00.000", "l1", "2.0.0", "all", None),
+    # CSV file matching file_rules for REACH (l1, %Y%m%d format)
+    ("REACH-all_20251201.csv", "reach", "2025-12-01T00:00:00.000", "l1", None, None, None),
+    # JSON file with no matching rule (Case 3 fallback)
+    ("REACH-all_20251201.json", "reach", "2025-12-01T00:00:00.000", "raw", None, None, None),
+])
+def test_parse_swxsoc_pipeline_science_files(use_mission, filename, instrument, time, level, version, mode, descriptor):
+    """Testing parsing of SWxSOC Pipeline (REACH) filenames."""
+    # swxsoc_pipeline mission is set via use_mission fixture
+
+    result = util.parse_science_filename(filename)
+    assert result['instrument'] == instrument
+    assert result['level'] == level
+    assert result['version'] == version
+    assert result['time'].isot == Time(time).isot
+    assert result['mode'] == mode
+    assert result['descriptor'] == descriptor
+# fmt: on
+
+
 @pytest.mark.parametrize("use_mission", ["padre"], indirect=True)
 @pytest.mark.parametrize(
     "filename,expected_error",

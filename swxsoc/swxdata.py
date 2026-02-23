@@ -39,6 +39,9 @@ class SWXData:
         timeseries data.
     meta : `Optional[dict]`
         The metadata describing the data in an ISTP-compliant format.
+    schema : `Optional[SWXSchema]`
+        An optional `~swxsoc.util.schema.SWXSchema` instance for metadata derivation.
+        If not provided, a default `SWXSchema` will be created.
 
     Examples
     --------
@@ -108,6 +111,7 @@ class SWXData:
         ] = None,
         spectra: Optional[ndcube.NDCollection] = None,
         meta: Optional[dict] = None,
+        schema: Optional[SWXSchema] = None,
     ):
         # ================================================
         #               VALIDATE INPUTS
@@ -206,7 +210,7 @@ class SWXData:
         # ================================================
 
         # Derive Metadata
-        self.schema = SWXSchema()
+        self.schema = schema if schema is not None else SWXSchema()
         self._derive_metadata()
 
     @property

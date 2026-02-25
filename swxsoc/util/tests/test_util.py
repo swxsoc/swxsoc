@@ -289,6 +289,36 @@ def test_extract_time_warnings(use_mission, filename, expected_warning, caplog):
     assert expected_warning in caplog.text
 
 
+def test_get_instrument_package_hermes(use_mission):
+    # Mission: hermes
+    assert util.get_instrument_package("eea") == "hermes_eea"
+    assert util.get_instrument_package("EEA") == "hermes_eea"
+    assert util.get_instrument_package("nemisis") == "hermes_nemisis"
+    assert util.get_instrument_package("Nemisis") == "hermes_nemisis"
+    with pytest.raises(ValueError):
+        util.get_instrument_package("not_an_inst")
+
+
+@pytest.mark.parametrize("use_mission", ["padre"], indirect=True)
+def test_get_instrument_package_padre(use_mission):
+    # Mission: padre
+    assert util.get_instrument_package("meddea") == "padre_meddea"
+    assert util.get_instrument_package("MEDDEA") == "padre_meddea"
+    assert util.get_instrument_package("sharp") == "padre_sharp"
+    assert util.get_instrument_package("SHARP") == "padre_sharp"
+    with pytest.raises(ValueError):
+        util.get_instrument_package("fake")
+
+
+@pytest.mark.parametrize("use_mission", ["swxsoc_pipeline"], indirect=True)
+def test_get_instrument_package_swxsoc_pipeline(use_mission):
+    # Mission: swxsoc_pipeline
+    assert util.get_instrument_package("reach") == "swxsoc_reach"
+    assert util.get_instrument_package("REACH") == "swxsoc_reach"
+    with pytest.raises(ValueError):
+        util.get_instrument_package("unknown")
+
+
 @mock_aws
 def test_search_all_attr():
     # HERMES mission is set by default via autouse fixture in conftest.py

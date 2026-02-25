@@ -100,6 +100,10 @@ def load_config():
             for inst in mission_data.get("instruments", [])
             if "extra_inst_names" in inst
         ],
+        "inst_packages": {
+            inst["name"]: inst.get("instrument_package", None)
+            for inst in mission_data.get("instruments", [])
+        },
         "inst_file_rules": {
             inst["name"]: inst.get("file_rules", [])
             for inst in mission_data.get("instruments", [])

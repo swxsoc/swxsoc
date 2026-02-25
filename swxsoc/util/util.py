@@ -653,6 +653,49 @@ def parse_science_filename(filepath: str) -> dict:
     return result
 
 
+def get_instrument_package(instrument_name: str) -> str:
+    """
+    Determines the package name of the correct instrument package to use for processing a file based on the instrument name.
+    This is determined through two possibilities:
+    1. The instrument name is directly mapped to a package in the instrument configuration under "instrument_package".
+    2. The package is default determined by "{mission__name}_{instrument_name}"
+
+    Parameters
+    ----------
+    instrument_name : str
+        The name of the instrument to find the package for.
+
+    Returns
+    -------
+    str
+        The name of the package to use for processing files from the specified instrument.
+
+    Raises
+    ------
+    ValueError
+        If the instrument name is not recognized as one of the mission's instruments.
+    """
+    mission_config = swxsoc.config["mission"]
+
+    # sanitize instrument name for matching (e.g. case insensitive)
+    instrument_name = instrument_name.lower()
+
+    # check if the instrument is available for the mission
+    if instrument_name not in mission_config["inst_names"]:
+        raise ValueError(
+            f"Instrument, {instrument_name}, is not recognized. Must be one of {list(mission_config['inst_names'])}."
+        )
+
+    # get the instrument configuration
+    inst_package = mission_config["inst_packages"].get(instrument_name)
+    if inst_package:
+        # if a package is explicitly defined for the instrument, use it
+        return inst_package
+    else:
+        # otherwise, default to the convention of {mission_name}_{instrument_name}
+        return f"{mission_config['mission_name'].lower()}_{instrument_name.lower()}"
+
+
 # ================================================================================================
 #                                  SWXSOC FIDO CLIENT
 # ================================================================================================

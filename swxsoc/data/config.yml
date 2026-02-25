@@ -120,6 +120,7 @@ missions_data:
         shortname: reach
         fullname: REACH
         targetname: REACH
+        instrument_package: swxsoc_reach
         file_rules:
           # SWxSOC Input Data (CSV Files) is already processed to a Level 1
           - levels: [l1]

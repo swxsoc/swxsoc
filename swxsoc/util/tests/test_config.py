@@ -97,8 +97,8 @@ def test_load_config_missing_valid_time_fields(use_mission):
 
     assert "min_valid_time" in mission_config
     assert "max_valid_time" in mission_config
-    assert mission_config["min_valid_time"] is None
-    assert mission_config["max_valid_time"] is None
+    assert mission_config["min_valid_time"] == Time("2020-01-01T00:00:00")
+    assert mission_config["max_valid_time"].isclose(Time.now(), atol=1.0 * u.min)
 
 
 def test_load_config_lambda_env(monkeypatch):

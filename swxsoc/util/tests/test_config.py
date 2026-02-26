@@ -46,6 +46,8 @@ def test_load_config_defaults(monkeypatch):
     assert "inst_fullnames" in mission_config
     assert "inst_targetnames" in mission_config
     assert "extra_inst_names" in mission_config
+    # Check Instrument Packages
+    assert "inst_packages" in mission_config
     # Check file rules
     assert "inst_file_rules" in mission_config
     # Check mapping dictionaries
@@ -72,6 +74,8 @@ def test_load_config_mission_override():
     assert mission_config["mission_name"] == "hermes"
     # Check that it actually loaded hermes-specific data (e.g. instruments)
     assert "eea" in mission_config["inst_names"]
+    # check instrument packages
+    assert "inst_packages" in mission_config
     # Check that file_rules exists
     assert "inst_file_rules" in mission_config
     assert isinstance(mission_config["inst_file_rules"], dict)
@@ -93,8 +97,8 @@ def test_load_config_missing_valid_time_fields(use_mission):
 
     assert "min_valid_time" in mission_config
     assert "max_valid_time" in mission_config
-    assert mission_config["min_valid_time"] is None
-    assert mission_config["max_valid_time"] is None
+    assert mission_config["min_valid_time"] == Time("2020-01-01T00:00:00")
+    assert mission_config["max_valid_time"].isclose(Time.now(), atol=1.0 * u.min)
 
 
 def test_load_config_lambda_env(monkeypatch):
@@ -128,6 +132,7 @@ def test_load_config_unknown_mission(monkeypatch):
     assert mission_config["inst_targetnames"] == []
     assert mission_config["extra_inst_names"] == []
     # Should have empty dicts for mappings and file rules
+    assert mission_config["inst_packages"] == {}
     assert mission_config["inst_file_rules"] == {}
     assert mission_config["inst_to_shortname"] == {}
     assert mission_config["inst_to_fullname"] == {}

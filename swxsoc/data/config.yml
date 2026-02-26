@@ -15,8 +15,10 @@ general:
 selected_mission: demo
 
 missions_data:
-  demo: # A generic mission template for testing
+  demo: # A generic mission template for demonstration
     file_extension: cdf # The File Extension Used for Archive Files and Science File Formats
+    min_valid_time: 2020-01-01T00:00:00 # The Minimum Valid Time for this Mission (in ISO8601 format)
+    max_valid_time: now # The Maximum Valid Time for this Mission (in ISO8601 format, or "now" for the current time)
     valid_data_levels: # List of Valid Data Levels for this Mission
       - l0
       - ql
@@ -24,10 +26,27 @@ missions_data:
       - l2
       - l3
     instruments: # List of Instruments for this Mission
-      - name: MyInstrument # The name of the instrument
+      - name: MyInstrument1 # The name of the instrument
+        instrument_package: demo_myinst1 # The name of the instrument package (if different from the {mission}_{instrument} name)
         shortname: myinst # The short name of the instrument
         fullname: My Instrument Full Name # The full name of the instrument (to be used in plots, metadata, etc)
         targetname: MYINST # The target name of the instrument (to be used in file paths, etc)
+      - name: MyInstrument2
+        shortname: myinst2
+        fullname: My Instrument 2 Full Name
+        targetname: MYINST2
+        extra_inst_names: # contains extra names that can be used to refer to this instrument (e.g. in file paths, etc)
+          - myinst2_altname1
+          - myinst2_altname2
+        file_rules: # A list of rules for how to interpret files for this instrument. 
+          # Raw Data (specific to .dat files)
+          - levels: [raw] # The data levels that this rule applies to (can be a list of levels)
+            extension: .dat # The file extension that this rule applies to
+            time_format: "%y%m%d%H%M%S" # The time format to use for parsing the time from the file name (using strptime format codes)
+          # Processed Files (Science / Standard Format Files)
+          - levels: [l0, l1, ql, l2, l3] # The data levels that this rule applies to (can be a list of levels)
+            extension: .fits # The file extension that this rule applies to
+            time_format: "%Y%m%dT%H%M%S" # The time format to use for parsing the time from the file name (using strptime format codes)
 
   hermes:
     file_extension: cdf
@@ -120,6 +139,7 @@ missions_data:
         shortname: reach
         fullname: REACH
         targetname: REACH
+        instrument_package: swxsoc_reach
         file_rules:
           # SWxSOC Input Data (CSV Files) is already processed to a Level 1
           - levels: [l1]

@@ -51,6 +51,7 @@ TIME_FORMAT = "%Y%m%dT%H%M%S"  # YYYYMMDDTHHMMSS
 
 TIME_PATTERNS = {
     "unix_ms": re.compile(r"(?<!\d)\d{13}(?!\d)"),  # unix time stamps in milliseconds
+    "unix_s": re.compile(r"(?<!\d)\d{10}(?!\d)"),  # unix time stamps in seconds
     "%Y-%m-%dT%H:%M:%S": re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"),  # ISO 8601
     "%Y%m%d-%H%M%S": re.compile(r"\d{8}-\d{6}"),  # YYYYMMDD-HHMMSS
     "%Y%m%dT%H%M%S": re.compile(r"\d{8}T\d{6}"),  # YYYYMMDDTHHMMSS
@@ -406,6 +407,9 @@ def _try_parse_with_expected_format(
     # Look for a match in the filename using the expected format
     match = pattern.search(filename)
     if not match:
+        swxsoc.log.warning(
+            f"No time string matching expected format '{expected_format}' found in {filename}."
+        )
         return None
 
     time_str = match.group(0)
@@ -461,8 +465,8 @@ def _parse_time_string(time_str: str, format_str: str) -> Optional[Time]:
     >>> _parse_time_string("invalid", "%Y-%m-%d")
     """
     # Special case for unix time
-    if format_str == "unix_ms":
-        return _parse_unix_timestamp(time_str)
+    if format_str in ("unix_ms", "unix_s"):
+        return _parse_unix_timestamp(time_str, format_str)
 
     # Try datetime string formatters
     try:
@@ -477,14 +481,16 @@ def _parse_time_string(time_str: str, format_str: str) -> Optional[Time]:
         return None
 
 
-def _parse_unix_timestamp(time_str: str) -> Time:
+def _parse_unix_timestamp(time_str: str, format_str: str) -> Time:
     """
-    Parse Unix timestamp in milliseconds.
+    Parse Unix timestamp in milliseconds or seconds.
 
     Parameters
     ----------
     time_str : str
-        The Unix timestamp string in milliseconds.
+        The Unix timestamp string.
+    format_str : str
+        The format identifier: ``"unix_ms"`` for milliseconds, or ``"unix_s"`` for seconds.
 
     Returns
     -------
@@ -493,10 +499,13 @@ def _parse_unix_timestamp(time_str: str) -> Time:
 
     Examples
     --------
-    >>> _parse_unix_timestamp("1673785845000")
+    >>> _parse_unix_timestamp("1673785845000", "unix_ms")
+    <Time object: scale='utc' format='isot' value=2023-01-15T12:30:45.000>
+    >>> _parse_unix_timestamp("1673785845", "unix_s")
     <Time object: scale='utc' format='isot' value=2023-01-15T12:30:45.000>
     """
-    t_unix = Time(int(time_str) / 1000.0, format="unix")
+    divisor = 1000.0 if format_str == "unix_ms" else 1.0
+    t_unix = Time(int(time_str) / divisor, format="unix")
     t_unix.format = "isot"  # Need to set format to isot for consistency
     return t_unix
 

@@ -1,8 +1,10 @@
-import pytest
-from unittest.mock import patch, MagicMock
 from datetime import datetime
-from swxsoc.util import util
+from unittest.mock import MagicMock, patch
+
+import pytest
 import requests
+
+from swxsoc.util import grafana
 
 
 @pytest.fixture
@@ -52,7 +54,7 @@ def test_query_annotations(mock_requests):
     # Call function
     start_time = datetime(2024, 9, 16, 13, 30, 0)
     end_time = datetime(2024, 9, 16, 13, 35, 0)
-    result = util.query_annotations(
+    result = grafana.query_annotations(
         start_time=start_time,
         end_time=end_time,
         dashboard_name="Solar flare",
@@ -96,7 +98,7 @@ def test_query_annotations_http_error(mock_requests):
 
     # Call function
     start_time = datetime(2024, 9, 16, 13, 30, 0)
-    result = util.query_annotations(
+    result = grafana.query_annotations(
         start_time=start_time,
         dashboard_name="Test Dashboard",
         panel_name="Test Panel",
@@ -119,7 +121,7 @@ def test_query_annotations_connection_error(mock_requests):
 
     # Call function
     start_time = datetime(2024, 9, 16, 13, 30, 0)
-    result = util.query_annotations(
+    result = grafana.query_annotations(
         start_time=start_time,
         dashboard_name="Test Dashboard",
         panel_name="Test Panel",
@@ -144,7 +146,7 @@ def test_create_annotation(mock_requests):
     # Call function
     start_time = datetime(2024, 9, 16, 13, 30, 0)
     end_time = datetime(2024, 9, 16, 13, 35, 0)
-    result = util.create_annotation(
+    result = grafana.create_annotation(
         start_time=start_time,
         end_time=end_time,
         text="Observed solar flare",
@@ -166,7 +168,7 @@ def test_create_annotation_http_error(mock_requests):
 
     # Call function
     start_time = datetime(2024, 9, 16, 13, 30, 0)
-    result = util.create_annotation(
+    result = grafana.create_annotation(
         start_time=start_time,
         text="Observed solar flare",
         tags=["meddea", "test"],
@@ -189,7 +191,7 @@ def test_create_annotation_connection_error(mock_requests):
 
     # Call function
     start_time = datetime(2024, 9, 16, 13, 30, 0)
-    result = util.create_annotation(
+    result = grafana.create_annotation(
         start_time=start_time,
         text="Observed solar flare",
         tags=["meddea", "test"],
@@ -211,7 +213,7 @@ def test_remove_annotation_by_id(mock_requests):
     mock_delete.return_value = mock_response
 
     # Call function
-    result = util.remove_annotation_by_id(annotation_id=123)
+    result = grafana.remove_annotation_by_id(annotation_id=123)
 
     # Assertions
     assert result is True
@@ -225,7 +227,7 @@ def test_remove_annotation_by_id_http_error(mock_requests):
     mock_delete.side_effect = requests.exceptions.HTTPError("HTTP Error occurred")
 
     # Call function
-    result = util.remove_annotation_by_id(annotation_id=123)
+    result = grafana.remove_annotation_by_id(annotation_id=123)
 
     # Assertions
     assert result is False
@@ -241,7 +243,7 @@ def test_remove_annotation_by_id_connection_error(mock_requests):
     )
 
     # Call function
-    result = util.remove_annotation_by_id(annotation_id=123)
+    result = grafana.remove_annotation_by_id(annotation_id=123)
 
     # Assertions
     assert result is False

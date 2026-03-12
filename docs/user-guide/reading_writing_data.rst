@@ -327,7 +327,7 @@ Your variable metadata can be found by querying the measurement column directly.
     ... )
     >>> example_sw_data.timeseries['Bx'].meta # doctest: +SKIP
 
-For multiple epoch variables, you have to addess measurements through the `.timeseries` dictionary, keyed by the epoch name: 
+For multiple epoch variables, you have to addess measurements through the ``.timeseries`` dictionary, keyed by the epoch name: 
 
     >>> sw_data.timeseries['Epoch']['diff_e_flux'].meta.update(
     ...     {"CATDESC": "Differential Electron Flux measured by HERMES"}

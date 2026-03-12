@@ -84,6 +84,8 @@ write_to = "swxsoc/_version.py"
 testpaths = [
    "swxsoc/tests",
    "swxsoc/util/tests",
+   "swxsoc/net/tests",
+   "swxsoc/db/tests",
    "docs"
 ]
 doctest_plus = "enabled"

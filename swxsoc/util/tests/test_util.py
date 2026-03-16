@@ -140,7 +140,7 @@ def test_create_science_filename_errors(instrument, time, level, version, mode, 
         ),  # Bad instrument value
         (
             "veeger_spn_2s_l3test_burst_20240406_120621_v2.4.5.cdf",
-            "Not a valid mission name",
+            "Invalid instrument shortname",
         ),  # Wrong mission name
         (
             "hermes_www_2s_l3test_burst_20240406_120621_v2.4.5.cdf",
@@ -200,7 +200,7 @@ def test_parse_l0_filenames_hermes(filename, instrument, time, level, version, m
     ("padreMDU8_240107034739.dat", "meddea", "2024-01-07 03:47:39", "raw", None, None),
     ("padreMDU8_240107034739.idx", "meddea", "2024-01-07 03:47:39", "raw", None, None),
     ("padre_meddea_l0test_light_20250131T192102_v0.3.0.bin", "meddea", "2025-01-31 19:21:02", "raw", None, None),
-    ("padre_sharp_ql_20230430T000000_v0.0.1.fits", "sharp", "2023-04-30T00:00:00.000", "ql", "0.0.1", None),
+    ("padre_sharp_ql_20230430T000000_v0.0.1.fits", "sharp", "2023-04-30 00:00:00", "ql", "0.0.1", None),
     ("padre_get_EPS2_BP_INST0_CHARGER_XP_Data_1762019652327_1762198944391.csv", "craft", "2025-11-01T17:54:12.327", "raw", None, None),
     ("padre_get_EPS2_BP_INST0_CHARGER_YP_Data_1762019652327_1762198944391.csv", "craft", "2025-11-01T17:54:12.327", "raw", None, None),
     ("padre_get_EPS_9_Data_1762008094193_1762187403300.csv", "craft", "2025-11-01T14:41:34.193", "raw", None, None),
@@ -285,7 +285,6 @@ def test_extract_time_errors(use_mission, filename, expected_error):
 )
 def test_extract_time_warnings(use_mission, filename, expected_warning, caplog):
     """Test that Time Parsing raises appropriate warnings when mission_config is None"""
-
     # Pass None for mission_config to test warning behavior instead of error raising
     util._extract_time(filename, mission_config=None)
     assert expected_warning in caplog.text

@@ -28,6 +28,7 @@ from sunpy.net.attr import AttrAnd, AttrOr, AttrWalker, SimpleAttr
 from sunpy.net.base_client import BaseClient, QueryResponseTable, convert_row_to_table
 
 import swxsoc
+from swxsoc.util.exceptions import warn_user
 
 __all__ = [
     "create_science_filename",
@@ -217,22 +218,25 @@ def _parse_standard_format(filename: str, mission_config: dict) -> dict:
     parsed_mission_name = "_".join(components[:n_mission_parts])
 
     if parsed_mission_name != mission_name:
-        raise ValueError(
-            f"Not a valid mission name: {parsed_mission_name}. Expected: {mission_name}"
+        warn_user(
+            f"Not a valid mission name: {parsed_mission_name}. Expected: {mission_name}. Reverting to parsing with assumption of configured mission name.",
         )
-
-    # Strip mission name parts so remaining components start with instrument
-    components = components[n_mission_parts:]
+    else:
+        # Strip mission name parts so remaining components start with instrument
+        components = components[n_mission_parts:]
 
     if components[0] not in shortnames:
         raise ValueError(
             f"Invalid instrument shortname: {components[0]}. Expected one of {shortnames}"
         )
 
+    # Parse Instrument Name
     inst_name = components[0]
     mapping = _get_instrument_mapping(mission_config)
     result["instrument"] = mapping.get(inst_name.lower(), inst_name)
-    result["time"] = Time.strptime(components[-2], TIME_FORMAT)
+    result["time"] = _extract_time(
+        filename, expected_format=TIME_FORMAT, mission_config=mission_config
+    )
 
     # Handle optional fields: mode, test, descriptor
     result["test"] = "test" in components[1] or "test" in components[2]

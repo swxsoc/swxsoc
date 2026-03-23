@@ -1,4 +1,4 @@
-"""Tests util.py that interact with timestream"""
+"""Tests for swxsoc.db.timeseries (Timestream recording functions)"""
 
 import os
 
@@ -11,7 +11,7 @@ from moto import mock_aws
 from moto.core import DEFAULT_ACCOUNT_ID as ACCOUNT_ID
 from moto.timestreamwrite.models import timestreamwrite_backends
 
-from swxsoc.util import util
+from swxsoc.db import timeseries
 
 
 def get_test_db_names():
@@ -77,7 +77,7 @@ def test_record_timeseries_quantity_1col(mocked_timestream):
         meta={"name": timeseries_name},
     )
     ts["temp4"] = [1.0, 4.0, 5.0, 6.0, 4.0] * u.deg_C
-    util.record_timeseries(ts, instrument_name="test")
+    timeseries.record_timeseries(ts, instrument_name="test")
 
     database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
@@ -115,7 +115,7 @@ def test_record_timeseries_quantity_1col_array(mocked_timestream):
         meta={"name": timeseries_name},
     )
     ts["temp4_arr"] = np.arange(6 * 5).reshape((5, 6))
-    util.record_timeseries(ts, instrument_name="test")
+    timeseries.record_timeseries(ts, instrument_name="test")
 
     database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
@@ -157,7 +157,7 @@ def test_record_timeseries_quantity_multicol(mocked_timestream):
     ts["temp4"] = [1.0, 4.0, 5.0, 6.0, 4.0] * u.deg_C
     ts["rail5v"] = [5.1, 5.2, 4.9, 4.8, 5.0] * u.volt
     ts["status"] = [0, 1, 1, 1, 2]
-    util.record_timeseries(ts, ts_name=timeseries_name, instrument_name="test")
+    timeseries.record_timeseries(ts, ts_name=timeseries_name, instrument_name="test")
 
     database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
@@ -224,7 +224,7 @@ def test_record_timeseries_with_nan_values(mocked_timestream):
     ts["temp4"] = [1.0, np.nan, 5.0, np.nan, 4.0] * u.deg_C
     ts["rail5v"] = [5.1, 5.2, np.nan, 4.8, 5.0] * u.volt
 
-    util.record_timeseries(ts, instrument_name="test")
+    timeseries.record_timeseries(ts, instrument_name="test")
 
     database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
@@ -299,7 +299,7 @@ def test_record_timeseries_with_nan_in_arrays(mocked_timestream):
         [[1.0, 2.0, np.nan, 4.0], [5.0, np.nan, 7.0, 8.0], [9.0, 10.0, 11.0, np.nan]]
     )
 
-    util.record_timeseries(ts, instrument_name="test")
+    timeseries.record_timeseries(ts, instrument_name="test")
 
     database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
@@ -338,7 +338,7 @@ def test_record_timeseries_with_boolean_values(mocked_timestream):
     ts["heater_on"] = [True, False, True, True, False]
     ts["safety_flag"] = [False, False, True, False, False]
 
-    util.record_timeseries(ts, instrument_name="test")
+    timeseries.record_timeseries(ts, instrument_name="test")
 
     database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
@@ -389,7 +389,7 @@ def test_record_timeseries_with_numpy_boolean(mocked_timestream):
     # Use numpy bool_ type
     ts["flag"] = np.array([True, False, True], dtype=np.bool_)
 
-    util.record_timeseries(ts, instrument_name="test")
+    timeseries.record_timeseries(ts, instrument_name="test")
 
     database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
@@ -422,7 +422,7 @@ def test_record_timeseries_with_mixed_types(mocked_timestream):
     ts["mode"] = ["nominal", "safe", "nominal"]
     ts["count"] = [10, 20, 30]
 
-    util.record_timeseries(ts, instrument_name="test")
+    timeseries.record_timeseries(ts, instrument_name="test")
 
     database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
@@ -466,7 +466,7 @@ def test_record_timeseries_all_nan_column(mocked_timestream):
     ts["temp"] = [1.0, 2.0, 3.0] * u.deg_C
     ts["bad_sensor"] = [np.nan, np.nan, np.nan] * u.volt
 
-    util.record_timeseries(ts, instrument_name="test")
+    timeseries.record_timeseries(ts, instrument_name="test")
 
     database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
@@ -498,7 +498,7 @@ def test_record_dimension_timestream(mocked_timestream):
     measure_value = 25.2
     measure_value_type = "DOUBLE"
 
-    util._record_dimension_timestream(
+    timeseries._record_dimension_timestream(
         dimensions=dimensions,
         instrument_name=instrument_name,
         measure_name=measure_name,
@@ -520,7 +520,7 @@ def test_invalid_record_dimension_timestream(mocked_timestream):
         {"Name": "Unit", "Value": "Celsius"},
     ]
 
-    util._record_dimension_timestream(
+    timeseries._record_dimension_timestream(
         dimensions=dimensions,
     )
 
@@ -536,7 +536,7 @@ def test_invalid_record_dimension_timestream(mocked_timestream):
 def test_invalid_instrument_record_dimension_timestream(mocked_timestream):
     dimensions = "invalid"
 
-    util._record_dimension_timestream(dimensions=dimensions)
+    timeseries._record_dimension_timestream(dimensions=dimensions)
 
     database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]

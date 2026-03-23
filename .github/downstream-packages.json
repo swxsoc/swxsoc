@@ -42,7 +42,7 @@
       "repository": "swxsoc/sdc_aws_utils",
       "ref": "main",
       "python_version": "3.10",
-      "install_command": "python -m pip install -e .[test]",
+      "install_command": "python -m pip install poetry && poetry install --with dev",
       "test_command": "pytest --pyargs sdc_aws_utils --tb=short -q"
     },
     {
@@ -51,8 +51,8 @@
       "repository": "swxsoc/MetaTracker",
       "ref": "main",
       "python_version": "3.10",
-      "install_command": "python -m pip install -e .[test]",
-      "test_command": "pytest --pyargs tests --tb=short -q"
+      "install_command": "python -m pip install poetry && poetry install --with dev",
+      "test_command": "pytest --tb=short -q"
     }
   ]
 }

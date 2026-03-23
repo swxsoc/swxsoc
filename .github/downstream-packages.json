@@ -3,56 +3,56 @@
     {
       "name": "padre_sharp",
       "enabled": true,
-      "repository": "Alrobbertz/padre_sharp",
+      "repository": "PADRESat/padre_sharp",
       "ref": "main",
-      "python_version": "3.11",
+      "python_version": "3.10",
       "install_command": "python -m pip install -e .[test]",
-      "test_command": "python -m pytest padre_sharp/tests --tb=short -q"
+      "test_command": "pytest padre_sharp --tb=short -q"
     },
     {
       "name": "padre_meddea",
       "enabled": true,
       "repository": "PADRESat/padre_meddea",
       "ref": "main",
-      "python_version": "3.11",
+      "python_version": "3.10",
       "install_command": "python -m pip install -e .[test]",
-      "test_command": "python -m pytest padre_meddea/tests --tb=short -q"
+      "test_command": "pytest padre_meddea --tb=short -q"
     },
     {
       "name": "padre_craft",
       "enabled": true,
       "repository": "PADRESat/padre_craft",
       "ref": "main",
-      "python_version": "3.11",
+      "python_version": "3.10",
       "install_command": "python -m pip install -e .[test]",
-      "test_command": "python -m pytest padre_craft/tests --tb=short -q"
+      "test_command": "pytest padre_craft --tb=short -q"
     },
     {
       "name": "swxsoc_reach",
       "enabled": true,
-      "repository": "Alrobbertz/swxsoc_reach",
+      "repository": "swxsoc/swxsoc_reach",
       "ref": "main",
-      "python_version": "3.11",
+      "python_version": "3.10",
       "install_command": "python -m pip install -e .[test]",
-      "test_command": "python -m pytest swxsoc_reach/tests --tb=short -q"
+      "test_command": "pytest swxsoc_reach --tb=short -q"
     },
     {
       "name": "sdc_aws_utils",
       "enabled": true,
-      "repository": "HERMES-SOC/sdc_aws_utils",
+      "repository": "swxsoc/sdc_aws_utils",
       "ref": "main",
-      "python_version": "3.11",
-      "install_command": "python -m pip install poetry && poetry config virtualenvs.create false && poetry install --with dev",
-      "test_command": "python -m pytest --pyargs sdc_aws_utils --tb=short -q"
+      "python_version": "3.10",
+      "install_command": "python -m pip install -e .[test]",
+      "test_command": "pytest --pyargs sdc_aws_utils --tb=short -q"
     },
     {
       "name": "MetaTracker",
       "enabled": true,
-      "repository": "dbarrous/MetaTracker",
+      "repository": "swxsoc/MetaTracker",
       "ref": "main",
-      "python_version": "3.11",
-      "install_command": "python -m pip install poetry && poetry config virtualenvs.create false && poetry install --with dev",
-      "test_command": "python -m pytest tests --tb=short -q"
+      "python_version": "3.10",
+      "install_command": "python -m pip install -e .[test]",
+      "test_command": "pytest --pyargs tests --tb=short -q"
     }
   ]
 }

@@ -24,5 +24,17 @@ API Reference
    :no-inheritance-diagram:
 .. automodapi:: swxsoc.util.util
    :no-inheritance-diagram:
+.. automodapi:: swxsoc.util.grafana
+   :no-inheritance-diagram:
 .. automodapi:: swxsoc.util.validation
+   :no-inheritance-diagram:
+.. automodapi:: swxsoc.net
+   :no-inheritance-diagram:
+.. automodapi:: swxsoc.net.attr
+   :no-inheritance-diagram:
+.. automodapi:: swxsoc.net.client
+   :no-inheritance-diagram:
+.. automodapi:: swxsoc.db
+   :no-inheritance-diagram:
+.. automodapi:: swxsoc.db.timeseries
    :no-inheritance-diagram:

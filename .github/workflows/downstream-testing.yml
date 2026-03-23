@@ -106,7 +106,7 @@ jobs:
       - name: Reinstall swxsoc from the pull request branch
         working-directory: swxsoc
         run: |
-          python -m pip install --no-deps --force-reinstall -e .
+          python -m pip install --force-reinstall -e .
           python - <<'PY'
           import swxsoc
 

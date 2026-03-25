@@ -398,7 +398,7 @@ class CDFHandler(SWXIOHandler):
                         var_name, var_data, cdf_file
                     )
 
-        # Loop through Non-Record-Varying Data
+        # Loop through the NDData Data Structure (Not all record-varying)
         for var_name, var_data in data.support.items():
             # Guess the data type to store
             # Documented in https://github.com/spacepy/spacepy/issues/707
@@ -408,7 +408,7 @@ class CDFHandler(SWXIOHandler):
                 name=var_name,
                 data=var_data.data,
                 type=var_data_types[0],
-                recVary=False,
+                recVary=(var_data.meta["VAR_TYPE"] == "data"),
             )
 
             # Add the Variable Attributes

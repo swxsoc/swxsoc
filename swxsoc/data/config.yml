@@ -141,10 +141,10 @@ missions_data:
           # SWxSOC Input Data (CSV & JSON Files) is already processed to a Level 1C
           - levels: [l1c]
             extension: .csv
-            time_format: "%Y%m%d"
+            time_format: "%Y%m%dT%H%M%S"
           - levels: [l1c]
             extension: .json
-            time_format: "%Y%m%d"
+            time_format: "%Y%m%dT%H%M%S"
 
 logger:
   # Threshold for the logging messages. Logging messages that are less severe

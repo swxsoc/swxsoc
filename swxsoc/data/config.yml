@@ -128,7 +128,6 @@ missions_data:
   # This is a collection of multuple instruments and missions grouped together for convenience.
     file_extension: cdf
     valid_data_levels:
-      - raw
       - l1c
       - l2
       - l3

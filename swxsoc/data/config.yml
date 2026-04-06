@@ -128,6 +128,7 @@ missions_data:
   # This is a collection of multuple instruments and missions grouped together for convenience.
     file_extension: cdf
     valid_data_levels:
+      - raw
       - l1c
       - l2
       - l3
@@ -139,10 +140,10 @@ missions_data:
         instrument_package: swxsoc_reach
         file_rules:
           # SWxSOC Input Data (CSV & JSON Files) is already processed to a Level 1C
-          - levels: [l1c]
+          - levels: [raw]
             extension: .csv
             time_format: "%Y%m%dT%H%M%S"
-          - levels: [l1c]
+          - levels: [raw]
             extension: .json
             time_format: "%Y%m%dT%H%M%S"
 

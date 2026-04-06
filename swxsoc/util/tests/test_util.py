@@ -223,11 +223,11 @@ def test_parse_padre_science_files(use_mission, filename, instrument, time, leve
 @pytest.mark.parametrize("use_mission", ["swxsoc_pipeline"], indirect=True)
 @pytest.mark.parametrize("filename,instrument,time,level,version,mode,descriptor", [
     # Standard format CDF file with underscore in mission name
-    ("swxsoc_pipeline_reach_all_l1_20251201T000000_v2.0.0.cdf", "reach", "2025-12-01T00:00:00.000", "l1", "2.0.0", "all", None),
-    # CSV file matching file_rules for REACH (l1, %Y%m%d format)
-    ("REACH-all_20251201.csv", "reach", "2025-12-01T00:00:00.000", "l1", None, None, None),
-    # JSON file with no matching rule (Case 3 fallback)
-    ("REACH-all_20251201.json", "reach", "2025-12-01T00:00:00.000", "raw", None, None, None),
+    ("swxsoc_pipeline_reach_all_l1c_20251201T000000_v2.0.0.cdf", "reach", "2025-12-01T00:00:00.000", "l1c", "2.0.0", "all", None),
+    # CSV file matching file_rules for REACH (l1c, "%Y%m%dT%H%M%S" format)
+    ("REACH-ALL_20251205T060517_20251205T060517.csv", "reach", "2025-12-05T06:05:17.000", "raw", None, None, None),
+    # JSON file matching file_rules for REACH (l1c, "%Y%m%dT%H%M%S" format)
+    ("REACH-ALL_20251201T013010_20251205T060517.json", "reach", "2025-12-01T01:30:10.000", "raw", None, None, None),
 ])
 def test_parse_swxsoc_pipeline_science_files(use_mission, filename, instrument, time, level, version, mode, descriptor):
     """Testing parsing of SWxSOC Pipeline (REACH) filenames."""

@@ -129,9 +129,7 @@ missions_data:
     file_extension: cdf
     valid_data_levels:
       - raw
-      - l0
-      - ql
-      - l1
+      - l1c
       - l2
       - l3
     instruments:
@@ -141,10 +139,13 @@ missions_data:
         targetname: REACH
         instrument_package: swxsoc_reach
         file_rules:
-          # SWxSOC Input Data (CSV Files) is already processed to a Level 1
-          - levels: [l1]
+          # SWxSOC Input Data (CSV & JSON Files) is already processed to a Level 1C
+          - levels: [raw]
             extension: .csv
-            time_format: "%Y%m%d"
+            time_format: "%Y%m%dT%H%M%S"
+          - levels: [raw]
+            extension: .json
+            time_format: "%Y%m%dT%H%M%S"
 
 logger:
   # Threshold for the logging messages. Logging messages that are less severe

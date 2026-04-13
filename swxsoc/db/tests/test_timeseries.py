@@ -16,18 +16,16 @@ from swxsoc.db import timeseries
 
 def get_test_db_names():
     """
-    Get mission-specific database and table names for testing.
+    Get database and table names for testing.
+
+    Delegates to :func:`~swxsoc.db.timeseries._get_timestream_names`.
 
     Returns
     -------
     tuple
-        (database_name, table_name) using current mission config
+        (database_name, table_name)
     """
-    import swxsoc
-
-    mission_name = swxsoc.config["mission"]["mission_name"]
-    database_name = f"dev-{mission_name}_sdc_aws_logs"
-    table_name = f"dev-{mission_name}_measures_table"
+    database_name, table_name, _ = timeseries._get_timestream_names()
     return database_name, table_name
 
 
@@ -543,3 +541,23 @@ def test_invalid_instrument_record_dimension_timestream(mocked_timestream):
     records = backend.databases[database_name].tables[table_name].records
 
     assert len(records) == 0
+
+
+@pytest.mark.parametrize("use_mission", ["demo"], indirect=True)
+def test_record_timeseries_uses_mission_agnostic_database_name(
+    use_mission, mocked_timestream
+):
+    """Regression test: default demo mission still writes to swxsoc_* resources."""
+    ts = TimeSeries(
+        time_start="2016-03-22T12:30:31",
+        time_delta=3 * u.s,
+        n_samples=1,
+        meta={"name": "agnostic_db_check"},
+    )
+    ts["temp4"] = [1.0] * u.deg_C
+
+    timeseries.record_timeseries(ts, instrument_name="test")
+
+    backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
+    assert "dev-swxsoc_sdc_aws_logs" in backend.databases
+    assert "dev-demo_sdc_aws_logs" not in backend.databases

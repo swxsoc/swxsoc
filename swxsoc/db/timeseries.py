@@ -21,6 +21,42 @@ import swxsoc
 __all__ = ["record_timeseries", "_record_dimension_timestream"]
 
 
+def _get_timestream_names() -> tuple[str, str, str]:
+    """
+    Return Timestream database, table, and mission names for the current environment.
+
+    The mission name is read from ``swxsoc.config["mission"]["mission_name"]``.
+    If the configured mission is ``demo`` (the library default), the name
+    ``swxsoc`` is used instead so that Timestream resources remain
+    mission-agnostic. For any other configured mission the real name is used
+    directly (e.g. ``hermes_sdc_aws_logs``).
+
+    Non-production environments are prefixed with ``dev-`` to match existing
+    deployment conventions.
+
+    Returns
+    -------
+    database_name : str
+        The Timestream database name, prefixed with ``dev-`` in non-production environments.
+    table_name : str
+        The Timestream table name, prefixed with ``dev-`` in non-production environments.
+    mission_name : str
+        The mission name used as a Timestream record dimension.
+    """
+    mission_name = swxsoc.config["mission"]["mission_name"]
+    if mission_name == "demo":
+        mission_name = "swxsoc"
+
+    database_name = f"{mission_name}_sdc_aws_logs"
+    table_name = f"{mission_name}_measures_table"
+
+    if os.getenv("LAMBDA_ENVIRONMENT") != "PRODUCTION":
+        database_name = f"dev-{database_name}"
+        table_name = f"dev-{table_name}"
+
+    return database_name, table_name, mission_name
+
+
 def record_timeseries(
     ts: TimeSeries, ts_name: str = None, instrument_name: str = ""
 ) -> None:
@@ -51,7 +87,11 @@ def record_timeseries(
     Notes
     -----
     Records are written in batches of 100 to comply with Timestream API limits.
-    Database and table names are automatically prefixed with 'dev-' when not in PRODUCTION environment.
+    Database and table names are derived from the configured mission name
+    (e.g. ``hermes_sdc_aws_logs``). When the default ``demo`` mission is
+    active, ``swxsoc`` is used instead so that Timestream resources remain
+    mission-agnostic. Names are automatically prefixed with 'dev-' when not
+    in PRODUCTION environment.
 
     NaN values are skipped entirely and not written to Timestream. When a NaN is encountered in the
     timeseries data, that specific measure value is omitted from the record. The function logs the
@@ -69,9 +109,6 @@ def record_timeseries(
     """
     timestream_client = boto3.client("timestream-write", region_name="us-east-1")
 
-    # Get mission name swxsoc config
-    mission_name = swxsoc.config["mission"]["mission_name"]
-
     # Validate Instrument name
     instrument_name = (
         instrument_name.lower()
@@ -87,12 +124,8 @@ def record_timeseries(
     if ts_name is None or ts_name == "":
         ts_name = ts.meta.get("name", "measurement_group")
 
-    # Get the Database and Table names based on Dev / Prod environment
-    database_name = f"{mission_name}_sdc_aws_logs"
-    table_name = f"{mission_name}_measures_table"
-    if os.getenv("LAMBDA_ENVIRONMENT") != "PRODUCTION":
-        database_name = f"dev-{database_name}"
-        table_name = f"dev-{table_name}"
+    # Get the Database, Table, and Mission names based on configured defaults and environment
+    database_name, table_name, mission_name = _get_timestream_names()
 
     dimensions = [
         {"Name": "mission", "Value": mission_name},
@@ -282,16 +315,8 @@ def _record_dimension_timestream(
         )
 
     try:
-        # Get mission name from environment or default to 'hermes'
-        mission_name = swxsoc.config["mission"]["mission_name"]
-
-        # Define database and table names based on mission and environment
-        database_name = f"{mission_name}_sdc_aws_logs"
-        table_name = f"{mission_name}_measures_table"
-
-        if os.getenv("LAMBDA_ENVIRONMENT") != "PRODUCTION":
-            database_name = f"dev-{database_name}"
-            table_name = f"dev-{table_name}"
+        # Resolve database and table names from mission-agnostic defaults.
+        database_name, table_name, _ = _get_timestream_names()
 
         record = {
             "Time": str(timestamp),

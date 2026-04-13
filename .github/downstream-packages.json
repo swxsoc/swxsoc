@@ -1,0 +1,58 @@
+{
+  "packages": [
+    {
+      "name": "padre_sharp",
+      "enabled": true,
+      "repository": "PADRESat/padre_sharp",
+      "ref": "main",
+      "python_version": "3.10",
+      "install_command": "python -m pip install -e .[test]",
+      "test_command": "pytest padre_sharp --tb=short -q"
+    },
+    {
+      "name": "padre_meddea",
+      "enabled": true,
+      "repository": "PADRESat/padre_meddea",
+      "ref": "main",
+      "python_version": "3.10",
+      "install_command": "python -m pip install -e .[test]",
+      "test_command": "pytest padre_meddea --tb=short -q"
+    },
+    {
+      "name": "padre_craft",
+      "enabled": true,
+      "repository": "PADRESat/padre_craft",
+      "ref": "main",
+      "python_version": "3.10",
+      "install_command": "python -m pip install -e .[test]",
+      "test_command": "pytest padre_craft --tb=short -q"
+    },
+    {
+      "name": "swxsoc_reach",
+      "enabled": true,
+      "repository": "swxsoc/swxsoc_reach",
+      "ref": "main",
+      "python_version": "3.10",
+      "install_command": "python -m pip install -e .[test]",
+      "test_command": "pytest swxsoc_reach --tb=short -q"
+    },
+    {
+      "name": "sdc_aws_utils",
+      "enabled": true,
+      "repository": "swxsoc/sdc_aws_utils",
+      "ref": "main",
+      "python_version": "3.10",
+      "install_command": "python -m pip install poetry && poetry install --with dev",
+      "test_command": "pytest --pyargs sdc_aws_utils --tb=short -q"
+    },
+    {
+      "name": "MetaTracker",
+      "enabled": true,
+      "repository": "swxsoc/MetaTracker",
+      "ref": "main",
+      "python_version": "3.10",
+      "install_command": "python -m pip install poetry && poetry install --with dev",
+      "test_command": "pytest --tb=short -q"
+    }
+  ]
+}

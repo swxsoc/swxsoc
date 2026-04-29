@@ -78,6 +78,12 @@ def _init_log(config=None):
         if config is not None:
             _config_to_loggerConf(config)
         log._set_defaults()
+        # Prevent duplicate log records when downstream packages configure
+        # the root logger (e.g. via ``logging.basicConfig``). The swxsoc
+        # logger already attaches its own ``StreamHandler`` via
+        # ``_set_defaults``, so propagation to the root logger would cause
+        # each record to be emitted twice.
+        log.propagate = False
     finally:
         logging.setLoggerClass(orig_logger_cls)
 

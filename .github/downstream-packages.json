@@ -43,7 +43,7 @@
       "ref": "main",
       "python_version": "3.10",
       "install_command": "python -m pip install poetry && poetry install --with dev",
-      "test_command": "pytest --pyargs sdc_aws_utils --tb=short -q"
+      "test_command": "poetry run pytest --pyargs sdc_aws_utils --tb=short -q"
     },
     {
       "name": "MetaTracker",
@@ -52,7 +52,7 @@
       "ref": "main",
       "python_version": "3.10",
       "install_command": "python -m pip install poetry && poetry install --with dev",
-      "test_command": "pytest --tb=short -q"
+      "test_command": "poetry run pytest --tb=short -q"
     }
   ]
 }

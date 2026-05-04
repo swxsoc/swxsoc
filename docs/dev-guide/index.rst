@@ -13,6 +13,7 @@ This guide borrows heavily from those developed by the SunPy Project and is gene
    dev_env
    code_standards
    tests
+   downstream_testing
    docs
    maintainer_workflow
    config

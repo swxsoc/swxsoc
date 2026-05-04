@@ -4,6 +4,14 @@ on:
   pull_request:
     branches:
       - main
+    types:
+      - opened
+      - reopened
+      - ready_for_review
+      - labeled
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       package_filter:
@@ -20,9 +28,16 @@ concurrency:
   group: downstream-tests-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  MANUAL_PR_LABEL: run-downstream
+
 jobs:
   define-matrix:
     name: Build downstream matrix
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.action != 'labeled' ||
+      github.event.label.name == env.MANUAL_PR_LABEL
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.build.outputs.matrix }}
@@ -70,6 +85,10 @@ jobs:
 
   downstream-tests:
     name: ${{ matrix.name }}
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.action != 'labeled' ||
+      github.event.label.name == env.MANUAL_PR_LABEL
     needs: define-matrix
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -103,7 +122,7 @@ jobs:
         working-directory: downstream
         run: ${{ matrix.install_command }}
 
-      - name: Reinstall swxsoc from the pull request branch
+      - name: Reinstall swxsoc from the workflow ref
         working-directory: swxsoc
         run: |
           python -m pip install --force-reinstall -e .

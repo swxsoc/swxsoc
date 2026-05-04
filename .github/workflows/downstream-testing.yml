@@ -28,16 +28,13 @@ concurrency:
   group: downstream-tests-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-env:
-  MANUAL_PR_LABEL: run-downstream
-
 jobs:
   define-matrix:
     name: Build downstream matrix
     if: >-
       github.event_name != 'pull_request' ||
       github.event.action != 'labeled' ||
-      github.event.label.name == env.MANUAL_PR_LABEL
+      github.event.label.name == 'run-downstream'
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.build.outputs.matrix }}
@@ -88,7 +85,7 @@ jobs:
     if: >-
       github.event_name != 'pull_request' ||
       github.event.action != 'labeled' ||
-      github.event.label.name == env.MANUAL_PR_LABEL
+      github.event.label.name == 'run-downstream'
     needs: define-matrix
     runs-on: ubuntu-latest
     timeout-minutes: 45

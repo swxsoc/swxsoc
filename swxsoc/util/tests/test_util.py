@@ -282,9 +282,20 @@ def test_extract_time_errors(use_mission, filename, expected_error):
 )
 def test_extract_time_warnings(use_mission, filename, expected_warning, caplog):
     """Test that Time Parsing raises appropriate warnings when mission_config is None"""
-    # Pass None for mission_config to test warning behavior instead of error raising
-    util._extract_time(filename, mission_config=None)
-    assert expected_warning in caplog.text
+    # The ``swxsoc`` logger has ``propagate=False`` to avoid duplicate log
+    # records in downstream packages, so attach caplog's handler directly to
+    # the ``swxsoc`` logger to capture its records.
+    import logging
+
+    swx_logger = logging.getLogger("swxsoc")
+    swx_logger.addHandler(caplog.handler)
+    try:
+        with caplog.at_level(logging.WARNING, logger="swxsoc"):
+            # Pass None for mission_config to test warning behavior instead of error raising
+            util._extract_time(filename, mission_config=None)
+        assert expected_warning in caplog.text
+    finally:
+        swx_logger.removeHandler(caplog.handler)
 
 
 def test_get_instrument_package_hermes(use_mission):

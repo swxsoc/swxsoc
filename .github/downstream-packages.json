@@ -2,7 +2,7 @@
   "packages": [
     {
       "name": "padre_sharp",
-      "enabled": true,
+      "enabled": false,
       "repository": "PADRESat/padre_sharp",
       "ref": "main",
       "python_version": "3.10",

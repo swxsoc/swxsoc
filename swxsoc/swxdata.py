@@ -418,6 +418,11 @@ class SWXData:
         # Find the TimeSeries Epoch for this Record-Varying Variable
         if var_meta is not None and "DEPEND_0" in var_meta:
             epoch_key = var_meta["DEPEND_0"]
+            # If epoch_key is in prefixed format (e.g., "REACH_165_Epoch"),
+            # convert back to the original key format (e.g., "REACH-165")
+            if epoch_key.endswith("_Epoch"):
+                epoch_key = epoch_key[:-6].replace("_", "-")  # Remove "_Epoch" and convert _ to -
+            # If it's just "Epoch", keep it as-is (default timeseries key)
         else:
             # Check which epoch key to use
             potential_epoch_keys = []
@@ -526,7 +531,7 @@ class SWXData:
             # Time Measurement Attributes
             for col in ts.columns:
                 for attr_name, attr_value in self.schema.derive_measurement_attributes(
-                    self, col
+                    self, col, epoch_key=epoch_key
                 ).items():
                     self._update_measurement_attribute(
                         data_structure=ts,

@@ -141,14 +141,22 @@ class CDFHandler(SWXIOHandler):
                 var_name for var_name in input_file.keys() if "Epoch" in var_name
             ]
             
+            # Check if there's a Default_Timeseries_Key metadata attribute
+            default_ts_key = None
+            if "Default_Timeseries_Key" in input_global_attrs:
+                default_ts_key = input_global_attrs["Default_Timeseries_Key"]
+            
             # Build a mapping of epoch_var_name -> epoch_key (for TimeSeries dict key)
             epoch_var_to_key = {}
             for epoch_var in epoch_variables:
                 if epoch_var.endswith("_Epoch"):
                     # Prefixed format: "REACH_165_Epoch" -> "REACH-165"
                     epoch_key = epoch_var[:-6].replace("_", "-")  # Remove "_Epoch" suffix
+                elif epoch_var == "Epoch" and default_ts_key is not None:
+                    # Unprefixed "Epoch" with a default key specified in metadata
+                    epoch_key = default_ts_key
                 else:
-                    # Legacy format or default: use as-is
+                    # Legacy format: use "Epoch" as-is (for single timeseries files)
                     epoch_key = epoch_var
                 epoch_var_to_key[epoch_var] = epoch_key
             
@@ -394,47 +402,76 @@ class CDFHandler(SWXIOHandler):
             else:
                 # Add the Attribute to the CDF File
                 cdf_file.attrs[attr_name] = attr_value
+        
+        # If there are multiple timeseries, store which one is the default (gets unprefixed variables)
+        if len(data.data["timeseries"]) > 1:
+            default_key = next(iter(data.data["timeseries"].keys()))
+            cdf_file.attrs["Default_Timeseries_Key"] = default_key
 
     def _convert_variables_to_cdf(self, data, cdf_file):
         # Make sure at least one TimeSeries is present
-        default_timeseries_key = swxsoc.config["general"]["default_timeseries_key"]
         if len(data.data["timeseries"]) == 0:
             warn_user(
                 f"No TimeSeries data found to write to CDF file: {cdf_file}"
             )
 
+        # Detect which variable names actually conflict across timeseries
+        has_multiple_timeseries = len(data.data["timeseries"]) > 1
+        conflicting_vars = set()
+        
+        # Use the first timeseries key as the default (gets unprefixed variables)
+        default_timeseries_key = next(iter(data.data["timeseries"].keys())) if has_multiple_timeseries else None
+        
+        if has_multiple_timeseries:
+            # Build a dict of var_name -> list of epoch_keys that have it
+            var_to_epochs = {}
+            for epoch_key, ts in data.data["timeseries"].items():
+                for var_name in ts.colnames:
+                    # For CDF purposes, "time" becomes "Epoch"
+                    cdf_name = "Epoch" if var_name == "time" else var_name
+                    if cdf_name not in var_to_epochs:
+                        var_to_epochs[cdf_name] = []
+                    var_to_epochs[cdf_name].append(epoch_key)
+            
+            # A variable conflicts if it appears in more than one timeseries
+            for var_name, epoch_keys in var_to_epochs.items():
+                if len(epoch_keys) > 1:
+                    conflicting_vars.add(var_name)
+
         for epoch_key, ts in data.data["timeseries"].items():
             # Sanitize the epoch_key for use as a prefix (replace hyphens with underscores)
             prefix = epoch_key.replace("-", "_")
+            
+            # Determine the Epoch variable name for this timeseries
+            if "Epoch" in conflicting_vars and epoch_key != default_timeseries_key:
+                epoch_cdf_var_name = f"{prefix}_Epoch"
+            else:
+                epoch_cdf_var_name = "Epoch"
             
             # Loop through Scalar TimeSeries Variables
             for var_name in ts.colnames:
                 var_data = ts[var_name]
                 if var_name == "time":
                     # Add 'time' in the TimeSeries as Epoch within the CDF
-                    # Use default "Epoch" name if this is the default timeseries_key,
-                    # otherwise prefix it
-                    if epoch_key == default_timeseries_key:
-                        cdf_var_name = "Epoch"
-                    else:
-                        cdf_var_name = f"{prefix}_Epoch"
-                    cdf_file[cdf_var_name] = var_data.to_datetime()
+                    cdf_file[epoch_cdf_var_name] = var_data.to_datetime()
                     # Add the Variable Attributes
                     self._convert_variable_attributes_to_cdf(
-                        cdf_var_name, var_data, cdf_file
+                        epoch_cdf_var_name, var_data, cdf_file
                     )
                 else:
-                    # Add the Variable to the CDF File with prefix
-                    # Use unprefixed name if this is the default timeseries_key
-                    if epoch_key == default_timeseries_key:
-                        cdf_var_name = var_name
-                    else:
+                    # Add the Variable to the CDF File
+                    # Only prefix if this variable conflicts AND not the default key
+                    if var_name in conflicting_vars and epoch_key != default_timeseries_key:
                         cdf_var_name = f"{prefix}_{var_name}"
+                    else:
+                        cdf_var_name = var_name
                     cdf_file[cdf_var_name] = var_data.value
                     # Add the Variable Attributes
                     self._convert_variable_attributes_to_cdf(
                         cdf_var_name, var_data, cdf_file
                     )
+                    # Set DEPEND_0 to point to the correct Epoch variable
+                    cdf_file[cdf_var_name].attrs["DEPEND_0"] = epoch_cdf_var_name
 
         # Loop through the NDData Data Structure (Not all record-varying)
         for var_name, var_data in data.support.items():

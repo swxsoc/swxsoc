@@ -162,3 +162,36 @@ def test_cdf_spectra_data():
         td_loaded = SWXData.load(test_file_output_path)
 
         assert "Test_Spectra_Var" in td_loaded.spectra
+
+
+def test_cdf_custom_filename():
+    """
+    Test that a custom filename can be provided instead of using Logical_file_id
+    """
+    # Get Test Data
+    td = get_test_sw_data()
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        tmp_path = Path(tmpdirname)
+        
+        # Save with custom filename
+        custom_filename = "my_custom_test_file.cdf"
+        test_file_output_path = td.save(output_path=tmp_path, filename=custom_filename)
+        
+        # Verify the file was created with the custom name
+        assert test_file_output_path.name == custom_filename
+        assert test_file_output_path.exists()
+        assert test_file_output_path.parent == tmp_path
+        
+        # Load the file back and verify it's correct
+        td_loaded = SWXData.load(test_file_output_path)
+        
+        assert len(td.timeseries) == len(td_loaded.timeseries)
+        assert len(td.timeseries.columns) == len(td_loaded.timeseries.columns)
+        
+        # Test that default behavior still works (no filename provided)
+        test_file_output_path_default = td.save(output_path=tmp_path, overwrite=True)
+        expected_default_name = f"{td.meta['Logical_file_id']}.cdf"
+        assert test_file_output_path_default.name == expected_default_name
+        assert test_file_output_path_default.exists()
+

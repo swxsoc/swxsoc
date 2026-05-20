@@ -331,7 +331,7 @@ class CDFHandler(SWXIOHandler):
             var_attrs["UNITS"] = u.dimensionless_unscaled.to_string()
             _load_data(spectra, var_name, var_data, var_attrs, time)
 
-    def save_data(self, data, file_path: Path):
+    def save_data(self, data, file_path: Path, filename: str = None):
         """
         Save heliophysics data to a CDF file.
 
@@ -341,6 +341,9 @@ class CDFHandler(SWXIOHandler):
             An instance of `SWXData` containing the data to be saved.
         file_path : `pathlib.Path`
             A fully specified path to the directory where the CDF file is to be saved.
+        filename : `str`, optional
+            Custom filename for the output file (including .cdf extension).
+            If not provided, uses the Logical_file_id from metadata.
 
         Returns
         -------
@@ -350,7 +353,10 @@ class CDFHandler(SWXIOHandler):
         from spacepy.pycdf import CDF
 
         # Initialize a new CDF
-        cdf_filename = f"{data.meta['Logical_file_id']}.cdf"
+        if filename:
+            cdf_filename = filename
+        else:
+            cdf_filename = f"{data.meta['Logical_file_id']}.cdf"
         output_cdf_filepath = str(Path(file_path) / cdf_filename)
         with CDF(output_cdf_filepath, masterpath="") as cdf_file:
             # Add Global Attriubtes to the CDF File

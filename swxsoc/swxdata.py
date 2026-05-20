@@ -912,7 +912,7 @@ class SWXData:
         # Re-Derive Metadata
         self._derive_metadata()
 
-    def save(self, output_path: Path = None, overwrite: bool = False):
+    def save(self, output_path: Path = None, filename: str = None, overwrite: bool = False):
         """
         Save the data to a CDF file.
 
@@ -921,6 +921,9 @@ class SWXData:
         output_path : `pathlib.Path`, optional
             A fully specified path to the directory where the file is to be saved.
             If not provided, saves to the current directory.
+        filename : `str`, optional
+            Custom filename for the output file (including .cdf extension).
+            If not provided, uses the Logical_file_id from metadata.
         overwrite : `bool`
             If set, overwrites existing file of the same name.
         Returns
@@ -934,10 +937,13 @@ class SWXData:
         if not output_path:
             output_path = Path.cwd()
         if overwrite:
-            cdf_file_path = output_path / (self.meta["Logical_file_id"] + ".cdf")
+            if filename:
+                cdf_file_path = output_path / filename
+            else:
+                cdf_file_path = output_path / (self.meta["Logical_file_id"] + ".cdf")
             if cdf_file_path.exists():
                 cdf_file_path.unlink()
-        return handler.save_data(data=self, file_path=output_path)
+        return handler.save_data(data=self, file_path=output_path, filename=filename)
 
     @classmethod
     def load(cls, file_path: Path):

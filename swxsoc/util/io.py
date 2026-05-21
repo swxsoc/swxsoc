@@ -192,9 +192,19 @@ class CDFHandler(SWXIOHandler):
                 var_data = input_file[var_name][...]
                 if input_file[var_name].rv():
                     # Find the TimeSeries Epoch for this Record-Varying Variable
-                    epoch_key = SWXData.get_timeseres_epoch_key(
+                    epoch_var_name = SWXData.get_timeseres_epoch_key(
                         timeseries, var_data, var_attrs
                     )
+                    # Map epoch variable name back to the timeseries key
+                    # (e.g., "Epoch" -> "REACH-165", "REACH_134_Epoch" -> "REACH-134")
+                    if epoch_var_name in epoch_var_to_key:
+                        epoch_key = epoch_var_to_key[epoch_var_name]
+                    else:
+                        # Fallback: try converting prefixed format
+                        if epoch_var_name.endswith("_Epoch"):
+                            epoch_key = epoch_var_name[:-6].replace("_", "-")
+                        else:
+                            epoch_key = epoch_var_name
                     ts = timeseries[epoch_key]
                     
                     # Check if this variable has a prefix matching an epoch key

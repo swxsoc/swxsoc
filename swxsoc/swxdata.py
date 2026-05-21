@@ -420,11 +420,12 @@ class SWXData:
             epoch_key = var_meta["DEPEND_0"]
             # If epoch_key is in prefixed format (e.g., "REACH_165_Epoch"),
             # convert back to the original key format (e.g., "REACH-165")
-            if epoch_key.endswith("_Epoch"):
+            if epoch_key.endswith("_Epoch"): # it is either Epoch or something_epoch. the first is the single timeseries case, the second is the multi-timeseries case with prefixed keys. In the second case we want to convert back to the original key format.
                 epoch_key = epoch_key[:-6].replace("_", "-")  # Remove "_Epoch" and convert _ to -
             # If it's just "Epoch", keep it as-is (default timeseries key)
         else:
             # Check which epoch key to use
+            # I 'spect we won't use this method anymore since we will require the user to specify the epoch key in the metadata when adding a measurement, but it is here as a fallback for now and could be useful in some cases. It also serves as an example of how to automatically determine the epoch key based on the length of the data if it is not provided in the metadata.
             potential_epoch_keys = []
             for key, ts in timeseries.items():
                 if hasattr(var_data, "shape"):

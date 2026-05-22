@@ -459,9 +459,9 @@ class CDFHandler(SWXIOHandler):
                 if var_name == "time":
                     # Add 'time' in the TimeSeries as Epoch within the CDF
                     cdf_file[epoch_cdf_var_name] = var_data.to_datetime()
-                    # Add the Variable Attributes
+                    # Add the Variable Attributes (excluding DEPEND_0 for Epoch variables)
                     self._convert_variable_attributes_to_cdf(
-                        epoch_cdf_var_name, var_data, cdf_file
+                        epoch_cdf_var_name, var_data, cdf_file, skip_depend_0=True
                     )
                 else:
                     # Add the Variable to the CDF File
@@ -502,8 +502,11 @@ class CDFHandler(SWXIOHandler):
             # Add the Variable Attributes
             self._convert_variable_attributes_to_cdf(var_name, var_data, cdf_file)
 
-    def _convert_variable_attributes_to_cdf(self, var_name, var_data, cdf_file):
+    def _convert_variable_attributes_to_cdf(self, var_name, var_data, cdf_file, skip_depend_0=False):
         for var_attr_name, var_attr_val in var_data.meta.items():
+            # Skip DEPEND_0 for Epoch variables (they don't need self-referencing DEPEND_0)
+            if skip_depend_0 and var_attr_name == "DEPEND_0":
+                continue
             if var_attr_val is None:
                 raise ValueError(
                     f"Variable {var_name}: Cannot Add vAttr: {var_attr_name}. Value was {str(var_attr_val)}"

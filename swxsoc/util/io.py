@@ -142,6 +142,10 @@ class CDFHandler(SWXIOHandler):
             ]
             
             # Check if there's a Default_Timeseries_Key metadata attribute
+            # allows loader to track the non prefixed epocch var with the mandatory dict name for the timeseries dict key. 
+            # This is needed to support legacy CDF files with a single timeseries that uses the unprefixed "Epoch" variable,
+            # as well as multi-timeseries CDF files that use prefixed epoch variables (e.g., "REACH_165_Epoch") 
+            # but also want to designate one of them as the default for unprefixed variables.
             default_ts_key = None
             if "Default_Timeseries_Key" in input_global_attrs:
                 default_ts_key = input_global_attrs["Default_Timeseries_Key"]
@@ -208,7 +212,7 @@ class CDFHandler(SWXIOHandler):
                     ts = timeseries[epoch_key]
                     
                     # Check if this variable has a prefix matching an epoch key
-                    # and strip it to get the original column name
+                    # and strip it to get the original column name - multi-timeseries code.
                     original_var_name = var_name
                     for ek in timeseries.keys():
                         prefix = ek.replace("-", "_")

@@ -10,7 +10,6 @@ from astropy.wcs import WCS
 import astropy.units as u
 from ndcube import NDCollection
 from ndcube import NDCube
-import swxsoc
 from swxsoc.swxdata import SWXData
 from swxsoc.util.exceptions import warn_user
 from swxsoc.util.schema import SWXSchema
@@ -112,7 +111,6 @@ class CDFHandler(SWXIOHandler):
         meta = {}
         # Create a struct for storing TimeSeries
         timeseries = {}
-        default_timeseries_key = swxsoc.config["general"]["default_timeseries_key"]
         # Create a Data Structure for Non-record Varying Data
         support = {}
         # Intermediate Type
@@ -416,11 +414,6 @@ class CDFHandler(SWXIOHandler):
             else:
                 # Add the Attribute to the CDF File
                 cdf_file.attrs[attr_name] = attr_value
-        
-        # If there are multiple timeseries, store which one is the default (gets unprefixed variables)
-        if len(data.data["timeseries"]) > 1:
-            default_key = next(iter(data.data["timeseries"].keys()))
-            cdf_file.attrs["Default_Timeseries_Key"] = default_key
 
     def _convert_variables_to_cdf(self, data, cdf_file):
         # Make sure at least one TimeSeries is present
@@ -432,9 +425,6 @@ class CDFHandler(SWXIOHandler):
         # Detect which variable names actually conflict across timeseries
         has_multiple_timeseries = len(data.data["timeseries"]) > 1
         conflicting_vars = set()
-        
-        # Use the first timeseries key as the default (gets unprefixed variables)
-        default_timeseries_key = next(iter(data.data["timeseries"].keys())) if has_multiple_timeseries else None
         
         if has_multiple_timeseries:
             # Build a dict of var_name -> list of epoch_keys that have it
@@ -457,7 +447,8 @@ class CDFHandler(SWXIOHandler):
             prefix = epoch_key.replace("-", "_")
             
             # Determine the Epoch variable name for this timeseries
-            if "Epoch" in conflicting_vars and epoch_key != default_timeseries_key:
+            # In multi-timeseries files, always prefix epochs for consistency
+            if has_multiple_timeseries:
                 epoch_cdf_var_name = f"{prefix}_Epoch"
             else:
                 epoch_cdf_var_name = "Epoch"
@@ -474,8 +465,8 @@ class CDFHandler(SWXIOHandler):
                     )
                 else:
                     # Add the Variable to the CDF File
-                    # Only prefix if this variable conflicts AND not the default key
-                    if var_name in conflicting_vars and epoch_key != default_timeseries_key:
+                    # Only prefix if this variable conflicts across multiple timeseries
+                    if var_name in conflicting_vars:
                         cdf_var_name = f"{prefix}_{var_name}"
                     else:
                         cdf_var_name = var_name

@@ -17,6 +17,13 @@ from swxsoc.swxdata import SWXData
 from swxsoc.util import const
 
 
+def save_for_examination(sw_data, filename):
+    """Save a copy to current dir for examination with custom filename."""
+    if False:
+       sw_data.meta["Logical_file_id"] = filename
+       sw_data.save(overwrite=True)
+
+
 def get_test_sw_data():
     """
     Function to get test swxsoc.swxdata.SWXData objects to re-use in
@@ -90,6 +97,7 @@ def test_cdf_io():
     with tempfile.TemporaryDirectory() as tmpdirname:
         # Convert SWXData the to a CDF File
         test_file_output_path = td.save(output_path=tmpdirname)
+        save_for_examination(td, "io")
 
         # Load the CDF to a SWXData Object
         td_loaded = SWXData.load(test_file_output_path)
@@ -121,6 +129,7 @@ def test_cdf_nrv_support_data():
         tmp_path = Path(tmpdirname)
         # Convert HermesData the to a CDF File
         test_file_output_path = td.save(output_path=tmp_path)
+        save_for_examination(td, "nrv_support_data")
 
         # Load the JSON file as JSON
         with CDF(str(test_file_output_path), readonly=False) as cdf_file:
@@ -156,6 +165,7 @@ def test_cdf_spectra_data():
         tmp_path = Path(tmpdirname)
         # Convert HermesData the to a CDF File
         test_file_output_path = td.save(output_path=tmp_path)
+        save_for_examination(td, "spectra_data")
 
         # Load the JSON file as JSON
         with CDF(str(test_file_output_path), readonly=False) as cdf_file:
@@ -276,24 +286,28 @@ def test_cdf_auto_prefixing_prevents_duplicates():
         tmp_path = Path(tmpdirname)
         
         test_file_output_path = sw_data.save(output_path=tmp_path)
+        save_for_examination(sw_data, "auto_prefixing_prevents_duplicates")
         
         # Verify the CDF file was created
         assert test_file_output_path.exists()
         
         # Verify all prefixed variables exist in the CDF file
         with CDF(str(test_file_output_path)) as cdf_file:
-            # Epoch conflicts - should be prefixed for non-default satellites
-            assert "Epoch" in cdf_file  # REACH-165 is default
+            # All epochs should be prefixed for consistency in multi-timeseries
+            assert "REACH_165_Epoch" in cdf_file
             assert "REACH_134_Epoch" in cdf_file
             assert "REACH_099_Epoch" in cdf_file
+            assert "Epoch" not in cdf_file  # No unprefixed default
             
-            # Lat and Lon conflict - should be prefixed for non-default
-            assert "Lat" in cdf_file  # REACH-165 is default
-            assert "Lon" in cdf_file  # REACH-165 is default
+            # Lat and Lon conflict - should be prefixed for all satellites
+            assert "REACH_165_Lat" in cdf_file
+            assert "REACH_165_Lon" in cdf_file
             assert "REACH_134_Lat" in cdf_file
             assert "REACH_134_Lon" in cdf_file
             assert "REACH_099_Lat" in cdf_file
             assert "REACH_099_Lon" in cdf_file
+            assert "Lat" not in cdf_file  # No unprefixed conflicting variables
+            assert "Lon" not in cdf_file
             
             # Sensor columns are unique - should NOT be prefixed
             assert "Sensor_A" in cdf_file
@@ -306,13 +320,13 @@ def test_cdf_auto_prefixing_prevents_duplicates():
             assert "REACH_099_Sensor_C" not in cdf_file
             
             # Verify each has the correct length
-            assert len(cdf_file["Lat"]) == 5
+            assert len(cdf_file["REACH_165_Lat"]) == 5
             assert len(cdf_file["REACH_134_Lat"]) == 5
             assert len(cdf_file["REACH_099_Lat"]) == 5
             
-            # Verify DEPEND_0 points to the correct epoch
-            assert cdf_file["Lat"].attrs["DEPEND_0"] == "Epoch"
-            assert cdf_file["Sensor_A"].attrs["DEPEND_0"] == "Epoch"
+            # Verify DEPEND_0 points to the correct prefixed epoch for all variables
+            assert cdf_file["REACH_165_Lat"].attrs["DEPEND_0"] == "REACH_165_Epoch"
+            assert cdf_file["Sensor_A"].attrs["DEPEND_0"] == "REACH_165_Epoch"
             assert cdf_file["REACH_134_Lat"].attrs["DEPEND_0"] == "REACH_134_Epoch"
             assert cdf_file["Sensor_B"].attrs["DEPEND_0"] == "REACH_134_Epoch"
             assert cdf_file["REACH_099_Lat"].attrs["DEPEND_0"] == "REACH_099_Epoch"
@@ -433,14 +447,16 @@ def test_cdf_selective_prefixing_unique_columns():
     with tempfile.TemporaryDirectory() as tmpdirname:
         tmp_path = Path(tmpdirname)
         test_file_output_path = sw_data.save(output_path=tmp_path)
+        save_for_examination(sw_data, "selective_prefixing_unique_columns")
         
         assert test_file_output_path.exists()
         
         with CDF(str(test_file_output_path)) as cdf_file:
-            # Epoch variables should be prefixed (they conflict)
-            assert "Epoch" in cdf_file  # Default key gets unprefixed
+            # All epoch variables should be prefixed for consistency
+            assert "SAT_A_Epoch" in cdf_file
             assert "SAT_B_Epoch" in cdf_file
             assert "SAT_C_Epoch" in cdf_file
+            assert "Epoch" not in cdf_file  # No unprefixed default
             
             # Unique columns should NOT be prefixed
             assert "Voltage" in cdf_file
@@ -461,9 +477,9 @@ def test_cdf_selective_prefixing_unique_columns():
             assert "SAT_C_Altitude" not in cdf_file
             assert "SAT_C_Speed" not in cdf_file
             
-            # Verify DEPEND_0 linkage
-            assert cdf_file["Voltage"].attrs["DEPEND_0"] == "Epoch"
-            assert cdf_file["Current"].attrs["DEPEND_0"] == "Epoch"
+            # Verify DEPEND_0 linkage - all point to prefixed epochs
+            assert cdf_file["Voltage"].attrs["DEPEND_0"] == "SAT_A_Epoch"
+            assert cdf_file["Current"].attrs["DEPEND_0"] == "SAT_A_Epoch"
             assert cdf_file["Temperature"].attrs["DEPEND_0"] == "SAT_B_Epoch"
             assert cdf_file["SAT_B_Pressure"].attrs["DEPEND_0"] == "SAT_B_Epoch"
             assert cdf_file["Altitude"].attrs["DEPEND_0"] == "SAT_C_Epoch"

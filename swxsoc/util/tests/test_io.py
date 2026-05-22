@@ -17,6 +17,13 @@ from swxsoc.swxdata import SWXData
 from swxsoc.util import const
 
 
+def save_for_examination(sw_data, filename):
+    """Save a copy to current dir for examination with custom filename."""
+    if False:
+       sw_data.meta["Logical_file_id"] = filename
+       sw_data.save(overwrite=True)
+
+
 def get_test_sw_data():
     """
     Function to get test swxsoc.swxdata.SWXData objects to re-use in other tests
@@ -88,6 +95,7 @@ def test_cdf_io():
     with tempfile.TemporaryDirectory() as tmpdirname:
         # Convert SWXData the to a CDF File
         test_file_output_path = td.save(output_path=tmpdirname)
+        save_for_examination(td, "io")
 
         # Load the CDF to a SWXData Object
         td_loaded = SWXData.load(test_file_output_path)
@@ -119,6 +127,7 @@ def test_cdf_nrv_support_data():
         tmp_path = Path(tmpdirname)
         # Convert HermesData the to a CDF File
         test_file_output_path = td.save(output_path=tmp_path)
+        save_for_examination(td, "nrv_support_data")
 
         # Load the JSON file as JSON
         with CDF(str(test_file_output_path), readonly=False) as cdf_file:
@@ -151,6 +160,7 @@ def test_cdf_spectra_data():
         tmp_path = Path(tmpdirname)
         # Convert HermesData the to a CDF File
         test_file_output_path = td.save(output_path=tmp_path)
+        save_for_examination(td, "spectra_data")
 
         # Load the JSON file as JSON
         with CDF(str(test_file_output_path), readonly=False) as cdf_file:
@@ -177,6 +187,7 @@ def test_cdf_custom_filename():
         # Save with custom filename
         custom_filename = "my_custom_test_file.cdf"
         test_file_output_path = td.save(output_path=tmp_path, filename=custom_filename)
+        save_for_examination(td, "custom_filename")
         
         # Verify the file was created with the custom name
         assert test_file_output_path.name == custom_filename
@@ -194,4 +205,13 @@ def test_cdf_custom_filename():
         expected_default_name = f"{td.meta['Logical_file_id']}.cdf"
         assert test_file_output_path_default.name == expected_default_name
         assert test_file_output_path_default.exists()
+        
+        # Test custom filename with overwrite (covers both parameters together)
+        another_custom_filename = "overwrite_test.cdf"
+        test_file_output_path_overwrite = td.save(
+            output_path=tmp_path, filename=another_custom_filename, overwrite=True
+        )
+        save_for_examination(td, "custom_filename_overwrite")
+        assert test_file_output_path_overwrite.name == another_custom_filename
+        assert test_file_output_path_overwrite.exists()
 

@@ -426,6 +426,10 @@ class CDFHandler(SWXIOHandler):
         has_multiple_timeseries = len(data.data["timeseries"]) > 1
         conflicting_vars = set()
         
+        # Get the first (default) timeseries key for ISTP compliance
+        # In Python 3.7+, dict iteration order is guaranteed to be insertion order
+        default_epoch_key = next(iter(data.data["timeseries"].keys())) if has_multiple_timeseries else None
+        
         if has_multiple_timeseries:
             # Build a dict of var_name -> list of epoch_keys that have it
             var_to_epochs = {}
@@ -441,14 +445,19 @@ class CDFHandler(SWXIOHandler):
             for var_name, epoch_keys in var_to_epochs.items():
                 if len(epoch_keys) > 1:
                     conflicting_vars.add(var_name)
+        
+        # Track which conflicting variables have been written (for asymmetric prefixing)
+        # First occurrence stays unprefixed, subsequent ones get prefixed
+        written_conflicting_vars = set()
 
         for epoch_key, ts in data.data["timeseries"].items():
             # Sanitize the epoch_key for use as a prefix (replace hyphens with underscores)
             prefix = epoch_key.replace("-", "_")
             
             # Determine the Epoch variable name for this timeseries
-            # In multi-timeseries files, always prefix epochs for consistency
-            if has_multiple_timeseries:
+            # First timeseries uses unprefixed "Epoch" for ISTP compliance
+            # Others are prefixed for uniqueness
+            if has_multiple_timeseries and epoch_key != default_epoch_key:
                 epoch_cdf_var_name = f"{prefix}_Epoch"
             else:
                 epoch_cdf_var_name = "Epoch"
@@ -465,10 +474,19 @@ class CDFHandler(SWXIOHandler):
                     )
                 else:
                     # Add the Variable to the CDF File
-                    # Only prefix if this variable conflicts across multiple timeseries
+                    # For conflicting variables, use asymmetric prefixing:
+                    # - First occurrence: unprefixed
+                    # - Subsequent occurrences: prefixed
                     if var_name in conflicting_vars:
-                        cdf_var_name = f"{prefix}_{var_name}"
+                        if var_name not in written_conflicting_vars:
+                            # First occurrence - leave unprefixed
+                            cdf_var_name = var_name
+                            written_conflicting_vars.add(var_name)
+                        else:
+                            # Subsequent occurrence - add prefix
+                            cdf_var_name = f"{prefix}_{var_name}"
                     else:
+                        # Non-conflicting variables never need prefixing
                         cdf_var_name = var_name
                     cdf_file[cdf_var_name] = var_data.value
                     # Add the Variable Attributes

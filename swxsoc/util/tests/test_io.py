@@ -19,7 +19,7 @@ from swxsoc.util import const
 
 def save_for_examination(sw_data, filename):
     """Save a copy to current dir for examination with custom filename."""
-    if False:
+    if True:
        sw_data.meta["Logical_file_id"] = filename
        sw_data.save(overwrite=True)
 
@@ -293,21 +293,21 @@ def test_cdf_auto_prefixing_prevents_duplicates():
         
         # Verify all prefixed variables exist in the CDF file
         with CDF(str(test_file_output_path)) as cdf_file:
-            # All epochs should be prefixed for consistency in multi-timeseries
-            assert "REACH_165_Epoch" in cdf_file
+            # First timeseries uses unprefixed "Epoch" for ISTP compliance
+            assert "Epoch" in cdf_file  # REACH-165 is first, gets default "Epoch"
             assert "REACH_134_Epoch" in cdf_file
             assert "REACH_099_Epoch" in cdf_file
-            assert "Epoch" not in cdf_file  # No unprefixed default
+            assert "REACH_165_Epoch" not in cdf_file  # REACH-165 uses unprefixed "Epoch"
             
-            # Lat and Lon conflict - should be prefixed for all satellites
-            assert "REACH_165_Lat" in cdf_file
-            assert "REACH_165_Lon" in cdf_file
+            # Lat and Lon conflict - first occurrence unprefixed, rest prefixed
+            assert "Lat" in cdf_file  # REACH-165 (first) gets unprefixed
+            assert "Lon" in cdf_file  # REACH-165 (first) gets unprefixed
             assert "REACH_134_Lat" in cdf_file
             assert "REACH_134_Lon" in cdf_file
             assert "REACH_099_Lat" in cdf_file
             assert "REACH_099_Lon" in cdf_file
-            assert "Lat" not in cdf_file  # No unprefixed conflicting variables
-            assert "Lon" not in cdf_file
+            assert "REACH_165_Lat" not in cdf_file  # First occurrence stays unprefixed
+            assert "REACH_165_Lon" not in cdf_file  # First occurrence stays unprefixed
             
             # Sensor columns are unique - should NOT be prefixed
             assert "Sensor_A" in cdf_file
@@ -320,13 +320,14 @@ def test_cdf_auto_prefixing_prevents_duplicates():
             assert "REACH_099_Sensor_C" not in cdf_file
             
             # Verify each has the correct length
-            assert len(cdf_file["REACH_165_Lat"]) == 5
+            assert len(cdf_file["Lat"]) == 5  # First occurrence unprefixed
             assert len(cdf_file["REACH_134_Lat"]) == 5
             assert len(cdf_file["REACH_099_Lat"]) == 5
             
-            # Verify DEPEND_0 points to the correct prefixed epoch for all variables
-            assert cdf_file["REACH_165_Lat"].attrs["DEPEND_0"] == "REACH_165_Epoch"
-            assert cdf_file["Sensor_A"].attrs["DEPEND_0"] == "REACH_165_Epoch"
+            # Verify DEPEND_0 points to the correct epoch for all variables
+            assert cdf_file["Lat"].attrs["DEPEND_0"] == "Epoch"  # First occurrence unprefixed
+            assert cdf_file["Lon"].attrs["DEPEND_0"] == "Epoch"  # First occurrence unprefixed
+            assert cdf_file["Sensor_A"].attrs["DEPEND_0"] == "Epoch"  # First timeseries uses unprefixed Epoch
             assert cdf_file["REACH_134_Lat"].attrs["DEPEND_0"] == "REACH_134_Epoch"
             assert cdf_file["Sensor_B"].attrs["DEPEND_0"] == "REACH_134_Epoch"
             assert cdf_file["REACH_099_Lat"].attrs["DEPEND_0"] == "REACH_099_Epoch"
@@ -336,12 +337,13 @@ def test_cdf_auto_prefixing_prevents_duplicates():
         sw_data_loaded = SWXData.load(test_file_output_path)
         
         # Verify the TimeSeries structure is reconstructed correctly
-        assert "REACH-165" in sw_data_loaded.data["timeseries"]
+        # First timeseries is keyed by "Epoch" (unprefixed), others keep their names
+        assert "Epoch" in sw_data_loaded.data["timeseries"]  # REACH-165 becomes "Epoch"
         assert "REACH-134" in sw_data_loaded.data["timeseries"]
         assert "REACH-099" in sw_data_loaded.data["timeseries"]
         
         # Verify columns are unprefixed in the loaded TimeSeries
-        ts_165 = sw_data_loaded.data["timeseries"]["REACH-165"]
+        ts_165 = sw_data_loaded.data["timeseries"]["Epoch"]  # REACH-165 data is under "Epoch" key
         assert "Lat" in ts_165.colnames
         assert "Lon" in ts_165.colnames
         assert "Sensor_A" in ts_165.colnames
@@ -452,11 +454,11 @@ def test_cdf_selective_prefixing_unique_columns():
         assert test_file_output_path.exists()
         
         with CDF(str(test_file_output_path)) as cdf_file:
-            # All epoch variables should be prefixed for consistency
-            assert "SAT_A_Epoch" in cdf_file
+            # First timeseries uses unprefixed "Epoch" for ISTP compliance
+            assert "Epoch" in cdf_file  # SAT-A is first, gets default "Epoch"
             assert "SAT_B_Epoch" in cdf_file
             assert "SAT_C_Epoch" in cdf_file
-            assert "Epoch" not in cdf_file  # No unprefixed default
+            assert "SAT_A_Epoch" not in cdf_file  # SAT-A uses unprefixed "Epoch"
             
             # Unique columns should NOT be prefixed
             assert "Voltage" in cdf_file
@@ -465,11 +467,11 @@ def test_cdf_selective_prefixing_unique_columns():
             assert "Altitude" in cdf_file
             assert "Speed" in cdf_file
             
-            # Pressure conflicts between SAT-B and SAT-C - both should be prefixed
-            # (SAT-A doesn't have Pressure, so no default unprefixed version)
-            assert "SAT_B_Pressure" in cdf_file
-            assert "SAT_C_Pressure" in cdf_file
-            assert "Pressure" not in cdf_file  # No unprefixed version since SAT-A doesn't have it
+            # Pressure conflicts between SAT-B and SAT-C - first occurrence unprefixed
+            # SAT-B is first to have Pressure, so it's unprefixed
+            assert "Pressure" in cdf_file  # SAT-B (first occurrence) gets unprefixed
+            assert "SAT_C_Pressure" in cdf_file  # SAT-C (second occurrence) gets prefixed
+            assert "SAT_B_Pressure" not in cdf_file  # First occurrence stays unprefixed
             
             # Should NOT have prefixed unique variables
             assert "SAT_A_Voltage" not in cdf_file
@@ -477,11 +479,11 @@ def test_cdf_selective_prefixing_unique_columns():
             assert "SAT_C_Altitude" not in cdf_file
             assert "SAT_C_Speed" not in cdf_file
             
-            # Verify DEPEND_0 linkage - all point to prefixed epochs
-            assert cdf_file["Voltage"].attrs["DEPEND_0"] == "SAT_A_Epoch"
-            assert cdf_file["Current"].attrs["DEPEND_0"] == "SAT_A_Epoch"
+            # Verify DEPEND_0 linkage - first epoch unprefixed, others prefixed
+            assert cdf_file["Voltage"].attrs["DEPEND_0"] == "Epoch"  # SAT-A uses unprefixed Epoch
+            assert cdf_file["Current"].attrs["DEPEND_0"] == "Epoch"  # SAT-A uses unprefixed Epoch
             assert cdf_file["Temperature"].attrs["DEPEND_0"] == "SAT_B_Epoch"
-            assert cdf_file["SAT_B_Pressure"].attrs["DEPEND_0"] == "SAT_B_Epoch"
+            assert cdf_file["Pressure"].attrs["DEPEND_0"] == "SAT_B_Epoch"  # First Pressure occurrence
             assert cdf_file["Altitude"].attrs["DEPEND_0"] == "SAT_C_Epoch"
             assert cdf_file["Speed"].attrs["DEPEND_0"] == "SAT_C_Epoch"
             assert cdf_file["SAT_C_Pressure"].attrs["DEPEND_0"] == "SAT_C_Epoch"
@@ -489,12 +491,13 @@ def test_cdf_selective_prefixing_unique_columns():
         # Test round-trip
         sw_data_loaded = SWXData.load(test_file_output_path)
         
-        assert "SAT-A" in sw_data_loaded.data["timeseries"]
+        # First timeseries is keyed by "Epoch" (unprefixed), others keep their prefixed names
+        assert "Epoch" in sw_data_loaded.data["timeseries"]  # SAT-A becomes "Epoch"
         assert "SAT-B" in sw_data_loaded.data["timeseries"]
         assert "SAT-C" in sw_data_loaded.data["timeseries"]
         
         # Verify unique columns are preserved
-        ts_a = sw_data_loaded.data["timeseries"]["SAT-A"]
+        ts_a = sw_data_loaded.data["timeseries"]["Epoch"]  # SAT-A data is under "Epoch" key
         assert "Voltage" in ts_a.colnames
         assert "Current" in ts_a.colnames
         

@@ -360,6 +360,8 @@ Data variables require the following attributes:
 * VALIDMIN and VALIDMAX
 * VAR_TYPE
 
+See :doc:`fillval_and_masks` for how ``swxsoc`` converts between in-memory ``NaN`` / mask representations and the on-disk ``FILLVAL`` sentinel for each dtype.
+
 In addition, the following attributes are strongly recommended for vectors, tensors and
 quaternions which are held in or relate to a particular coordinate system:
 

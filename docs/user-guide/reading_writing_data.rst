@@ -561,6 +561,8 @@ If no path is provided it writes the file to the current directory.
 This function returns the full :py:class:`~pathlib.Path` to the CDF file that was generated.
 From this you can validate and distribute your CDF file.
 
+Missing data, ``NaN``, masks, and FILLVAL on write/read are described in :doc:`fillval_and_masks`.
+
 Validating a CDF File
 =====================
 

@@ -1,73 +1,32 @@
-from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import Tuple
+"""
+CDF (Common Data Format) implementation of :class:`SWXIOHandler`.
+
+Handles reading SWxSOC-style CDF files into the SWXData container and writing
+SWXData instances back out to CDF.
+"""
+
 from collections import OrderedDict
 from datetime import datetime
-from astropy.timeseries import TimeSeries
-from astropy.time import Time
-from astropy.nddata import NDData
-from astropy.wcs import WCS
+from pathlib import Path
+from typing import Tuple
+
+import numpy as np
 import astropy.units as u
-from ndcube import NDCollection
-from ndcube import NDCube
+from astropy.nddata import NDData
+from astropy.time import Time
+from astropy.timeseries import TimeSeries
+from astropy.utils.masked import Masked
+from astropy.wcs import WCS
+from ndcube import NDCollection, NDCube
+
 import swxsoc
+from swxsoc.io import fillval as fv
+from swxsoc.io.base_handler import SWXIOHandler
 from swxsoc.swxdata import SWXData
 from swxsoc.util.exceptions import warn_user
 from swxsoc.util.schema import SWXSchema
 
-__all__ = ["SWXIOHandler", "CDFHandler"]
-
-# ================================================================================================
-#                                   ABSTRACT HANDLER
-# ================================================================================================
-
-
-class SWXIOHandler(ABC):
-    """
-    Abstract base class for handling input/output operations of heliophysics data.
-    """
-
-    @abstractmethod
-    def load_data(self, file_path: Path) -> Tuple[dict, dict, NDCollection, dict]:
-        """
-        Load data from a file.
-
-        Parameters
-        ----------
-        file_path : `pathlib.Path`
-            A fully specified file path of the data file to load.
-
-        Returns
-        -------
-        timeseries : `dict[~astropy.time.TimeSeries]`
-            An instance of `TimeSeries` containing the loaded data.
-        support : `dict[astropy.nddata.NDData]`
-            Non-record-varying data contained in the file
-        spectra : `ndcube.NDCollection`
-            Spectral or High-dimensional measurements in the loaded data.
-        meta: `dict`
-            Global metadata attributes.
-        """
-        pass
-
-    @abstractmethod
-    def save_data(self, data, file_path: Path):
-        """
-        Save data to a file.
-
-        Parameters
-        ----------
-        data : `swxsoc.swxdata.SWXData`
-            An instance of `SWXData` containing the data to be saved.
-        file_path : `pathlib.Path`
-            A fully specified path to the directory where the file is to be saved.
-        """
-        pass
-
-
-# ================================================================================================
-#                                   CDF HANDLER
-# ================================================================================================
+__all__ = ["CDFHandler"]
 
 
 class CDFHandler(SWXIOHandler):
@@ -145,7 +104,7 @@ class CDFHandler(SWXIOHandler):
                 )
             # Loop for each Epoch Variable
             for epoch_var in epoch_variables:
-                time_data = Time(input_file[epoch_var][:].copy())
+                time_data = self._load_epoch_variable(input_file, epoch_var)
                 time_attrs = self._load_metadata_attributes(input_file[epoch_var])
                 # Create a new TimeSeries
                 timeseries[epoch_var] = TimeSeries()
@@ -213,12 +172,45 @@ class CDFHandler(SWXIOHandler):
                 var_attrs[attr_name] = var_data.attrs[attr_name]
         return var_attrs
 
+    def _load_epoch_variable(self, input_file, epoch_var):
+        """
+        Read an Epoch variable, computing a fill mask from the raw underlying
+        TT2000 / EPOCH values.  Returns a ``Time`` whose native mask is set
+        on positions whose underlying value equals the ISTP fill sentinel.
+        """
+        # Datetime-converted values for building Time
+        time_data = Time(input_file[epoch_var][:].copy())
+        # Raw numeric values (int64 for TT2000, float64 for EPOCH,
+        # complex128 for EPOCH16) for sentinel detection.
+        raw_values = input_file.raw_var(epoch_var)[:]
+        raw_arr = np.asarray(raw_values)
+        if raw_arr.dtype == np.int64:
+            sentinel = fv.tt2000_fillval_int64()
+        elif raw_arr.dtype == np.float64:
+            sentinel = fv.epoch_fillval_float()
+        else:
+            sentinel = None
+        if sentinel is None:
+            return time_data
+        mask = raw_arr == sentinel
+        if not mask.any():
+            return time_data
+        # Use astropy.Time's native masking (compatible with TimeSeries).
+        time_data[mask] = np.ma.masked
+        return time_data
+
     def _load_timeseries_variable(self, timeseries, var_name, var_data, var_attrs):
+        fillval = var_attrs.get("FILLVAL")
+        mask = fv.compute_fill_mask(var_data, fillval)
+        if fv.is_float_dtype(var_data):
+            var_data = fv.apply_fillval_to_nan(var_data, fillval)
+
         def _load_data(timeseries, var_name, var_data, var_attrs):
             # Create a Quantity object for the variable
-            timeseries[var_name] = u.Quantity(
-                value=var_data, unit=var_attrs["UNITS"], copy=False
-            )
+            quantity = u.Quantity(value=var_data, unit=var_attrs["UNITS"], copy=False)
+            if mask.any():
+                quantity = Masked(quantity, mask=mask)
+            timeseries[var_name] = quantity
             # Create the Metadata
             timeseries[var_name].meta = OrderedDict()
             timeseries[var_name].meta.update(var_attrs)
@@ -235,8 +227,16 @@ class CDFHandler(SWXIOHandler):
             _load_data(timeseries, var_name, var_data, var_attrs)
 
     def _load_support_variable(self, support, var_name, var_data, var_attrs):
+        fillval = var_attrs.get("FILLVAL")
+        mask = fv.compute_fill_mask(var_data, fillval)
+        if fv.is_float_dtype(var_data):
+            var_data = fv.apply_fillval_to_nan(var_data, fillval)
         # Create a NDData entry for the variable
-        support[var_name] = NDData(data=var_data, meta=var_attrs)
+        support[var_name] = NDData(
+            data=var_data,
+            mask=mask if mask.any() else None,
+            meta=var_attrs,
+        )
 
     def _get_tensor_attribute(
         self, var_attrs, naxis, attribute_name, default_attribute
@@ -305,19 +305,29 @@ class CDFHandler(SWXIOHandler):
         wcs.wcs.timeunit = "ns"
         if len(time) > 1:
             time_delta = time[1] - time[0]
-        else: # If there is only one time entry, we cannot calculate a time delta. We will default to 1 ns
+        else:  # If there is only one time entry, we cannot calculate a time delta. We will default to 1 ns
             time_delta = 1 * u.ns
         wcs.wcs.timedel = time_delta.to("ns").value
 
         return wcs
 
     def _load_spectra_variable(self, spectra, var_name, var_data, var_attrs, time):
+        fillval = var_attrs.get("FILLVAL")
+        mask = fv.compute_fill_mask(var_data, fillval)
+        if fv.is_float_dtype(var_data):
+            var_data = fv.apply_fillval_to_nan(var_data, fillval)
+        cube_mask = mask if mask.any() else None
+
         def _load_data(spectra, var_name, var_data, var_attrs, time):
             # Create a World Cordinate System for the Tensor
             var_wcs = self._get_world_coords(var_data, var_attrs, time)
             # Create a Cube
             var_cube = NDCube(
-                data=var_data, wcs=var_wcs, meta=var_attrs, unit=var_attrs["UNITS"]
+                data=var_data,
+                wcs=var_wcs,
+                meta=var_attrs,
+                unit=var_attrs["UNITS"],
+                mask=cube_mask,
             )
             # Add to Spectra
             spectra.append((var_name, var_cube))
@@ -387,43 +397,125 @@ class CDFHandler(SWXIOHandler):
             for var_name in ts.colnames:
                 var_data = ts[var_name]
                 if var_name == "time":
-                    # Add 'time' in the TimeSeries as 'Epoch' within the CDF
-                    cdf_file[epoch_key] = var_data.to_datetime()
-                    # Add the Variable Attributes
+                    self._write_time_variable(epoch_key, var_data, cdf_file)
                     self._convert_variable_attributes_to_cdf(
                         epoch_key, var_data, cdf_file
                     )
                 else:
-                    # Add the Variable to the CDF File
-                    cdf_file[var_name] = var_data.value
-                    # Add the Variable Attributes
+                    self._write_timeseries_variable(var_name, var_data, cdf_file)
                     self._convert_variable_attributes_to_cdf(
                         var_name, var_data, cdf_file
                     )
 
         # Loop through the NDData Data Structure (Not all record-varying)
         for var_name, var_data in data.support.items():
-            # Guess the data type to store
-            # Documented in https://github.com/spacepy/spacepy/issues/707
-            _, var_data_types, _ = self.schema._types(var_data.data)
-            # Add the Variable to the CDF File
-            cdf_file.new(
-                name=var_name,
-                data=var_data.data,
-                type=var_data_types[0],
-                recVary=(var_data.meta["VAR_TYPE"] == "data"),
-            )
-
-            # Add the Variable Attributes
+            self._write_support_variable(var_name, var_data, cdf_file)
             self._convert_variable_attributes_to_cdf(var_name, var_data, cdf_file)
 
         # Loop through High-Dimensional/Spectra Variables
         for var_name in data.spectra:
             var_data = data.spectra[var_name]
-            # Add the Variable to the CDF File
-            cdf_file[var_name] = var_data.data
-            # Add the Variable Attributes
+            self._write_spectra_variable(var_name, var_data, cdf_file)
             self._convert_variable_attributes_to_cdf(var_name, var_data, cdf_file)
+
+    @staticmethod
+    def _get_mask(var_data):
+        """
+        Return the boolean ``.mask`` array from a container (Masked Quantity,
+        Masked Time, NDData, NDCube), or ``None`` if none is set.
+        """
+        mask = getattr(var_data, "mask", None)
+        if mask is None:
+            return None
+        mask = np.asarray(mask, dtype=bool)
+        if not mask.any():
+            return None
+        return mask
+
+    @staticmethod
+    def _unmasked_quantity_value(var_data):
+        """
+        Return the raw numpy values of a (possibly Masked) Quantity, with the
+        unit stripped.
+        """
+        if isinstance(var_data, Masked):
+            return np.asarray(var_data.unmasked.value)
+        return np.asarray(var_data.value)
+
+    def _write_timeseries_variable(self, var_name, var_data, cdf_file):
+        fillval = var_data.meta.get("FILLVAL")
+        if fillval is None:
+            swxsoc.log.debug(
+                f"FILLVAL not set for variable {var_name}; writing values unchanged."
+            )
+        mask = self._get_mask(var_data)
+        values = self._unmasked_quantity_value(var_data)
+        cdf_file[var_name] = fv.apply_fill_on_write(values, mask, fillval)
+
+    def _write_support_variable(self, var_name, var_data, cdf_file):
+        fillval = var_data.meta.get("FILLVAL")
+        if fillval is None:
+            swxsoc.log.debug(
+                f"FILLVAL not set for variable {var_name}; writing values unchanged."
+            )
+        mask = self._get_mask(var_data)
+        raw_data = np.asarray(var_data.data)
+        out_data = fv.apply_fill_on_write(raw_data, mask, fillval)
+        # Guess the data type to store
+        # Documented in https://github.com/spacepy/spacepy/issues/707
+        _, var_data_types, _ = self.schema._types(raw_data)
+        cdf_file.new(
+            name=var_name,
+            data=out_data,
+            type=var_data_types[0],
+            recVary=(var_data.meta["VAR_TYPE"] == "data"),
+        )
+
+    def _write_spectra_variable(self, var_name, var_data, cdf_file):
+        fillval = var_data.meta.get("FILLVAL")
+        if fillval is None:
+            swxsoc.log.debug(
+                f"FILLVAL not set for variable {var_name}; writing values unchanged."
+            )
+        mask = self._get_mask(var_data)
+        raw_data = np.asarray(var_data.data)
+        cdf_file[var_name] = fv.apply_fill_on_write(raw_data, mask, fillval)
+
+    def _write_time_variable(self, epoch_key, var_data, cdf_file):
+        """
+        Write the Epoch column.  Falls back to the historical datetime-based
+        write path when the column is not masked; for a masked time column
+        we write raw TT2000 nanoseconds (int64) with the ISTP sentinel at
+        masked positions to preserve precision.
+        """
+        mask = self._get_mask(var_data)
+        if mask is None:
+            cdf_file[epoch_key] = var_data.to_datetime()
+            return
+
+        from spacepy.pycdf import const as cdfconst
+        from spacepy.pycdf import lib as cdflib
+
+        # ``Time`` supports native masking; ``Masked(Time)`` exposes ``.unmasked``.
+        if isinstance(var_data, Masked):
+            unmasked = var_data.unmasked
+        else:
+            unmasked = var_data
+        # Convert to datetime; masked positions are filled with an arbitrary
+        # valid datetime so v_datetime_to_tt2000 succeeds, then overwritten
+        # with the int64 sentinel below.
+        dt_array = np.asarray(unmasked.to_datetime(), dtype=object)
+        if mask.any():
+            from datetime import datetime as _datetime
+
+            dt_array[mask] = _datetime(2000, 1, 1)
+        ttns = np.asarray(cdflib.v_datetime_to_tt2000(dt_array), dtype=np.int64)
+        ttns[mask] = fv.tt2000_fillval_int64()
+        cdf_file.new(
+            name=epoch_key,
+            data=ttns,
+            type=cdfconst.CDF_TIME_TT2000,
+        )
 
     def _convert_variable_attributes_to_cdf(self, var_name, var_data, cdf_file):
         for var_attr_name, var_attr_val in var_data.meta.items():

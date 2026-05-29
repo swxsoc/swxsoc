@@ -744,9 +744,10 @@ class SWXSchema(CdfAttributeManager):
         if var_type in ["data", "support_data", "metadata"]:
             var_atttibutes = list(
                 filter(
-                    lambda attr_info: attr_info[0]
-                    in self.variable_attribute_schema[var_type]
-                    and attr_info[1]["derived"],
+                    lambda attr_info: (
+                        attr_info[0] in self.variable_attribute_schema[var_type]
+                        and attr_info[1]["derived"]
+                    ),
                     self.variable_attribute_schema["attribute_key"].items(),
                 )
             )
@@ -755,9 +756,10 @@ class SWXSchema(CdfAttributeManager):
         if var_name == "time":
             time_attributes = list(
                 filter(
-                    lambda attr_info: attr_info[0]
-                    in self.variable_attribute_schema["epoch"]
-                    and attr_info[1]["derived"],
+                    lambda attr_info: (
+                        attr_info[0] in self.variable_attribute_schema["epoch"]
+                        and attr_info[1]["derived"]
+                    ),
                     self.variable_attribute_schema["attribute_key"].items(),
                 )
             )
@@ -766,9 +768,10 @@ class SWXSchema(CdfAttributeManager):
         if hasattr(var_data, "wcs") and getattr(var_data, "wcs") is not None:
             spectra_attributes = list(
                 filter(
-                    lambda attr_info: attr_info[0]
-                    in self.variable_attribute_schema["spectra"]
-                    and attr_info[1]["derived"],
+                    lambda attr_info: (
+                        attr_info[0] in self.variable_attribute_schema["spectra"]
+                        and attr_info[1]["derived"]
+                    ),
                     self.variable_attribute_schema["attribute_key"].items(),
                 )
             )
@@ -1450,8 +1453,10 @@ class SWXSchema(CdfAttributeManager):
         Function to get the start time of the data contained in the CDF
         given in format `YYYYMMDDThhmmss`
         """
-        # Get the Start Time from the TimeSeries
-        return data["time"][0].isot
+        # Get the Start Time from the TimeSeries.  Use ``str(...)`` to flatten
+        # any zero-dim ``MaskedNDArray`` that arises when the time column has
+        # native masking from the read path.
+        return str(data["time"][0].isot)
 
     def _get_version(self, data):
         """

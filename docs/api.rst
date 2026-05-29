@@ -16,7 +16,13 @@ API Reference
    :no-inheritance-diagram:
 .. automodapi:: swxsoc.util.exceptions
    :no-inheritance-diagram:
-.. automodapi:: swxsoc.util.io
+.. automodapi:: swxsoc.io
+   :no-inheritance-diagram:
+.. automodapi:: swxsoc.io.base_handler
+   :no-inheritance-diagram:
+.. automodapi:: swxsoc.io.cdf_handler
+   :no-inheritance-diagram:
+.. automodapi:: swxsoc.io.fillval
    :no-inheritance-diagram:
 .. automodapi:: swxsoc.util.logger
    :no-inheritance-diagram:

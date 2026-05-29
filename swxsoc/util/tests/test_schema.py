@@ -8,7 +8,11 @@ from astropy.time import Time
 from astropy.timeseries import TimeSeries
 from astropy.table import Table
 import astropy.units as u
+
+# Skip all tests in this module if spacepy is not available
+spacepy = pytest.importorskip("spacepy.pycdf")
 from spacepy.pycdf import CDF
+
 from swxsoc.swxdata import SWXData
 from swxsoc.util.schema import SWXSchema
 from swxsoc.util import const

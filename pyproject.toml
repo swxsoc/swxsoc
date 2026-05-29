@@ -26,11 +26,9 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Physics",
 ]
 dependencies = [
-  'sammi-cdf>=0.1.2',
   'astropy>=5.3.3',
   'numpy>=1.18.0',
   'sunpy[all]>=5.0.1',
-  'spacepy>=0.5.0',
   'ndcube>=2.2.0',
   'parfive>=2.1.0',
   'pyyaml>=5.3.1',
@@ -42,8 +40,25 @@ Homepage = "https://github.com/swxsoc/swxsoc"
 Documentation = "https://swxsoc.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
+# CDF file format support (spacepy requires NASA CDF library)
+# sammi-cdf is maintained by the SWxSOC team with metadata support for SWxSOC data products
+cdf = [
+  'spacepy>=0.5.0',
+  'sammi-cdf>=0.1.2',
+]
+
+# FITS file format support (already included via astropy)
+fits = [
+  'astropy>=5.3.3',  # astropy.io.fits already included in base
+]
+
+# All file format support
+all = [
+  'swxsoc[cdf,fits]'
+]
+
 dev = [
-  "swxsoc[docs, test, style]"
+  "swxsoc[all,docs,test,style]"
 ]
 
 docs = [

@@ -7,6 +7,7 @@ import numpy as np
 from numpy.random import random
 import tempfile
 from astropy.timeseries import TimeSeries
+from astropy.table import Table
 from astropy.time import Time
 from astropy.units import Quantity
 from astropy.nddata import NDData
@@ -21,7 +22,7 @@ def save_cdf_for_examination(sw_data, filename=None):
     """Save a copy to current dir for examination with custom filename or logical id.
        No output path will put it in the current directory which is the point of this
        function."""
-    if False: # change to True if you'd like to use this feature
+    if True: # change to True if you'd like to use this feature
         if filename:
             # Add .cdf suffix if not already present
             if not filename.endswith('.cdf'):
@@ -188,6 +189,8 @@ def test_cdf_custom_filename():
     """
     # Get Test Data
     td = get_test_sw_data()
+    assert isinstance(td.timeseries, TimeSeries) 
+    assert isinstance(td.timeseries, Table)
 
     with tempfile.TemporaryDirectory() as tmpdirname:
         tmp_path = Path(tmpdirname)
@@ -237,4 +240,40 @@ def test_cdf_custom_filename():
         )
         assert test_file_output_path_overwrite.name == another_custom_filename + ".cdf"
         assert test_file_output_path_overwrite.exists()
+        
+        # Test 6: Create actual FITS file for comparison with CDF
+        # This demonstrates that FITS and CDF are different formats
+        fits_filename = "real_fits_format.fits"
+        fits_path = tmp_path / fits_filename
+        
+        # Convert TimeSeries to Table and write as actual FITS format
+        fits_table = Table(td.timeseries)
+        fits_table.write(fits_path, format='fits', overwrite=True)
+        
+        # Verify FITS file was created
+        assert fits_path.exists()
+        
+        # Astropy can read it back as a Table
+        loaded_fits_table = Table.read(fits_path, format='fits')
+        assert len(loaded_fits_table) == len(td.timeseries)
+        
+        # But SWXData.load() cannot read FITS format (only CDF)
+        with pytest.raises(Exception):
+            SWXData.load(fits_path)  # Will fail - no FITS handler exists
+        
+        
+        # Test 7: CDF can store text data - demonstrate CDF is a rich format
+        # Add text as a global attribute
+        td.meta['Custom_text_description'] = "This is txt in a CDF file"
+        
+        # Save and reload
+        cdf_with_text_path = tmp_path / "cdf_with_text.cdf"
+        td.save(output_path=cdf_with_text_path, overwrite=True)
+        
+        # Load back and verify text is preserved
+        td_with_text = SWXData.load(cdf_with_text_path)
+        assert td_with_text.meta['Custom_text_description'] == "This is txt in a CDF file"
+        
+
+        
 

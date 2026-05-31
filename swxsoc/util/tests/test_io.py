@@ -10,6 +10,7 @@ from astropy.timeseries import TimeSeries
 from astropy.table import Table
 from astropy.time import Time
 from astropy.units import Quantity
+import astropy.units as u
 from astropy.nddata import NDData
 from astropy.wcs import WCS
 from ndcube import NDCube, NDCollection
@@ -263,12 +264,28 @@ def test_cdf_custom_filename():
         
         
         # Test 7: CDF can store text data - demonstrate CDF is a rich format
-        # Add text as a global attribute
-        td.meta['Custom_text_description'] = "This is txt in a CDF file"
+        # Create minimal SWXData with just text metadata (no arrays)
+        minimal_meta = {
+            "Descriptor": "EEA>Text Storage Test",
+            "Data_level": "l0>Level 0",
+            "Data_version": "v0.0.1",
+            "Custom_text_description": "This is txt in a CDF file"
+        }
+        
+        # Minimal TimeSeries with just one time point (required)
+        minimal_ts = TimeSeries(
+            time_start="2024-01-01T00:00:00",
+            time_delta=1*u.s,
+            data={"value": Quantity([1, 2], unit=u.dimensionless_unscaled, dtype=np.uint16)}
+        )
+        minimal_ts["value"].meta = {"CATDESC": "Minimal test value", "VAR_TYPE": "data"}
+        minimal_ts.meta = minimal_meta
+        
+        td_text = SWXData(timeseries=minimal_ts)
         
         # Save and reload
         cdf_with_text_path = tmp_path / "cdf_with_text.cdf"
-        td.save(output_path=cdf_with_text_path, overwrite=True)
+        td_text.save(output_path=cdf_with_text_path, overwrite=True)
         
         # Load back and verify text is preserved
         td_with_text = SWXData.load(cdf_with_text_path)

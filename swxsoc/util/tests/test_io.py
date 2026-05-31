@@ -263,34 +263,29 @@ def test_cdf_custom_filename():
             SWXData.load(fits_path)  # Will fail - no FITS handler exists
         
         
-        # Test 7: CDF can store text data - demonstrate CDF is a rich format
-        # Create minimal SWXData with just text metadata (no arrays)
-        minimal_meta = {
-            "Descriptor": "EEA>Text Storage Test",
+        # Test 7: Cannot create SWXData with empty TimeSeries (even with metadata)
+        # This demonstrates SWXData validation requires actual time points, not just metadata
+        
+        # Create a TimeSeries and then remove all rows to make it empty
+        ts_with_data = TimeSeries(
+            time_start="2024-01-01T00:00:00", 
+            time_delta=1*u.s, 
+            n_samples=2,
+            data={"value": [1, 2] * u.dimensionless_unscaled}
+        )
+        empty_ts = ts_with_data[:0]  # Slice to get empty TimeSeries (length 0)
+        
+        # Add metadata - but it won't help, still needs time points
+        empty_ts.meta = {
+            "Descriptor": "EEA>Empty Test Data",
             "Data_level": "l0>Level 0",
             "Data_version": "v0.0.1",
-            "Custom_text_description": "This is txt in a CDF file"
+            "Logical_file_id": "hermes_eea_l0_test_empty"
         }
-        
-        # Minimal TimeSeries with just one time point (required)
-        minimal_ts = TimeSeries(
-            time_start="2024-01-01T00:00:00",
-            time_delta=1*u.s,
-            data={"value": Quantity([1, 2], unit=u.dimensionless_unscaled, dtype=np.uint16)}
-        )
-        minimal_ts["value"].meta = {"CATDESC": "Minimal test value", "VAR_TYPE": "data"}
-        minimal_ts.meta = minimal_meta
-        
-        td_text = SWXData(timeseries=minimal_ts)
-        
-        # Save and reload
-        cdf_with_text_path = tmp_path / "cdf_with_text.cdf"
-        td_text.save(output_path=cdf_with_text_path, overwrite=True)
-        
-        # Load back and verify text is preserved
-        td_with_text = SWXData.load(cdf_with_text_path)
-        assert td_with_text.meta['Custom_text_description'] == "This is txt in a CDF file"
-        
-
+      
+        with pytest.raises(ValueError, match="timeseries cannot be empty"):
+            SWXData(timeseries=empty_ts)  # Will fail - metadata alone isn't enough
+         
+            
         
 

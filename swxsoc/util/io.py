@@ -347,7 +347,10 @@ class CDFHandler(SWXIOHandler):
         # attribute rather than a scalar attribute
         wcs.wcs.mjdref = [time[0].mjd, 0]
         wcs.wcs.timeunit = "ns"
-        time_delta = time[1] - time[0]
+        if len(time) > 1:
+            time_delta = time[1] - time[0]
+        else: # If there is only one time entry, we cannot calculate a time delta. We will default to 1 ns
+            time_delta = 1 * u.ns
         wcs.wcs.timedel = time_delta.to("ns").value
 
         return wcs

@@ -80,7 +80,7 @@ def cdf_dump(file_path, show_data=True, max_values=10, summary=False, variable=N
             
             # Variable attributes
             if var.attrs:
-                print(f"  Attributes:")
+                print("  Attributes:")
                 for attr_name in sorted(var.attrs.keys()):
                     attr_value = var.attrs[attr_name]
                     # Truncate long attribute values

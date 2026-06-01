@@ -19,10 +19,6 @@ from ndcube import NDCube, NDCollection
 spacepy = pytest.importorskip("spacepy.pycdf")
 from spacepy.pycdf import CDFError
 
-# Skip all tests in this module if matplotlib is not available
-matplotlib = pytest.importorskip("matplotlib")
-from matplotlib.axes import Axes
-
 from swxsoc.swxdata import SWXData
 from swxsoc.util.schema import SWXSchema
 from swxsoc.util.validation import validate
@@ -690,6 +686,10 @@ def test_sw_data_plot():
     Test asserts the SWXData.plot() function generates matplotlib
     images as expected.
     """
+    # Skip this test if matplotlib is not available
+    matplotlib = pytest.importorskip("matplotlib")
+    from matplotlib.axes import Axes
+    
     # fmt: off
     input_attrs = {
         "Descriptor": "EEA>Electron Electrostatic Analyzer",

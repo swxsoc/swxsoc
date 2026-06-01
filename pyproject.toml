@@ -25,10 +25,11 @@ classifiers = [
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Physics",
 ]
+# base dependencies required for core functionality, excluding optional file format support and development dependencies
 dependencies = [
   'astropy>=5.3.3',
   'numpy>=1.18.0',
-  'sunpy[all]>=5.0.1',
+  'sunpy[net]>=5.0.1',  # Sunpy with network/data fetching support, all but matplotlib...
   'ndcube>=2.2.0',
   'parfive>=2.1.0',
   'pyyaml>=5.3.1',
@@ -45,6 +46,7 @@ Documentation = "https://swxsoc.readthedocs.io/en/latest/"
 cdf = [
   'spacepy>=0.5.0',
   'sammi-cdf>=0.1.2',
+  'matplotlib>=3.5.0',  # Required only for SWXData (CDF) plotting functionality
 ]
 
 # FITS file format support (already included via astropy)

@@ -14,11 +14,14 @@ import astropy.units as u
 from astropy.nddata import NDData
 from astropy.wcs import WCS
 from ndcube import NDCube, NDCollection
-from matplotlib.axes import Axes
 
 # Skip all tests in this module if spacepy is not available
 spacepy = pytest.importorskip("spacepy.pycdf")
 from spacepy.pycdf import CDFError
+
+# Skip all tests in this module if matplotlib is not available
+matplotlib = pytest.importorskip("matplotlib")
+from matplotlib.axes import Axes
 
 from swxsoc.swxdata import SWXData
 from swxsoc.util.schema import SWXSchema

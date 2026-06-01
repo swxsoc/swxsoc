@@ -5,20 +5,21 @@ This code is based on that provided by SpacePy see
     licenses/SPACEPY.rst
 """
 
-from pathlib import Path
+import math
 from collections import OrderedDict
 from copy import deepcopy
+from pathlib import Path
 from typing import Optional
-import math
 
 import numpy as np
+from astropy import units as u
 from astropy.table import Table
 from astropy.time import Time
-from astropy import units as u
-
 from sammi.cdf_attribute_manager import CdfAttributeManager
+
 import swxsoc
-from swxsoc.util import util, const
+import swxsoc.io.fillval as fv
+from swxsoc.util import const, util
 
 __all__ = ["SWXSchema"]
 
@@ -853,39 +854,17 @@ class SWXSchema(CdfAttributeManager):
             return "Epoch"
 
     def _get_fillval(self, var_name, var_data, guess_type, **kwargs):
-        # Get the Variable Data
-        if guess_type == const.CDF_TIME_TT2000.value:
-            return Time("9999-12-31T23:59:59.999999", format="isot")
-        else:
-            # Get the FILLVAL for the gussed data type
-            fillval = self._fillval_helper(cdf_type=guess_type)
-            return fillval
+        """
+        Return the ISTP ``FILLVAL`` sentinel for the given CDF data type.
 
-    def _fillval_helper(self, cdf_type):
-        # Fill value, indexed by the CDF type (numeric)
-        fillvals = {}
-        # Integers
-        for i in (1, 2, 4, 8):
-            fillvals[getattr(const, "CDF_INT{}".format(i)).value] = -(2 ** (8 * i - 1))
-            if i == 8:
-                continue
-            fillvals[getattr(const, "CDF_UINT{}".format(i)).value] = 2 ** (8 * i) - 1
-        fillvals[const.CDF_EPOCH16.value] = (-1e31, -1e31)
-        fillvals[const.CDF_REAL8.value] = -1e31
-        fillvals[const.CDF_REAL4.value] = -1e31
-        fillvals[const.CDF_CHAR.value] = " "
-        fillvals[const.CDF_UCHAR.value] = " "
-        # Equivalent pairs
-        for cdf_t, equiv in (
-            (const.CDF_TIME_TT2000, const.CDF_INT8),
-            (const.CDF_EPOCH, const.CDF_REAL8),
-            (const.CDF_BYTE, const.CDF_INT1),
-            (const.CDF_FLOAT, const.CDF_REAL4),
-            (const.CDF_DOUBLE, const.CDF_REAL8),
-        ):
-            fillvals[cdf_t.value] = fillvals[equiv.value]
-        value = fillvals[cdf_type]
-        return value
+        The numeric sentinels (including those for the Epoch types
+        ``CDF_TIME_TT2000``, ``CDF_EPOCH`` and ``CDF_EPOCH16``) are defined by
+        :meth:`_fillval_helper` and follow the ISTP Metadata Guidelines.  The
+        CDF library separately exposes a human-readable display string for the
+        Epoch types (for example ``9999-12-31T23:59:59.999999999`` for
+        ``CDF_TIME_TT2000``); only the *stored number* is returned here.
+        """
+        return fv.get_fillval(cdf_type=guess_type)
 
     def _get_format(self, var_name, var_data, cdftype, **kwargs):
         """

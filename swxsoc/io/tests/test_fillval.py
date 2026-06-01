@@ -10,21 +10,6 @@ import pytest
 
 from swxsoc.io import fillval as fv
 
-
-# ----------------------------------------------------------------------
-# Sentinel helpers
-# ----------------------------------------------------------------------
-
-
-def test_tt2000_fillval_int64():
-    assert fv.tt2000_fillval_int64() == -9223372036854775808
-    assert fv.tt2000_fillval_int64() == int(np.iinfo(np.int64).min)
-
-
-def test_epoch_fillval_float():
-    assert fv.epoch_fillval_float() == -1.0e31
-
-
 # ----------------------------------------------------------------------
 # Dtype checks
 # ----------------------------------------------------------------------

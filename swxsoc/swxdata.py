@@ -950,7 +950,7 @@ class SWXData:
         path : `str`
             A path to the saved file.
         """
-        from swxsoc.io import CDFHandler
+        from swxsoc.io.cdf_handler import CDFHandler
 
         handler = CDFHandler()
         if not output_path:
@@ -981,7 +981,7 @@ class SWXData:
         ValueError: If the file type is not recognized as a file type that can be loaded.
 
         """
-        from swxsoc.io import CDFHandler
+        from swxsoc.io.cdf_handler import CDFHandler
 
         # Determine the file type
         file_extension = file_path.suffix

@@ -1,21 +1,22 @@
 """Tests for Loading and Saving data from data containers"""
 
+import tempfile
 from collections import OrderedDict
 from pathlib import Path
-import pytest
+
 import numpy as np
-from numpy.random import random
-import tempfile
-from astropy.timeseries import TimeSeries
+import pytest
+from astropy.nddata import NDData
 from astropy.time import Time
+from astropy.timeseries import TimeSeries
+from astropy.units import Quantity
 from astropy.utils.masked import Masked
+from astropy.wcs import WCS
+from ndcube import NDCollection, NDCube
+from numpy.random import random
+from spacepy.pycdf import CDF, CDFError
 
 from swxsoc.io import fillval as fv
-from astropy.units import Quantity
-from astropy.nddata import NDData
-from astropy.wcs import WCS
-from ndcube import NDCube, NDCollection
-from spacepy.pycdf import CDFError, CDF
 from swxsoc.swxdata import SWXData
 from swxsoc.util import const
 
@@ -327,7 +328,7 @@ def test_roundtrip_time_masked():
             epoch_var = next(k for k in cdf_file.keys() if "Epoch" in k)
             raw_epoch = cdf_file.raw_var(epoch_var)[:]
         assert raw_epoch.dtype == np.int64
-        assert raw_epoch[2] == fv.tt2000_fillval_int64()
+        assert raw_epoch[2] == fv.get_fillval(cdf_type=const.CDF_TIME_TT2000.value)
 
         td_loaded = SWXData.load(out_path)
         loaded_time = td_loaded.timeseries["time"]

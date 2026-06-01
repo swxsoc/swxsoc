@@ -8,21 +8,23 @@ SWXData instances back out to CDF.
 from collections import OrderedDict
 from datetime import datetime
 from pathlib import Path
-from typing import Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
-import numpy as np
 import astropy.units as u
+import numpy as np
 from astropy.nddata import NDData
 from astropy.time import Time
 from astropy.timeseries import TimeSeries
 from astropy.utils.masked import Masked
 from astropy.wcs import WCS
 from ndcube import NDCollection, NDCube
+from spacepy import pycdf
 
 import swxsoc
 from swxsoc.io import fillval as fv
 from swxsoc.io.base_handler import SWXIOHandler
 from swxsoc.swxdata import SWXData
+from swxsoc.util import const
 from swxsoc.util.exceptions import warn_user
 from swxsoc.util.schema import SWXSchema
 
@@ -41,6 +43,10 @@ class CDFHandler(SWXIOHandler):
 
         # CDF Schema
         self.schema = SWXSchema()
+
+    # ================================================================================================
+    #                                   CDF READER
+    # ================================================================================================
 
     def load_data(self, file_path: Path) -> Tuple[dict, dict, NDCollection, dict]:
         """
@@ -62,7 +68,6 @@ class CDFHandler(SWXIOHandler):
         meta: `dict`
             Global metadata attributes.
         """
-        from spacepy.pycdf import CDF
 
         if not file_path.exists():
             raise FileNotFoundError(f"CDF Could not be loaded from path: {file_path}")
@@ -78,7 +83,7 @@ class CDFHandler(SWXIOHandler):
         spectra = []
 
         # Open CDF file with context manager
-        with CDF(str(file_path)) as input_file:
+        with pycdf.CDF(str(file_path)) as input_file:
             # Add Global Attributes from the CDF file to TimeSeries
             input_global_attrs = {}
             for attr_name in input_file.attrs:
@@ -125,7 +130,7 @@ class CDFHandler(SWXIOHandler):
                 var_attrs = self._load_metadata_attributes(input_file[var_name])
 
                 # Extract the Variable's Data
-                var_data = input_file[var_name][...]
+                var_data: np.ndarray = input_file[var_name][...]
                 if input_file[var_name].rv():
                     # Find the TimeSeries Epoch for this Record-Varying Variable
                     epoch_key = SWXData.get_timeseres_epoch_key(
@@ -161,10 +166,35 @@ class CDFHandler(SWXIOHandler):
         # Return the given TimeSeries, NRV Data, Spectra Data, Global Metadata
         return timeseries, support, spectra, meta
 
-    def _load_metadata_attributes(self, var_data):
-        var_attrs = {}
+    def _load_metadata_attributes(self, var_data: pycdf.Var) -> Dict[str, Any]:
+        """
+        Load the variable-level (zVariable) attributes from a CDF variable.
+
+        Datetime values are converted to :class:`~astropy.time.Time`; all other
+        attribute values are returned unchanged.
+
+        For time-variable ``FILLVAL`` attributes, keep the canonical ISTP
+        numeric sentinel value instead of converting the CDF library's
+        datetime display representation to ``Time``. This preserves write/read
+        idempotency for load -> save round trips.
+
+        Parameters
+        ----------
+        var_data : `spacepy.pycdf.Var`
+            The CDF variable whose ``.attrs`` mapping should be read.
+
+        Returns
+        -------
+        var_attrs : dict[str, Any]
+            Mapping from attribute name to attribute value, with any
+            :class:`datetime.datetime` values promoted to
+            :class:`~astropy.time.Time`.
+        """
+        var_attrs: Dict[str, Any] = {}
         for attr_name in var_data.attrs:
-            if isinstance(var_data.attrs[attr_name], datetime):
+            if attr_name == "FILLVAL" and var_data.type() in self.schema.timetypes:
+                var_attrs[attr_name] = fv.get_fillval(var_data.type())
+            elif isinstance(var_data.attrs[attr_name], datetime):
                 # Metadata Attribute is a Datetime - we want to convert to Astropy Time
                 var_attrs[attr_name] = Time(var_data.attrs[attr_name])
             else:
@@ -172,11 +202,29 @@ class CDFHandler(SWXIOHandler):
                 var_attrs[attr_name] = var_data.attrs[attr_name]
         return var_attrs
 
-    def _load_epoch_variable(self, input_file, epoch_var):
+    def _load_epoch_variable(self, input_file: pycdf.CDF, epoch_var: str) -> Time:
         """
-        Read an Epoch variable, computing a fill mask from the raw underlying
-        TT2000 / EPOCH values.  Returns a ``Time`` whose native mask is set
-        on positions whose underlying value equals the ISTP fill sentinel.
+        Read an Epoch variable from a CDF file as an astropy :class:`~astropy.time.Time`.
+
+        The underlying raw numeric values (``int64`` for ``TT2000``, ``float64``
+        for ``EPOCH``) are inspected for the ISTP fill sentinel.  Positions
+        equal to the sentinel are marked using ``Time``'s native masking so the
+        result remains a :class:`~astropy.time.Time` compatible with
+        :class:`~astropy.timeseries.TimeSeries`.
+
+        Parameters
+        ----------
+        input_file : `spacepy.pycdf.CDF`
+            The open CDF file to read from.
+        epoch_var : str
+            The name of the Epoch variable to load.
+
+        Returns
+        -------
+        time_data : `~astropy.time.Time`
+            The Epoch column as an astropy ``Time``.  If any value equals the
+            ISTP fill sentinel, ``time_data.masked`` is ``True`` and
+            ``time_data.mask`` is set at those positions.
         """
         # Datetime-converted values for building Time
         time_data = Time(input_file[epoch_var][:].copy())
@@ -184,22 +232,62 @@ class CDFHandler(SWXIOHandler):
         # complex128 for EPOCH16) for sentinel detection.
         raw_values = input_file.raw_var(epoch_var)[:]
         raw_arr = np.asarray(raw_values)
+        # Determine the FILLVAL sentinel for this Epoch data type
         if raw_arr.dtype == np.int64:
-            sentinel = fv.tt2000_fillval_int64()
+            sentinel = fv.get_fillval(cdf_type=const.CDF_TIME_TT2000.value)
         elif raw_arr.dtype == np.float64:
-            sentinel = fv.epoch_fillval_float()
+            sentinel = fv.get_fillval(cdf_type=const.CDF_EPOCH.value)
         else:
             sentinel = None
+
+        # If not FILLVAL is defined for this data type, return the Time as-is without masking
         if sentinel is None:
             return time_data
+
         mask = raw_arr == sentinel
+        # If there is no mask, return the Time as-is without masking
         if not mask.any():
             return time_data
+
         # Use astropy.Time's native masking (compatible with TimeSeries).
         time_data[mask] = np.ma.masked
         return time_data
 
-    def _load_timeseries_variable(self, timeseries, var_name, var_data, var_attrs):
+    def _load_timeseries_variable(
+        self,
+        timeseries: TimeSeries,
+        var_name: str,
+        var_data: np.ndarray,
+        var_attrs: Dict[str, Any],
+    ) -> None:
+        """
+        Add a record-varying scalar variable to a :class:`~astropy.timeseries.TimeSeries`.
+
+        The variable is wrapped in an :class:`~astropy.units.Quantity` using the
+        ``UNITS`` zAttribute.  Fill values are converted to a boolean mask using
+        the ``FILLVAL`` attribute; for floating-point data, fill positions are
+        also normalized to ``NaN`` and the column is wrapped in
+        :class:`~astropy.utils.masked.Masked` when any mask bit is set.
+        Falls back to ``dimensionless_unscaled`` (with a warning) if the
+        ``UNITS`` string cannot be parsed.
+
+        Parameters
+        ----------
+        timeseries : `~astropy.timeseries.TimeSeries`
+            The target TimeSeries to add the column to.  Modified in place.
+        var_name : str
+            The column / variable name.
+        var_data : `numpy.ndarray`
+            The raw array of values read from the CDF.
+        var_attrs : dict[str, Any]
+            The variable-level metadata, including ``UNITS`` and (optionally)
+            ``FILLVAL``.
+
+        Returns
+        -------
+        None
+        """
+        # Get the FILLVAL MASK and apply FILLVAL -> NaN for float dtypes
         fillval = var_attrs.get("FILLVAL")
         mask = fv.compute_fill_mask(var_data, fillval)
         if fv.is_float_dtype(var_data):
@@ -226,11 +314,43 @@ class CDFHandler(SWXIOHandler):
             var_attrs["UNITS"] = u.dimensionless_unscaled.to_string()
             _load_data(timeseries, var_name, var_data, var_attrs)
 
-    def _load_support_variable(self, support, var_name, var_data, var_attrs):
+    def _load_support_variable(
+        self,
+        support: Dict[str, NDData],
+        var_name: str,
+        var_data: np.ndarray,
+        var_attrs: Dict[str, Any],
+    ) -> None:
+        """
+        Add a non-record-varying or support variable as an :class:`~astropy.nddata.NDData`.
+
+        Fill values are converted to a boolean mask using the ``FILLVAL``
+        attribute; for floating-point data, fill positions are additionally
+        normalized to ``NaN``.  Integer and string dtypes are preserved.
+
+        Parameters
+        ----------
+        support : dict[str, `~astropy.nddata.NDData`]
+            Mapping of support variable names to ``NDData`` containers.
+            Modified in place.
+        var_name : str
+            The variable name (used as the dict key).
+        var_data : `numpy.ndarray`
+            The raw array of values read from the CDF.
+        var_attrs : dict[str, Any]
+            The variable-level metadata; stored on the resulting ``NDData``
+            as ``.meta``.
+
+        Returns
+        -------
+        None
+        """
+        # Get the FILLVAL MASK and apply FILLVAL -> NaN for float dtypes
         fillval = var_attrs.get("FILLVAL")
         mask = fv.compute_fill_mask(var_data, fillval)
         if fv.is_float_dtype(var_data):
             var_data = fv.apply_fillval_to_nan(var_data, fillval)
+
         # Create a NDData entry for the variable
         support[var_name] = NDData(
             data=var_data,
@@ -239,20 +359,44 @@ class CDFHandler(SWXIOHandler):
         )
 
     def _get_tensor_attribute(
-        self, var_attrs, naxis, attribute_name, default_attribute
-    ):
+        self,
+        var_attrs: Dict[str, Any],
+        naxis: int,
+        attribute_name: str,
+        default_attribute: Any,
+    ) -> List[Any]:
         """
-        Function to get the `attribute_name` for each dimension of a multi-dimensional variable.
+        Collect per-dimension values for a 1-indexed WCS-style attribute.
 
-        For example if we have variable 'des_dist_brst' and we want to get the `.cunit` member
-        for the WCS corresponding to the 'CUNIT' Keyword Attribute:
-        - 'CUNIT1': 'eV'    (DEPEND_3: 'mms1_des_energy_brst')
-        - 'CUNIT2': 'deg'   (DEPEND_2: 'mms1_des_theta_brst')
-        - 'CUNIT3': 'deg'   (DEPEND_1: 'mms1_des_phi_brst' )
-        - 'CUNIT4': 'ns'    (DEPEND_0: 'Epoch')
+        For each axis ``i`` in ``range(naxis)``, looks for the zAttribute
+        ``f"{attribute_name}{i + 1}"`` in ``var_attrs`` and falls back to
+        ``default_attribute`` if it is missing.
 
-        We want to return a list of these units:
-        ['eV', 'deg', 'deg', 'ns']
+        For example, for a variable ``'des_dist_brst'`` and ``attribute_name='CUNIT'``
+        with ``naxis=4``::
+
+            'CUNIT1': 'eV'    (DEPEND_3: 'mms1_des_energy_brst')
+            'CUNIT2': 'deg'   (DEPEND_2: 'mms1_des_theta_brst')
+            'CUNIT3': 'deg'   (DEPEND_1: 'mms1_des_phi_brst')
+            'CUNIT4': 'ns'    (DEPEND_0: 'Epoch')
+
+        returns ``['eV', 'deg', 'deg', 'ns']``.
+
+        Parameters
+        ----------
+        var_attrs : dict[str, Any]
+            The variable's zAttribute mapping.
+        naxis : int
+            Number of axes to collect a value for.
+        attribute_name : str
+            Base WCS attribute name (e.g. ``'CUNIT'`` or ``'CTYPE'``).
+        default_attribute : Any
+            Value to use when ``f"{attribute_name}{i + 1}"`` is absent.
+
+        Returns
+        -------
+        attr_values : list[Any]
+            Length-``naxis`` list of per-dimension attribute values.
         """
         # Get `attribute_name` for each of the dimensions
         attr_values = []
@@ -267,7 +411,41 @@ class CDFHandler(SWXIOHandler):
 
         return attr_values
 
-    def _get_world_coords(self, var_data, var_attrs, time):
+    def _get_world_coords(
+        self,
+        var_data: np.ndarray,
+        var_attrs: Dict[str, Any],
+        time: Time,
+    ) -> WCS:
+        """
+        Build an astropy :class:`~astropy.wcs.WCS` for a multi-dimensional variable.
+
+        The number of axes is taken from the ``WCSAXES`` zAttribute when
+        present, otherwise from ``var_data.shape``.  WCS properties
+        (``ctype``, ``cunit``, ``cdelt``, ``crpix``, ``crval``, ``cname``,
+        ``...``) are populated from per-axis zAttributes via
+        :meth:`_get_tensor_attribute`, using the mapping defined in
+        :attr:`SWXSchema.wcs_keyword_to_astropy_property`.  Time-related
+        WCS fields (``timesys``, ``mjdref``, ``timeunit``, ``timedel``)
+        are filled in from the provided ``time`` column.
+
+        Parameters
+        ----------
+        var_data : `numpy.ndarray`
+            The variable data array (used to infer ``naxis`` when ``WCSAXES``
+            is not provided).
+        var_attrs : dict[str, Any]
+            The variable's zAttribute mapping.
+        time : `~astropy.time.Time`
+            The Epoch column associated with this variable; used to set
+            ``MJDREF`` and the time cadence (``TIMEDEL``).
+
+        Returns
+        -------
+        wcs : `~astropy.wcs.WCS`
+            A configured WCS object suitable for attaching to an
+            :class:`~ndcube.NDCube`.
+        """
         # Define WCS transformations in an astropy WCS object.
 
         # Get the N in var_attrs:
@@ -311,12 +489,51 @@ class CDFHandler(SWXIOHandler):
 
         return wcs
 
-    def _load_spectra_variable(self, spectra, var_name, var_data, var_attrs, time):
+    def _load_spectra_variable(
+        self,
+        spectra: List[Tuple[str, NDCube]],
+        var_name: str,
+        var_data: np.ndarray,
+        var_attrs: Dict[str, Any],
+        time: Time,
+    ) -> None:
+        """
+        Add a multi-dimensional variable to the spectra list as an :class:`~ndcube.NDCube`.
+
+        A WCS is constructed via :meth:`_get_world_coords`.  Fill values are
+        converted to a boolean mask using the ``FILLVAL`` attribute, and for
+        floating-point data fill positions are additionally normalized to
+        ``NaN``.  Integer and string dtypes are preserved and only the mask is
+        attached to the cube.  Falls back to ``dimensionless_unscaled`` (with a
+        warning) if the ``UNITS`` string cannot be parsed.
+
+        Parameters
+        ----------
+        spectra : list[tuple[str, `~ndcube.NDCube`]]
+            The accumulating list of ``(name, cube)`` pairs that will be
+            wrapped in an :class:`~ndcube.NDCollection` after all variables
+            have been loaded.  Modified in place.
+        var_name : str
+            The variable name.
+        var_data : `numpy.ndarray`
+            The raw multi-dimensional array of values read from the CDF.
+        var_attrs : dict[str, Any]
+            The variable-level metadata, including ``UNITS`` and (optionally)
+            ``FILLVAL`` and WCS-related axis attributes.
+        time : `~astropy.time.Time`
+            The Epoch column associated with this variable; passed through to
+            :meth:`_get_world_coords` for the time axis.
+
+        Returns
+        -------
+        None
+        """
+        # Get the FILLVAL MASK and apply FILLVAL -> NaN for float dtypes
         fillval = var_attrs.get("FILLVAL")
         mask = fv.compute_fill_mask(var_data, fillval)
         if fv.is_float_dtype(var_data):
             var_data = fv.apply_fillval_to_nan(var_data, fillval)
-        cube_mask = mask if mask.any() else None
+        cube_mask: Optional[np.ndarray] = mask if mask.any() else None
 
         def _load_data(spectra, var_name, var_data, var_attrs, time):
             # Create a World Cordinate System for the Tensor
@@ -344,7 +561,11 @@ class CDFHandler(SWXIOHandler):
             var_attrs["UNITS"] = u.dimensionless_unscaled.to_string()
             _load_data(spectra, var_name, var_data, var_attrs, time)
 
-    def save_data(self, data, file_path: Path):
+    # ================================================================================================
+    #                                   CDF WRITER
+    # ================================================================================================
+
+    def save_data(self, data: SWXData, file_path: Path):
         """
         Save heliophysics data to a CDF file.
 
@@ -360,20 +581,18 @@ class CDFHandler(SWXIOHandler):
         path : `pathlib.Path`
             A path to the saved file.
         """
-        from spacepy.pycdf import CDF
-
         # Initialize a new CDF
         cdf_filename = f"{data.meta['Logical_file_id']}.cdf"
         output_cdf_filepath = str(Path(file_path) / cdf_filename)
-        with CDF(output_cdf_filepath, masterpath="") as cdf_file:
-            # Add Global Attriubtes to the CDF File
+        with pycdf.CDF(output_cdf_filepath, masterpath="") as cdf_file:
+            # Add Global Attributes to the CDF File
             self._convert_global_attributes_to_cdf(data, cdf_file)
 
-            # Add zAttributes
+            # Add zVariables to the CDF File
             self._convert_variables_to_cdf(data, cdf_file)
         return Path(output_cdf_filepath)
 
-    def _convert_global_attributes_to_cdf(self, data, cdf_file):
+    def _convert_global_attributes_to_cdf(self, data: SWXData, cdf_file: pycdf.CDF):
         # Loop though Global Attributes in target_dict
         for attr_name, attr_value in data.meta.items():
             # Make sure the Value is not None
@@ -384,7 +603,7 @@ class CDFHandler(SWXIOHandler):
                 # Add the Attribute to the CDF File
                 cdf_file.attrs[attr_name] = attr_value
 
-    def _convert_variables_to_cdf(self, data, cdf_file):
+    def _convert_variables_to_cdf(self, data: SWXData, cdf_file: pycdf.CDF):
         # Make sure the Default "Epoch" is present in the CDF
         default_timeseries_key = swxsoc.config["general"]["default_timeseries_key"]
         if default_timeseries_key not in data.data["timeseries"]:
@@ -442,7 +661,9 @@ class CDFHandler(SWXIOHandler):
             return np.asarray(var_data.unmasked.value)
         return np.asarray(var_data.value)
 
-    def _write_timeseries_variable(self, var_name, var_data, cdf_file):
+    def _write_timeseries_variable(
+        self, var_name: str, var_data: Any, cdf_file: pycdf.CDF
+    ):
         fillval = var_data.meta.get("FILLVAL")
         if fillval is None:
             swxsoc.log.debug(
@@ -452,7 +673,9 @@ class CDFHandler(SWXIOHandler):
         values = self._unmasked_quantity_value(var_data)
         cdf_file[var_name] = fv.apply_fill_on_write(values, mask, fillval)
 
-    def _write_support_variable(self, var_name, var_data, cdf_file):
+    def _write_support_variable(
+        self, var_name: str, var_data: Any, cdf_file: pycdf.CDF
+    ):
         fillval = var_data.meta.get("FILLVAL")
         if fillval is None:
             swxsoc.log.debug(
@@ -471,7 +694,9 @@ class CDFHandler(SWXIOHandler):
             recVary=(var_data.meta["VAR_TYPE"] == "data"),
         )
 
-    def _write_spectra_variable(self, var_name, var_data, cdf_file):
+    def _write_spectra_variable(
+        self, var_name: str, var_data: Any, cdf_file: pycdf.CDF
+    ):
         fillval = var_data.meta.get("FILLVAL")
         if fillval is None:
             swxsoc.log.debug(
@@ -481,9 +706,9 @@ class CDFHandler(SWXIOHandler):
         raw_data = np.asarray(var_data.data)
         cdf_file[var_name] = fv.apply_fill_on_write(raw_data, mask, fillval)
 
-    def _write_time_variable(self, epoch_key, var_data, cdf_file):
+    def _write_time_variable(self, epoch_key: str, var_data: Time, cdf_file: pycdf.CDF):
         """
-        Write the Epoch column.  Falls back to the historical datetime-based
+        Write the Epoch column. Falls back to the historical datetime-based
         write path when the column is not masked; for a masked time column
         we write raw TT2000 nanoseconds (int64) with the ISTP sentinel at
         masked positions to preserve precision.
@@ -510,22 +735,39 @@ class CDFHandler(SWXIOHandler):
 
             dt_array[mask] = _datetime(2000, 1, 1)
         ttns = np.asarray(cdflib.v_datetime_to_tt2000(dt_array), dtype=np.int64)
-        ttns[mask] = fv.tt2000_fillval_int64()
+        ttns[mask] = fv.get_fillval(cdf_type=cdfconst.CDF_TIME_TT2000.value)
         cdf_file.new(
             name=epoch_key,
             data=ttns,
             type=cdfconst.CDF_TIME_TT2000,
         )
 
-    def _convert_variable_attributes_to_cdf(self, var_name, var_data, cdf_file):
+    def _convert_variable_attributes_to_cdf(
+        self, var_name: str, var_data: Any, cdf_file: pycdf.CDF
+    ):
+        var: pycdf.Var = cdf_file[var_name]
+        var_cdf_type = var.type()
+        # Epoch-type variables need FILLVAL written with a matching CDF type so
+        # downstream ISTP validators see the sentinel as the same type as the
+        # variable (otherwise pycdf would infer CDF_INT8 / CDF_REAL8 from the
+        # raw numeric value returned by ``swxsoc.io.fillval.get_fillval``).
+        epoch_types = set(self.schema.timetypes)
+
         for var_attr_name, var_attr_val in var_data.meta.items():
             if var_attr_val is None:
                 raise ValueError(
                     f"Variable {var_name}: Cannot Add vAttr: {var_attr_name}. Value was {str(var_attr_val)}"
                 )
+            elif var_attr_name == "FILLVAL" and var_cdf_type in epoch_types:
+                # Set FILLVAL with the variable's own CDF type
+                var.attrs.new(
+                    name=var_attr_name,
+                    data=var_attr_val,
+                    type=var_cdf_type,
+                )
             elif isinstance(var_attr_val, Time):
                 # Convert the Attribute to Datetime before adding to CDF File
-                cdf_file[var_name].attrs[var_attr_name] = var_attr_val.to_datetime()
+                var.attrs[var_attr_name] = var_attr_val.to_datetime()
             else:
                 # Add the Attribute to the CDF File
-                cdf_file[var_name].attrs[var_attr_name] = var_attr_val
+                var.attrs[var_attr_name] = var_attr_val

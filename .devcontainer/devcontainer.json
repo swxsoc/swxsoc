@@ -57,12 +57,13 @@
 				"ms-toolsai.jupyter-renderers",
 				"ms-toolsai.jupyter-keymap",
 				"jithurjacob.nbpreviewer"
-			],
+			]
 		}
 	},
 	// Mount to a volume if you'd like to persist data to your disk
 	"mounts": [
-		"source=${localEnv:HOME}/.bash_profile,target=/home/vscode/.bashrc,type=bind,consistency=cached"
+		"source=${localEnv:HOME}/.bash_profile,target=/home/vscode/.bashrc,type=bind,consistency=cached",
+		"source=/Users/rstrub/junk,target=/workspaces/swxsoc/junk,type=bind,consistency=cached"
 	],
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],

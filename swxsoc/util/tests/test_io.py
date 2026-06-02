@@ -7,14 +7,28 @@ import numpy as np
 from numpy.random import random
 import tempfile
 from astropy.timeseries import TimeSeries
+from astropy.table import Table
 from astropy.time import Time
 from astropy.units import Quantity
+import astropy.units as u
 from astropy.nddata import NDData
 from astropy.wcs import WCS
 from ndcube import NDCube, NDCollection
 from spacepy.pycdf import CDFError, CDF
 from swxsoc.swxdata import SWXData
 from swxsoc.util import const
+
+
+def save_cdf_for_examination(sw_data, filename=None):
+    """Save a copy to current dir for examination with custom filename or logical id.
+       No output path will put it in the current directory which is the point of this
+       function."""
+    if False: # change to True if you'd like to use this feature
+        if filename:
+            # Add .cdf suffix if not already present
+            if not filename.endswith('.cdf'):
+                filename = filename + '.cdf'
+        sw_data.save(output_path=filename, overwrite=True)
 
 
 def get_test_sw_data():
@@ -88,6 +102,7 @@ def test_cdf_io():
     with tempfile.TemporaryDirectory() as tmpdirname:
         # Convert SWXData the to a CDF File
         test_file_output_path = td.save(output_path=tmpdirname)
+        save_cdf_for_examination(td, "io")
 
         # Load the CDF to a SWXData Object
         td_loaded = SWXData.load(test_file_output_path)
@@ -119,6 +134,7 @@ def test_cdf_nrv_support_data():
         tmp_path = Path(tmpdirname)
         # Convert HermesData the to a CDF File
         test_file_output_path = td.save(output_path=tmp_path)
+        save_cdf_for_examination(td, "nrv_support_data")
 
         # Load the JSON file as JSON
         with CDF(str(test_file_output_path), readonly=False) as cdf_file:
@@ -151,6 +167,7 @@ def test_cdf_spectra_data():
         tmp_path = Path(tmpdirname)
         # Convert HermesData the to a CDF File
         test_file_output_path = td.save(output_path=tmp_path)
+        save_cdf_for_examination(td, "spectra_data")
 
         # Load the JSON file as JSON
         with CDF(str(test_file_output_path), readonly=False) as cdf_file:
@@ -162,3 +179,113 @@ def test_cdf_spectra_data():
         td_loaded = SWXData.load(test_file_output_path)
 
         assert "Test_Spectra_Var" in td_loaded.spectra
+
+
+def test_cdf_custom_filename():
+    """
+    Test that a custom filename can be provided instead of using Logical_file_id.
+    Tests the smart path logic where output_path can be either:
+    - A directory (uses Logical_file_id)
+    - A full file path (uses that filename)
+    """
+    # Get Test Data
+    td = get_test_sw_data()
+    assert isinstance(td.timeseries, TimeSeries) 
+    assert isinstance(td.timeseries, Table)
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        tmp_path = Path(tmpdirname)
+        expected_name = f"{td.meta['Logical_file_id']}.cdf"
+        
+        # Test 1: Save with directory path only (uses Logical_file_id)
+        
+        test_file_output_path = td.save(output_path=tmp_path)
+        save_cdf_for_examination(td)
+        
+        # Verify the file was created with Logical_file_id
+        assert test_file_output_path.exists()
+        assert test_file_output_path.name == expected_name
+        assert test_file_output_path.parent == tmp_path
+
+        # Test 2: Save with full file path (custom filename)
+        custom_filename = "my_custom_test_file.cdf"
+        test_file_output_path = td.save(output_path=tmp_path / custom_filename)
+        save_cdf_for_examination(td, custom_filename)
+        # Verify the file was created with the custom name
+        assert test_file_output_path.name == custom_filename
+        assert test_file_output_path.exists()
+        assert test_file_output_path.parent == tmp_path
+        
+        # Load the file back and verify it's correct
+        td_loaded = SWXData.load(test_file_output_path)
+        
+        assert len(td.timeseries) == len(td_loaded.timeseries)
+        assert len(td.timeseries.columns) == len(td_loaded.timeseries.columns)
+        
+        # Test 3: Overwrite with directory path
+        test_file_output_path_default = td.save(output_path=tmp_path, overwrite=True)
+        assert test_file_output_path_default.name == expected_name
+        assert test_file_output_path_default.exists()
+        
+        # Test 4: Save with no path (saves to current dir with Logical_file_id)
+        test_file_output_path_cwd = td.save(overwrite=True)
+        assert test_file_output_path_cwd.exists()
+        assert test_file_output_path_cwd.name == expected_name
+        # Clean up file in current directory
+        test_file_output_path_cwd.unlink()
+        
+        # Test 5: Custom filename with overwrite (covers both parameters together)
+        another_custom_filename = "overwrite_test"
+        test_file_output_path_overwrite = td.save(
+            output_path=tmp_path / another_custom_filename, overwrite=True
+        )
+        assert test_file_output_path_overwrite.name == another_custom_filename + ".cdf"
+        assert test_file_output_path_overwrite.exists()
+        
+        # Test 6: Create actual FITS file for comparison with CDF
+        # This demonstrates that FITS and CDF are different formats
+        fits_filename = "real_fits_format.fits"
+        fits_path = tmp_path / fits_filename
+        
+        # Convert TimeSeries to Table and write as actual FITS format
+        fits_table = Table(td.timeseries)
+        fits_table.write(fits_path, format='fits', overwrite=True)
+        
+        # Verify FITS file was created
+        assert fits_path.exists()
+        
+        # Astropy can read it back as a Table
+        loaded_fits_table = Table.read(fits_path, format='fits')
+        assert len(loaded_fits_table) == len(td.timeseries)
+        
+        # But SWXData.load() cannot read FITS format (only CDF)
+        with pytest.raises(Exception):
+            SWXData.load(fits_path)  # Will fail - no FITS handler exists
+        
+        
+        # Test 7: Cannot create SWXData with empty TimeSeries (even with metadata)
+        # This demonstrates SWXData validation requires actual time points, not just metadata
+        
+        # Create a TimeSeries and then remove all rows to make it empty
+        ts_with_data = TimeSeries(
+            time_start="2024-01-01T00:00:00", 
+            time_delta=1*u.s, 
+            n_samples=2,
+            data={"value": [1, 2] * u.dimensionless_unscaled}
+        )
+        empty_ts = ts_with_data[:0]  # Slice to get empty TimeSeries (length 0)
+        
+        # Add metadata - but it won't help, still needs time points
+        empty_ts.meta = {
+            "Descriptor": "EEA>Empty Test Data",
+            "Data_level": "l0>Level 0",
+            "Data_version": "v0.0.1",
+            "Logical_file_id": "hermes_eea_l0_test_empty"
+        }
+      
+        with pytest.raises(ValueError, match="timeseries cannot be empty"):
+            SWXData(timeseries=empty_ts)  # Will fail - metadata alone isn't enough
+         
+            
+        
+

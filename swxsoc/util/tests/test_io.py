@@ -23,7 +23,7 @@ def save_cdf_for_examination(sw_data, filename=None):
     """Save a copy to current dir for examination with custom filename or logical id.
        No output path will put it in the current directory which is the point of this
        function."""
-    if True: # change to True if you'd like to use this feature
+    if False: # change to True if you'd like to use this feature
         if filename:
             # Add .cdf suffix if not already present
             if not filename.endswith('.cdf'):

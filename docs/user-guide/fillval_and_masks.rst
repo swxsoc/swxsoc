@@ -1,19 +1,19 @@
 .. _fillval_and_masks:
 
-**********************************
-FILLVAL, NaN, and Mask Round-trips
-**********************************
+**********************************************
+Tagging Missing or Bad Data: FILLVAL and Masks
+**********************************************
 
 Overview
 ========
 
-``swxsoc`` round-trips missing data between in-memory containers and CDF files using the ISTP FILLVAL convention.
+``swxsoc`` supports tagging missing or bad data with our in-memory containers and seamlessly converts these tags values in CDF files using the ISTP FILLVAL convention.
 Masks are the canonical in-memory representation of missing data.
-For convenience, floating-point NaN values are also treated as missing on the write path.
+For convenience, floating-point NaN values are also treated as missing.
 Integer and string dtypes are never promoted to floats; missing positions are tracked exclusively through a boolean mask.
 
-Per-dtype behavior
-==================
+Missing Values Across Data Types
+================================
 
 .. list-table::
    :header-rows: 1
@@ -36,8 +36,8 @@ Per-dtype behavior
      - Single space ``b" "``
      - ``NDData`` with ``.mask`` set; data shows ``b" "`` at masked positions
    * - Time (Epoch)
-     - ``Time`` column with native astropy masking (``t[i] = np.ma.masked``)
-     - Raw ``TT2000`` sentinel ``-9223372036854775808`` (or ``-1.0e31`` for ``EPOCH``)
+     - ``Time`` column with native astropy masking (``t[i] = np.ma.masked``), or a :class:`~astropy.utils.masked.Masked` wrapper around a ``Time``
+     - Raw ``TT2000`` sentinel ``-9223372036854775808`` (the masked write path always emits ``CDF_TIME_TT2000``). The reader also recognises the ``EPOCH`` sentinel ``-1.0e31`` in pre-existing files.
      - ``Time`` column with ``.mask`` set at sentinel positions
 
 Floats
@@ -80,9 +80,9 @@ String round-trips are intentionally asymmetric:
 
 * On write, any position equal to the literal bytes ``b"nan"`` or ``b"NaN"`` is treated as fill (this is how numpy coerces ``np.nan`` into ``S``/``U`` arrays) and is emitted to the CDF as a single space ``b" "``.
 * On read, only the spec sentinel ``b" "`` is mapped to a mask bit.
-  The literal string ``"nan"`` is never reinterpreted on read.
+  The literal string ``b"nan"`` is never reinterpreted on read.
 
-A consequence: a legitimate string value of ``"nan"`` will be coerced to fill on write.
+A consequence: a legitimate string value of ``b"nan"`` will be coerced to fill on write.
 If you need to preserve the literal four-byte string ``"nan"``, do not use it as a data value.
 
 Time / Epoch
@@ -96,17 +96,19 @@ Time columns use astropy's native masking on :class:`~astropy.time.Time`::
    t = Time(np.arange(5), format="unix")
    t[2] = np.ma.masked
 
-When a mask is present, the writer bypasses the datetime conversion path and writes raw ``TT2000`` nanoseconds (``int64``) so the ISTP sentinel ``-9223372036854775808`` is preserved exactly.
+When a mask is present, the writer emits the Epoch variable as ``CDF_TIME_TT2000`` and writes the raw ``int64`` nanosecond values directly, overwriting masked positions with the ISTP sentinel ``-9223372036854775808``.
+This preserves the integer sentinel exactly; the unmasked write path (which goes through ``Time.to_datetime()``) cannot represent it.
 On read, the time column comes back as a ``Time`` whose ``.mask`` is set at sentinel positions; ``.masked`` is ``True``.
+The reader also handles ``CDF_EPOCH`` (``float64``) variables, recognising the ``-1.0e31`` sentinel.
 
 Working with masks
 ==================
 
-After loading a CDF, you can inspect masks uniformly across container types::
+After loading a CDF, you can inspect missing values through the mask uniformly across types::
 
-   loaded = swxdata.timeseries["measurement"]   # Masked Quantity
-   mask = loaded.mask
-   raw = loaded.unmasked.value                  # underlying numpy array
+   loaded = swxdata.timeseries["measurement"]   # Masked Quantity if any positions were fill; otherwise a plain Quantity
+   mask = getattr(loaded, "mask", None)
+   raw = loaded.unmasked.value if mask is not None else loaded.value
 
    loaded_support = swxdata.support["my_int"]   # NDData
    mask = loaded_support.mask
@@ -123,4 +125,4 @@ Caveats
 
 * Integer dtypes are never promoted to float; rely on the mask to identify missing positions.
 * The string write path treats ``b"nan"`` / ``b"NaN"`` as fill regardless of any mask; the read path is strict and uses only ``b" "``.
-* For time columns, masked positions are written as raw ``TT2000`` nanoseconds; the historical datetime write path is unchanged when no mask is present.
+* For time columns, the masked write path always emits ``CDF_TIME_TT2000``; the historical datetime write path is unchanged when no mask is present.

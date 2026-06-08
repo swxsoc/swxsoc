@@ -71,6 +71,15 @@
       "python_version": "3.10",
       "install_command": "python -m pip install -r requirements.dev.txt",
       "test_command": "pytest --pyargs lambda_function/tests --tb=short -q"
+    },
+    {
+      "name": "sdc_aws_executor_lambda",
+      "enabled": true,
+      "repository": "swxsoc/sdc_aws_executor_lambda",
+      "ref": "main",
+      "python_version": "3.10",
+      "install_command": "python -m pip install -r requirements.dev.txt",
+      "test_command": "pytest --pyargs lambda_function/tests --tb=short -q"
     }
   ]
 }

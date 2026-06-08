@@ -941,8 +941,10 @@ class SWXData:
         Parameters
         ----------
         output_path : `pathlib.Path`, optional
-            A fully specified path to the directory where the file is to be saved.
-            If not provided, saves to the current directory.
+            Path to save location. Can be:
+            - A directory: saves using Logical_file_id from metadata as filename
+            - A full file path (with .cdf extension): saves using that filename
+            If not provided, saves to the current directory with Logical_file_id.
         overwrite : `bool`
             If set, overwrites existing file of the same name.
         Returns
@@ -955,11 +957,35 @@ class SWXData:
         handler = CDFHandler()
         if not output_path:
             output_path = Path.cwd()
+
+        output_path = Path(output_path)
+
+        # Smart logic: detect if output_path is a directory or full file path
+        if output_path.is_dir():
+            # It's a directory - use logical_file_id for filename
+            file_path = output_path
+            filename = None
+        elif not output_path.suffix:
+            # No suffix - add .cdf and treat as filename
+            file_path = (
+                output_path.parent if output_path.parent != Path() else Path.cwd()
+            )
+            filename = output_path.name + ".cdf"
+        else:
+            # Has suffix - use as filename
+            file_path = (
+                output_path.parent if output_path.parent != Path() else Path.cwd()
+            )
+            filename = output_path.name
+
         if overwrite:
-            cdf_file_path = output_path / (self.meta["Logical_file_id"] + ".cdf")
+            if filename:
+                cdf_file_path = file_path / filename
+            else:
+                cdf_file_path = file_path / (self.meta["Logical_file_id"] + ".cdf")
             if cdf_file_path.exists():
                 cdf_file_path.unlink()
-        return handler.save_data(data=self, file_path=output_path)
+        return handler.save_data(data=self, file_path=file_path, filename=filename)
 
     @classmethod
     def load(cls, file_path: Path):

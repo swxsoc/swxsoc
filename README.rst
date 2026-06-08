@@ -44,11 +44,12 @@ Installation
 Basic Installation
 ~~~~~~~~~~~~~~~~~~
 
-To install the core swxsoc package::
+To install the core swxsoc (FITS) package::
 
     pip install swxsoc
 
 This installs the base functionality without file format-specific dependencies.
+FITS support is provided through astropy, which is included in the base installation.
 
 Optional Dependencies
 ~~~~~~~~~~~~~~~~~~~~~
@@ -61,11 +62,6 @@ Different file formats require different optional dependencies:
 
 This installs spacepy and sammi-cdf for working with CDF files.
 
-**For FITS file support** (already included)::
-
-    pip install swxsoc[fits]
-
-FITS support is provided through astropy, which is included in the base installation.
 
 **For all file format support**::
 

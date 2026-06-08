@@ -724,9 +724,6 @@ class CDFHandler(SWXIOHandler):
             cdf_file[epoch_key] = var_data.to_datetime()
             return
 
-        from spacepy.pycdf import const as cdfconst
-        from spacepy.pycdf import lib as cdflib
-
         # ``Time`` supports native masking; ``Masked(Time)`` exposes ``.unmasked``.
         if isinstance(var_data, Masked):
             unmasked = var_data.unmasked
@@ -737,15 +734,14 @@ class CDFHandler(SWXIOHandler):
         # with the int64 sentinel below.
         dt_array = np.asarray(unmasked.to_datetime(), dtype=object)
         if mask.any():
-            from datetime import datetime as _datetime
-
-            dt_array[mask] = _datetime(2000, 1, 1)
-        ttns = np.asarray(cdflib.v_datetime_to_tt2000(dt_array), dtype=np.int64)
-        ttns[mask] = fv.get_fillval(cdf_type=cdfconst.CDF_TIME_TT2000.value)
+            # Insert temp mask sentinel to ensure valid for conversion
+            dt_array[mask] = datetime(2000, 1, 1)
+        ttns = np.asarray(pycdf.lib.v_datetime_to_tt2000(dt_array), dtype=np.int64)
+        ttns[mask] = fv.get_fillval(cdf_type=const.CDF_TIME_TT2000.value)
         cdf_file.new(
             name=epoch_key,
             data=ttns,
-            type=cdfconst.CDF_TIME_TT2000,
+            type=const.CDF_TIME_TT2000,
         )
 
     def _convert_variable_attributes_to_cdf(

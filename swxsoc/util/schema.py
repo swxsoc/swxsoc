@@ -859,7 +859,7 @@ class SWXSchema(CdfAttributeManager):
 
         The numeric sentinels (including those for the Epoch types
         ``CDF_TIME_TT2000``, ``CDF_EPOCH`` and ``CDF_EPOCH16``) are defined by
-        :meth:`_fillval_helper` and follow the ISTP Metadata Guidelines.  The
+        :func:`swxsoc.io.fillval.get_fillval` and follow the ISTP Metadata Guidelines.  The
         CDF library separately exposes a human-readable display string for the
         Epoch types (for example ``9999-12-31T23:59:59.999999999`` for
         ``CDF_TIME_TT2000``); only the *stored number* is returned here.

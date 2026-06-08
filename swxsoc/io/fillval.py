@@ -16,7 +16,7 @@ Conventions
   ``np.nan`` to the literal bytes ``b"nan"`` (and ``b"NaN"``) is also treated
   as fill.  The reader is strict: only the spec sentinel maps to a mask bit.
 - The ISTP FILLVAL values for specific CDF types (including the Epoch
-  variants) are owned by :meth:`swxsoc.util.schema.SWXSchema._fillval_helper`.
+  variants) are owned by :func:`swxsoc.io.fillval.get_fillval`.
 """
 
 from typing import Any

@@ -29,51 +29,38 @@ Example 1: Search by a combination of Attributes
 
 To search for data based on multiple attributes such as instrument, level, and time::
 
-    # Import necessary modules
-    from swxsoc.util.util import SWXSOCClient, AttrAnd, Instrument, Level, SearchTime, DevelopmentBucket
-
-    # Initialize the FIDO client
-    fido_client = SWXSOCClient()
-
-    # Test search with a query for specific instrument, level, and time
-    query = AttrAnd(
-        [
-            SearchTime("2024-01-01", "2025-01-01"),
-            DevelopmentBucket(False),
-            Level("l0"),
-            Instrument("eea"),
-        ]
-    )
-    # Search for data
-    results = fido_client.search(query)
-    print(results)
-
-.. code-block:: text
-
-    instrument mode  test           time          level version ...   size       bucket                     etag                storage_class    last_modified   
-                                                               ...   byte                                                                                       
-    ---------- ---- ----- ----------------------- ----- ------- ... ------- ---------------- ---------------------------------- ------------- -------------------
-    meddea None False 2024-03-27T13:46:16.000    l0       1 ...  4648.0 dev-padre-meddea "8fca00048426ec8a114750a4de80c161"      STANDARD 2024-08-09 17:12:09
-    meddea None  True 2024-03-27T13:46:16.000    l1   0.1.0 ... 25920.0 dev-padre-meddea "4b9c15fc55e8d05dd9b8414e146c51c3"      STANDARD 2024-08-09 17:12:24
+    >>> # Import necessary modules
+    >>> from sunpy.net.attr import AttrAnd
+    >>> from swxsoc.util.util import SWXSOCClient, Instrument, Level, SearchTime, DevelopmentBucket
+    >>> # Initialize the FIDO client
+    >>> fido_client = SWXSOCClient()  
+    >>> # Test search with a query for specific instrument, level, and time
+    >>> query = AttrAnd(
+    ...     [
+    ...         SearchTime("2024-01-01", "2025-01-01"),
+    ...         DevelopmentBucket(False),
+    ...         Level("l0"),
+    ...         Instrument("eea"),
+    ...     ]
+    ... )  # doctest: +SKIP
+    >>> # Search for data
+    >>> results = fido_client.search(query)  # doctest: +SKIP
+    >>> print(results)  # doctest: +SKIP
 
 Example 2: Search by a single Attribute
 ----------------------------------------
 
 To search for data based on a single attribute such as instrument::
 
-    # Import necessary modules
-    from swxsoc.util.util import SWXSOCClient, AttrAnd, Instrument
-
-    # Initialize the SWxSOC client
-    fido_client = SWXSOCClient()
-
-    # Test search with a query for specific instrument
-    query = AttrAnd([Instrument("meddea")])
-    results = fido_client.search(query)
-    print(results)
-
-.. code-block:: text
-
+    >>> # Import necessary modules
+    >>> from sunpy.net.attr import AttrAnd
+    >>> from swxsoc.util.util import SWXSOCClient, Instrument
+    >>> # Initialize the SWxSOC client
+    >>> fido_client = SWXSOCClient()  
+    >>> # Test search with a query for specific instrument
+    >>> query = AttrAnd([Instrument("meddea")])  # doctest: +SKIP
+    >>> results = fido_client.search(query)  # doctest: +SKIP
+    >>> print(results)  # doctest: +SKIP
     instrument mode  test           time          level version ...   size      bucket                   etag                storage_class    last_modified   
                                                                 ...   byte                                                                                    
     ---------- ---- ----- ----------------------- ----- ------- ... -------- ------------ ---------------------------------- ------------- -------------------
@@ -90,18 +77,13 @@ Example 3: Search all data
 
 To search for all data::
 
-    # Import necessary modules
-    from swxsoc.util.util import SWXSOCClient
-
-    # Initialize the SWxSOC client
-    fido_client = SWXSOCClient()
-
-    # Test search with a query for all data
-    results = fido_client.search()
-    print(results)
-
-.. code-block:: text
-
+    >>> # Import necessary modules
+    >>> from swxsoc.util.util import SWXSOCClient
+    >>> # Initialize the SWxSOC client
+    >>> fido_client = SWXSOCClient()
+    >>> # Test search with a query for all data
+    >>> results = fido_client.search()  # doctest: +SKIP
+    >>> print(results)  # doctest: +SKIP  
     instrument mode  test           time          level version ...   size      bucket                   etag                storage_class    last_modified   
                                                                 ...   byte                                                                                    
     ---------- ---- ----- ----------------------- ----- ------- ... -------- ------------ ---------------------------------- ------------- -------------------
@@ -128,35 +110,27 @@ Example to Download Data
 ------------------------
 Below is an example demonstrating how to download data using the `~swxsoc.util.util.SWXSOCClient` class::
 
-    # Import necessary modules
-    from swxsoc.util.util import SWXSOCClient, AttrAnd, Instrument, Level, SearchTime, DevelopmentBucket
-    from parfive import Downloader
-
-    # Initialize the SWxSOC client
-    fido_client = SWXSOCClient()
-
-    # Test search with a query for specific instrument, level, and time
-    query = AttrAnd(
-        [
-            SearchTime("2024-01-01", "2025-01-01"),
-            DevelopmentBucket(False),
-            Level("l0"),
-            Instrument("eea"),
-        ]
-    )
-
-    # Search for data
-    results = fido_client.search(query)
-
-    # Initialize a parfive Downloader object
-    dl = Downloader()
-
-    # Queue the download of the data to specific path
-    fido_client.fetch(query_results=results, downloader=dl, path="path/to/download")
-
-    # Start the download
-    dl.download()
-
-.. code-block:: text
-
+    >>> # Import necessary modules
+    >>> from sunpy.net.attr import AttrAnd
+    >>> from swxsoc.util.util import SWXSOCClient, Instrument, Level, SearchTime, DevelopmentBucket
+    >>> from parfive import Downloader
+    >>> # Initialize the SWxSOC client
+    >>> fido_client = SWXSOCClient()  # doctest: +SKIP
+    >>> # Test search with a query for specific instrument, level, and time
+    >>> query = AttrAnd(
+    ...     [
+    ...         SearchTime("2024-01-01", "2025-01-01"),
+    ...         DevelopmentBucket(False),
+    ...         Level("l0"),
+    ...         Instrument("eea"),
+    ...     ]
+    ... )  # doctest: +SKIP
+    >>> # Search for data
+    >>> results = fido_client.search(query)  # doctest: +SKIP
+    >>> # Initialize a parfive Downloader object
+    >>> dl = Downloader()  # doctest: +SKIP
+    >>> # Queue the download of the data to specific path
+    >>> fido_client.fetch(query_results=results, downloader=dl, path="path/to/download")  # doctest: +SKIP
+    >>> # Start the download
+    >>> dl.download()  # doctest: +SKIP
     Files Downloaded: 100% 2/2 [00:00<00:00,  2.59file/s]

@@ -41,42 +41,45 @@ The documentation is hosted on readthedocs and is available `here <https://swxso
 Installation
 ------------
 
-Basic Installation
-~~~~~~~~~~~~~~~~~~
+Basic Installation (FITS Support Included)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To install the core swxsoc (FITS) package::
+To install swxsoc with **FITS file support**::
 
     pip install swxsoc
 
-This installs the base functionality without file format-specific dependencies.
-FITS support is provided through astropy, which is included in the base installation.
+This includes:
 
-Optional Dependencies
-~~~~~~~~~~~~~~~~~~~~~
+- Core swxsoc functionality
+- **FITS file support** via astropy (no extra dependencies needed)
+- Network data retrieval capabilities
 
-Different file formats require different optional dependencies:
+**FITS users can stop here!** No additional installation needed.
 
-**For CDF file support** (requires NASA CDF library)::
+Optional CDF File Support
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Only if you need CDF file support**, install the optional CDF dependencies::
 
     pip install swxsoc[cdf]
 
-This installs spacepy and sammi-cdf for working with CDF files.
+This adds:
 
+- spacepy for CDF file I/O
+- sammi-cdf for SWxSOC-specific CDF metadata handling
+- matplotlib for plotting CDF data
 
-**For all file format support**::
+.. warning::
+   
+   CDF support requires the NASA CDF library to be installed separately on your system.
+   See the `spacepy installation guide <https://spacepy.github.io/install.html>`_ for details.
 
-    pip install swxsoc[all]
+Development Installation
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-**For development** (includes testing, documentation, and style tools)::
-
-    pip install -e .[all,test,docs,style]
-
-or simply::
+For developers (includes all formats, testing, documentation, and style tools)::
 
     pip install -e .[dev]
-
-Note: Installing spacepy requires the NASA CDF library to be installed separately.
-See the `spacepy installation guide <https://spacepy.github.io/install.html>`_ for details.
 
 Licenses
 --------

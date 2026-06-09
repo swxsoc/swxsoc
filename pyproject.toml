@@ -43,18 +43,20 @@ Documentation = "https://swxsoc.readthedocs.io/en/latest/"
 [project.optional-dependencies]
 # CDF file format support (spacepy requires NASA CDF library)
 # sammi-cdf is maintained by the SWxSOC team with metadata support for SWxSOC data products
+# Note: FITS support is included in base dependencies via astropy - no extra needed
 cdf = [
   'spacepy>=0.5.0',
   'sammi-cdf>=0.1.2',
   'matplotlib>=3.5.0',  # Required only for SWXData (CDF) plotting functionality
 ]
 
-# FITS file format support (already included via astropy)
+# FITS file format support (already included via astropy in base dependencies)
+# This extra is provided for completeness but installs no additional packages
 fits = [
   'astropy>=5.3.3',  # astropy.io.fits already included in base
 ]
 
-# All file format support
+# All file format support (currently just adds CDF since FITS is in base)
 all = [
   'swxsoc[cdf,fits]'
 ]

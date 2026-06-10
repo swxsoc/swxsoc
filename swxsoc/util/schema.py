@@ -421,47 +421,85 @@ class SWXSchema(CdfAttributeManager):
                 raise ValueError(msg)
         return d
 
-    def _types(self, data, backward=False, encoding="utf-8"):
+    def types(self, data, encoding="utf-8"):
         """
         Find dimensions and valid types of a nested list-of-lists
 
         Any given data may be representable by a range of CDF types; infer
         the CDF types which can represent this data. This breaks down to:
-          1. Proper kind (numerical, string, time)
-          2. Proper range (stores highest and lowest number)
-          3. Sufficient resolution (EPOCH16 or TT2000 required if astropy.time has
-             microseconds or below.)
 
-        If more than one value satisfies the requirements, types are returned
-        in preferred order:
-          1. Type that matches precision of data first, then
-          2. integer type before float type, then
-          3. Smallest type first, then
-          4. signed type first, then
-          5. specifically-named (CDF_BYTE) vs. generically named (CDF_INT1)
-        So for example, EPOCH_16 is preferred over EPOCH if L{data} specifies
-        below the millisecond level (rule 1), but otherwise EPOCH is preferred
-        (rule 2). TIME_TT2000 is always preferred as of 0.3.0.
+        1. Proper kind (numerical, string, time).
+        2. Proper range (stores highest and lowest number).
+        3. Sufficient resolution (EPOCH16 or TT2000 required if
+           astropy.time has microseconds or below).
+
+        When more than one type satisfies the requirements, candidates are
+        returned in preference order:
+
+        1. Type that matches the precision of the data first,
+        2. Integer type before float type,
+        3. Smallest type first,
+        4. Signed type first,
+        5. Specifically-named (``CDF_BYTE``) before generically-named (``CDF_INT1``).
+
+        ``CDF_TIME_TT2000`` is always preferred for :class:`~astropy.time.Time`
+        inputs since SWxSOC 0.3.0.
 
         For floats, four-byte is preferred unless eight-byte is required:
-          1. absolute values between 0 and 3e-39
-          2. absolute values greater than 1.7e38
+
+        1. Absolute values between 0 and ``3e-39``.
+        2. Absolute values greater than ``1.7e38``.
+        
         This will switch to an eight-byte double in some cases where four bytes
         would be sufficient for IEEE 754 encoding, but where DEC formats would
         require eight.
 
-        @param data: data for which dimensions and CDF types are desired
-        @type data: list (of lists)
-        @param backward: limit to pre-CDF3 types
-        @type backward: bool
-        @param encoding: Encoding to use for Unicode input, default utf-8
-        @type backward: str
-        @return: dimensions of L{data}, in order outside-in;
-                 CDF types which can represent this data;
-                 number of elements required (i.e. length of longest string)
-        @rtype: 3-tuple of lists ([int], [ctypes.c_long], [int])
-        @raise ValueError: if L{data} has irregular dimensions
+        Parameters
+        ----------
+        data : array-like, scalar, str, or `~astropy.time.Time`
+            The data for which dimensions and CDF types are desired. May be a
+            nested list-of-lists, a :class:`numpy.ndarray`, a Python scalar, a
+            string, or an :class:`~astropy.time.Time` instance.
+        encoding : `str`, optional
+            Encoding to use for Unicode (``U``) input when computing the
+            on-disk element length. Defaults to ``"utf-8"``.
 
+        Returns
+        -------
+        dims : `tuple` of `int`
+            Dimensions of ``data``, in order outside-in.
+        types : `list` of `int`
+            CDF type numbers (see :mod:`swxsoc.util.const`) which can
+            represent ``data``, in preferred order. The first entry is the
+            type that :py:class:`~swxsoc.io.cdf_handler.CDFHandler` uses on
+            write.
+        elements : `int`
+            Number of elements required per record (i.e. length of the
+            longest string for ``CDF_CHAR`` / ``CDF_UCHAR`` variables; ``1``
+            otherwise).
+
+        Raises
+        ------
+        ValueError
+            If ``data`` has irregular dimensions, is an empty object array,
+            or contains generic Python objects that cannot be converted to a
+            CDF type.
+
+        Notes
+        -----
+        The algorithm is adapted from
+        :py:meth:`spacepy.pycdf.istp.VarBundle._types`. See the
+        :ref:`cdf_format_guide` (Section 5, *Data Type Mapping*) for a full
+        user-facing description of the NumPy ``dtype`` → CDF type rules.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from swxsoc.util.schema import SWXSchema
+        >>> schema = SWXSchema()
+        >>> dims, types, elements = schema.types(np.array([1, 2, 3], dtype=np.int32))
+        >>> dims, types[0], elements
+        ((3,), 4, 1)
         """
         d = SWXSchema._check_well_formed(data)
         dims = d.shape
@@ -728,13 +766,13 @@ class SWXSchema(CdfAttributeManager):
         if not guess_types:
             if var_name == "time":
                 # Guess the const CDF Data Type
-                (guess_dims, guess_types, guess_elements) = self._types(var_data)
+                (guess_dims, guess_types, guess_elements) = self.types(var_data)
             elif hasattr(var_data, "value"):
                 # Support NDData use `.value`
-                (guess_dims, guess_types, guess_elements) = self._types(var_data.value)
+                (guess_dims, guess_types, guess_elements) = self.types(var_data.value)
             else:
                 # TimeSeries Quantity and Spectra NDCube use `.data`
-                (guess_dims, guess_types, guess_elements) = self._types(var_data.data)
+                (guess_dims, guess_types, guess_elements) = self.types(var_data.data)
 
         # Check the Attributes that can be derived
         var_type = self._get_var_type(var_name, var_data, guess_types[0])

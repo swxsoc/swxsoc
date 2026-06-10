@@ -12,6 +12,8 @@ Masks are the canonical in-memory representation of missing data.
 For convenience, floating-point NaN values are also treated as missing.
 Integer and string dtypes are never promoted to floats; missing positions are tracked exclusively through a boolean mask.
 
+The ``FILLVAL`` sentinel emitted for a given variable is determined by the CDF data type chosen for it; see :ref:`cdf_format_guide` (Section 5, *Data Type Mapping*) for the NumPy ``dtype`` → CDF type rules.
+
 Missing Values Across Data Types
 ================================
 

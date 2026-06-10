@@ -677,7 +677,16 @@ class CDFHandler(SWXIOHandler):
             )
         mask = self._get_mask(var_data)
         values = self._unmasked_quantity_value(var_data)
-        cdf_file[var_name] = fv.apply_fill_on_write(values, mask, fillval)
+        out_data = fv.apply_fill_on_write(values, mask, fillval)
+        # Get the CDF Data Type for the variable
+        _, var_data_types, _ = self.schema.types(values)
+        # Insert the Variable into the CDF File
+        cdf_file.new(
+            name=var_name,
+            data=out_data,
+            type=var_data_types[0],
+            recVary=True,
+        )
 
     def _write_support_variable(
         self, var_name: str, var_data: Any, cdf_file: pycdf.CDF
@@ -692,7 +701,8 @@ class CDFHandler(SWXIOHandler):
         out_data = fv.apply_fill_on_write(raw_data, mask, fillval)
         # Guess the data type to store
         # Documented in https://github.com/spacepy/spacepy/issues/707
-        _, var_data_types, _ = self.schema._types(raw_data)
+        _, var_data_types, _ = self.schema.types(raw_data)
+        # Insert the Variable into the CDF File
         cdf_file.new(
             name=var_name,
             data=out_data,
@@ -710,7 +720,16 @@ class CDFHandler(SWXIOHandler):
             )
         mask = self._get_mask(var_data)
         raw_data = np.asarray(var_data.data)
-        cdf_file[var_name] = fv.apply_fill_on_write(raw_data, mask, fillval)
+        out_data = fv.apply_fill_on_write(raw_data, mask, fillval)
+        # Get the CDF Data Type for the variable
+        _, var_data_types, _ = self.schema.types(raw_data)
+        # Insert the Variable into the CDF File
+        cdf_file.new(
+            name=var_name,
+            data=out_data,
+            type=var_data_types[0],
+            recVary=(var_data.meta["VAR_TYPE"] == "data"),
+        )
 
     def _write_time_variable(self, epoch_key: str, var_data: Time, cdf_file: pycdf.CDF):
         """

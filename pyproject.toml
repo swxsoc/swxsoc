@@ -78,6 +78,7 @@ write_to = "swxsoc/_version.py"
 testpaths = [
    "swxsoc/tests",
    "swxsoc/util/tests",
+   "swxsoc/io/tests",
    "swxsoc/net/tests",
    "swxsoc/db/tests",
    "docs"

@@ -82,6 +82,18 @@ class CDFHandler(SWXIOHandler):
         # CDF Schema
         self.schema = SWXSchema()
 
+    @staticmethod
+    def _cdf_name_to_dict_key(cdf_name: str) -> str:
+        """Convert CDF variable name format to dict key format.
+        CDF uses underscores, dict keys use hyphens."""
+        return cdf_name.replace("_", "-")
+
+    @staticmethod
+    def _dict_key_to_cdf_name(dict_key: str) -> str:
+        """Convert dict key format to CDF variable name format.
+        Dict keys use hyphens, CDF uses underscores."""
+        return dict_key.replace("-", "_")
+
     def load_data(self, file_path: Path) -> Tuple[dict, dict, NDCollection, dict]:
         """
         Load heliophysics data from a CDF file.
@@ -155,7 +167,7 @@ class CDFHandler(SWXIOHandler):
             for epoch_var in epoch_variables:
                 if epoch_var.endswith("_Epoch"):
                     # Prefixed format: "REACH_165_Epoch" -> "REACH-165"
-                    epoch_key = epoch_var[:-6].replace("_", "-")  # Remove "_Epoch" suffix
+                    epoch_key = self._cdf_name_to_dict_key(epoch_var[:-6])  # Remove "_Epoch" suffix
                 elif epoch_var == "Epoch" and default_ts_key is not None:
                     # Unprefixed "Epoch" with a default key specified in metadata
                     epoch_key = default_ts_key
@@ -163,6 +175,10 @@ class CDFHandler(SWXIOHandler):
                     # Legacy format: use "Epoch" as-is (for single timeseries files)
                     epoch_key = epoch_var
                 epoch_var_to_key[epoch_var] = epoch_key
+            
+            # Build prefix mapping once (epoch_key -> CDF prefix with underscores)
+            # to avoid repeated string replacements when processing variables
+            epoch_key_to_prefix = {key: self._dict_key_to_cdf_name(key) for key in epoch_var_to_key.values()}
             
             # Make sure at least one Epoch variable is present in the CDF
             if len(epoch_variables) == 0:
@@ -196,25 +212,24 @@ class CDFHandler(SWXIOHandler):
                 var_data = input_file[var_name][...]
                 if input_file[var_name].rv():
                     # Find the TimeSeries Epoch for this Record-Varying Variable
-                    epoch_var_name = SWXData.get_timeseres_epoch_key(
+                    # get_timeseres_epoch_key may return "Epoch" or a dict key like "REACH-134"
+                    result_key = SWXData.get_timeseres_epoch_key(
                         timeseries, var_data, var_attrs
                     )
-                    # Map epoch variable name back to the timeseries key
-                    # (e.g., "Epoch" -> "REACH-165", "REACH_134_Epoch" -> "REACH-134")
-                    if epoch_var_name in epoch_var_to_key:
-                        epoch_key = epoch_var_to_key[epoch_var_name]
+                    # Map CDF epoch variable name to dict key if needed
+                    # (e.g., "Epoch" -> "REACH-165"; "REACH-134" already converted)
+                    if result_key in epoch_var_to_key:
+                        epoch_key = epoch_var_to_key[result_key]
                     else:
-                        raise ValueError(
-                            f"Epoch variable '{epoch_var_name}' not found in epoch mapping. "
-                            f"Available epoch variables: {list(epoch_var_to_key.keys())}"
-                        )
+                        # Already a dict key (from prefixed epoch or legacy fallback)
+                        epoch_key = result_key
                     ts = timeseries[epoch_key]
                     
                     # Check if this variable has a prefix matching its epoch key
                     # and strip it to get the original column name - multi-timeseries code.
                     # CDF names have restrictions so real world names with hyphen conventions
                     # need to be replaced by underscores in the CDF.
-                    prefix = epoch_key.replace("-", "_")
+                    prefix = epoch_key_to_prefix[epoch_key]
                     if var_name.startswith(f"{prefix}_"):
                         original_var_name = var_name[len(prefix) + 1:]  # Strip "prefix_"
                     else:
@@ -457,7 +472,7 @@ class CDFHandler(SWXIOHandler):
 
         for epoch_key, ts in data.data["timeseries"].items():
             # Sanitize the epoch_key for use as a prefix (replace hyphens with underscores)
-            prefix = epoch_key.replace("-", "_")
+            prefix = self._dict_key_to_cdf_name(epoch_key)
             
             # Determine the Epoch variable name for this timeseries
             # First timeseries uses unprefixed "Epoch" for ISTP compliance

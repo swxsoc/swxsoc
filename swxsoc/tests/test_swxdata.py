@@ -870,7 +870,8 @@ def test_sw_data_generate_valid_cdf():
 
         # Validate the generated CDF File
         result = validate(file_path=test_file_output_path)
-        assert len(result) <= 1  # Logical Source and File ID Do not Agree
+        # Allow for: Logical Source and File ID Do not Agree + Default_Timeseries_Key non-ISTP attr
+        assert len(result) <= 2
 
         # Remove the File
         test_file_output_path.unlink()
@@ -984,7 +985,8 @@ def test_sw_data_from_cdf():
 
         # Validate the generated CDF File
         result = validate(test_file_output_path)
-        assert len(result) <= 1  # Logical Source and File ID Do not Agree
+        # Allow for: Logical Source and File ID Do not Agree + Default_Timeseries_Key non-ISTP attr
+        assert len(result) <= 2
 
         # Try to Load the CDF File in a new CDFWriter
         new_writer = SWXData.load(test_file_output_path)
@@ -998,7 +1000,8 @@ def test_sw_data_from_cdf():
 
         # Validate the generated CDF File
         result2 = validate(test_file_output_path2)
-        assert len(result2) <= 1  # Logical Source and File ID Do not Agree
+        # Allow for: Logical Source and File ID Do not Agree + Default_Timeseries_Key non-ISTP attr
+        assert len(result2) <= 2
         assert len(result) == len(result2)
 
 

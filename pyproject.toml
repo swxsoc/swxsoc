@@ -95,8 +95,7 @@ omit = [
   'swxsoc/*/tests/*',
   'swxsoc/extern/*',
   'swxsoc/version*',
-  'cdf_dump.py',
-  'swxsoc/scripts/cdf_dump.py',
+  'swxsoc/scripts/*',
   '*/swxsoc/__init*',
   '*/swxsoc/conftest.py',
   '*/swxsoc/*setup_package*',
@@ -104,7 +103,7 @@ omit = [
   '*/swxsoc/*/tests/*',
   '*/swxsoc/extern/*',
   '*/swxsoc/version*',
-  '*/swxsoc/scripts/cdf_dump.py',
+  '*/swxsoc/scripts/*',
 ]
 
 [tool.rstcheck]

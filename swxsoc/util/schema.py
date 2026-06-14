@@ -1462,6 +1462,21 @@ class SWXSchema(CdfAttributeManager):
         """
         return Time.now().strftime("%Y-%m-%d")
 
+    def _get_default_timeseries_key(self, data):
+        """
+        Function to get the default timeseries key for multi-timeseries CDF files.
+        
+        Returns the key of the first timeseries, which corresponds to the unprefixed
+        "Epoch" variable in the CDF file. This is only set for files with multiple
+        timeseries; single-timeseries files return None.
+        """
+        if hasattr(data, 'data') and 'timeseries' in data.data:
+            timeseries_dict = data.data['timeseries']
+            if len(timeseries_dict) > 1:
+                # Return the first timeseries key (dict preserves insertion order in Python 3.7+)
+                return next(iter(timeseries_dict.keys()))
+        return None
+
     def _get_start_time(self, data):
         """
         Function to get the start time of the data contained in the CDF

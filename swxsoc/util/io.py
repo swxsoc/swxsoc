@@ -146,7 +146,9 @@ class CDFHandler(SWXIOHandler):
             # but also want to designate one of them as the default for unprefixed variables.
             default_ts_key = None
             if "Default_Timeseries_Key" in input_global_attrs:
-                default_ts_key = input_global_attrs["Default_Timeseries_Key"]
+                # Treat empty string as None (for single-timeseries files)
+                value = input_global_attrs["Default_Timeseries_Key"]
+                default_ts_key = value if value != "" else None
             
             # Build a mapping of epoch_var_name -> epoch_key (for TimeSeries dict key)
             epoch_var_to_key = {}
@@ -202,21 +204,21 @@ class CDFHandler(SWXIOHandler):
                     if epoch_var_name in epoch_var_to_key:
                         epoch_key = epoch_var_to_key[epoch_var_name]
                     else:
-                        # Fallback: try converting prefixed format
-                        if epoch_var_name.endswith("_Epoch"):
-                            epoch_key = epoch_var_name[:-6].replace("_", "-")
-                        else:
-                            epoch_key = epoch_var_name
+                        raise ValueError(
+                            f"Epoch variable '{epoch_var_name}' not found in epoch mapping. "
+                            f"Available epoch variables: {list(epoch_var_to_key.keys())}"
+                        )
                     ts = timeseries[epoch_key]
                     
-                    # Check if this variable has a prefix matching an epoch key
+                    # Check if this variable has a prefix matching its epoch key
                     # and strip it to get the original column name - multi-timeseries code.
-                    original_var_name = var_name
-                    for ek in timeseries.keys():
-                        prefix = ek.replace("-", "_")
-                        if var_name.startswith(f"{prefix}_"):
-                            original_var_name = var_name[len(prefix) + 1:]  # Strip "prefix_"
-                            break
+                    # CDF names have restrictions so real world names with hyphen conventions
+                    # need to be replaced by underscores in the CDF.
+                    prefix = epoch_key.replace("-", "_")
+                    if var_name.startswith(f"{prefix}_"):
+                        original_var_name = var_name[len(prefix) + 1:]  # Strip "prefix_"
+                    else:
+                        original_var_name = var_name
 
                     # See if it is record-varying data with UNITS
                     if "UNITS" in var_attrs and len(var_data) == len(ts["time"]):

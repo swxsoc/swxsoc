@@ -99,6 +99,12 @@ def test_cdf_io():
         test_file_output_path = td.save(output_path=tmpdirname)
         save_for_examination(td, "io")
 
+        # Verify single-timeseries files don't have Default_Timeseries_Key
+        with CDF(str(test_file_output_path)) as cdf_file:
+            # Single timeseries should either not have this attribute or have it empty
+            if "Default_Timeseries_Key" in cdf_file.attrs:
+                assert cdf_file.attrs["Default_Timeseries_Key"][0] == ""
+
         # Load the CDF to a SWXData Object
         td_loaded = SWXData.load(test_file_output_path)
 
@@ -332,18 +338,22 @@ def test_cdf_auto_prefixing_prevents_duplicates():
             assert cdf_file["Sensor_B"].attrs["DEPEND_0"] == "REACH_134_Epoch"
             assert cdf_file["REACH_099_Lat"].attrs["DEPEND_0"] == "REACH_099_Epoch"
             assert cdf_file["Sensor_C"].attrs["DEPEND_0"] == "REACH_099_Epoch"
+            
+            # Verify Default_Timeseries_Key global attribute is written for multi-timeseries files
+            assert "Default_Timeseries_Key" in cdf_file.attrs
+            assert cdf_file.attrs["Default_Timeseries_Key"][0] == "REACH-165"
         
         # Test round-trip: Load the file back and verify structure
         sw_data_loaded = SWXData.load(test_file_output_path)
         
         # Verify the TimeSeries structure is reconstructed correctly
-        # First timeseries is keyed by "Epoch" (unprefixed), others keep their names
-        assert "Epoch" in sw_data_loaded.data["timeseries"]  # REACH-165 becomes "Epoch"
+        # All original keys should be preserved after round-trip
+        assert "REACH-165" in sw_data_loaded.data["timeseries"]  # Original key preserved
         assert "REACH-134" in sw_data_loaded.data["timeseries"]
         assert "REACH-099" in sw_data_loaded.data["timeseries"]
         
         # Verify columns are unprefixed in the loaded TimeSeries
-        ts_165 = sw_data_loaded.data["timeseries"]["Epoch"]  # REACH-165 data is under "Epoch" key
+        ts_165 = sw_data_loaded.data["timeseries"]["REACH-165"]  # Original key preserved
         assert "Lat" in ts_165.colnames
         assert "Lon" in ts_165.colnames
         assert "Sensor_A" in ts_165.colnames
@@ -357,6 +367,16 @@ def test_cdf_auto_prefixing_prevents_duplicates():
         assert "Lat" in ts_099.colnames
         assert "Lon" in ts_099.colnames
         assert "Sensor_C" in ts_099.colnames
+        
+        # Verify data integrity: each timeseries has correct number of records
+        assert len(ts_165) == 5
+        assert len(ts_134) == 5
+        assert len(ts_099) == 5
+        
+        # Verify that each timeseries has exactly the expected columns (no extras, no missing)
+        assert set(ts_165.colnames) == {"time", "Lat", "Lon", "Sensor_A"}
+        assert set(ts_134.colnames) == {"time", "Lat", "Lon", "Sensor_B"}
+        assert set(ts_099.colnames) == {"time", "Lat", "Lon", "Sensor_C"}
         
         # BREAKPOINT: Set breakpoint here to copy the CDF file
         # File path: test_file_output_path
@@ -487,17 +507,21 @@ def test_cdf_selective_prefixing_unique_columns():
             assert cdf_file["Altitude"].attrs["DEPEND_0"] == "SAT_C_Epoch"
             assert cdf_file["Speed"].attrs["DEPEND_0"] == "SAT_C_Epoch"
             assert cdf_file["SAT_C_Pressure"].attrs["DEPEND_0"] == "SAT_C_Epoch"
+            
+            # Verify Default_Timeseries_Key global attribute is written for multi-timeseries files
+            assert "Default_Timeseries_Key" in cdf_file.attrs
+            assert cdf_file.attrs["Default_Timeseries_Key"][0] == "SAT-A"
         
         # Test round-trip
         sw_data_loaded = SWXData.load(test_file_output_path)
         
-        # First timeseries is keyed by "Epoch" (unprefixed), others keep their prefixed names
-        assert "Epoch" in sw_data_loaded.data["timeseries"]  # SAT-A becomes "Epoch"
+        # All original keys should be preserved after round-trip
+        assert "SAT-A" in sw_data_loaded.data["timeseries"]  # Original key preserved
         assert "SAT-B" in sw_data_loaded.data["timeseries"]
         assert "SAT-C" in sw_data_loaded.data["timeseries"]
         
         # Verify unique columns are preserved
-        ts_a = sw_data_loaded.data["timeseries"]["Epoch"]  # SAT-A data is under "Epoch" key
+        ts_a = sw_data_loaded.data["timeseries"]["SAT-A"]  # Original key preserved
         assert "Voltage" in ts_a.colnames
         assert "Current" in ts_a.colnames
         
@@ -509,6 +533,16 @@ def test_cdf_selective_prefixing_unique_columns():
         assert "Altitude" in ts_c.colnames
         assert "Speed" in ts_c.colnames
         assert "Pressure" in ts_c.colnames
+        
+        # Verify data integrity: each timeseries has correct number of records
+        assert len(ts_a) == 5
+        assert len(ts_b) == 5
+        assert len(ts_c) == 5
+        
+        # Verify that each timeseries has exactly the expected columns
+        assert set(ts_a.colnames) == {"time", "Voltage", "Current"}
+        assert set(ts_b.colnames) == {"time", "Temperature", "Pressure"}
+        assert set(ts_c.colnames) == {"time", "Altitude", "Speed", "Pressure"}
         
         # BREAKPOINT: Set breakpoint here to copy the CDF file
         # File path: test_file_output_path

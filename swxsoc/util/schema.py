@@ -449,7 +449,7 @@ class SWXSchema(CdfAttributeManager):
 
         1. Absolute values between 0 and ``3e-39``.
         2. Absolute values greater than ``1.7e38``.
-        
+
         This will switch to an eight-byte double in some cases where four bytes
         would be sufficient for IEEE 754 encoding, but where DEC formats would
         require eight.

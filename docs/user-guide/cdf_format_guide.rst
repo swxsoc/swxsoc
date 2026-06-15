@@ -578,75 +578,13 @@ In practice this means the CDF type used on disk is uniquely determined by the i
    is equivalent to ``CDF_BYTE``, and ``CDF_UCHAR`` is equivalent to
    ``CDF_CHAR``; the more specifically-named variant wins (rule 5).
 
-------------------------------------------------------
-5.3 Range-Based Mapping (Untyped Python Lists/Scalars)
-------------------------------------------------------
-
-When the input is a plain Python ``list`` or scalar (no ``dtype``), ``types``
-falls back to a range-based search.  For integer data, the candidate types are
-walked in order from smallest to largest, and the *first* type whose range
-contains every element is chosen.  Signed types are tried before unsigned types
-of the same width.
-
-.. list-table:: Table 5-2: Range cutoffs used for untyped integer inputs
-   :widths: 20 30 30
-   :header-rows: 1
-
-   * - Candidate CDF type
-     - Required ``[min, max]``
-     - Notes
-   * - ``CDF_BYTE``
-     - ``[-128, 127]``
-     - Tried first, even for non-negative data.
-   * - ``CDF_UINT1``
-     - ``[0, 255]``
-     - Only eligible when ``min >= 0``.
-   * - ``CDF_INT2``
-     - ``[-32 768, 32 767]``
-     -
-   * - ``CDF_UINT2``
-     - ``[0, 65 535]``
-     - Only eligible when ``min >= 0``.
-   * - ``CDF_INT4``
-     - ``[-2 147 483 648, 2 147 483 647]``
-     -
-   * - ``CDF_UINT4``
-     - ``[0, 4 294 967 295]``
-     - Only eligible when ``min >= 0``.
-   * - ``CDF_INT8``
-     - ``[-2^63, 2^63 - 1]``
-     - No ``CDF_UINT8`` exists; values above ``2^63 - 1`` fall through to
-       ``CDF_FLOAT`` / ``CDF_DOUBLE`` (precision loss).
-   * - ``CDF_FLOAT``
-     - ``|x| <= 1.7e38``
-     -
-   * - ``CDF_DOUBLE``
-     - ``|x| <= 8e307``
-     -
-
-For untyped float data, ``CDF_FLOAT`` is used unless any non-zero element has
-``abs(value) > 1.7e38`` or ``abs(value) < 3e-39``, in which case ``CDF_DOUBLE``
-is selected to preserve the value exactly.
-
 ----------------------------------
-5.4 Ambiguous / Non-Obvious Cases
+5.3 Ambiguous / Non-Obvious Cases
 ----------------------------------
 
 The rules above are deterministic, but a few combinations surprise users.
-Where the chosen CDF type may not match expectations, pass an explicitly typed :class:`numpy.ndarray` to take full control.
 
-* **Python ``int`` lists default to the smallest signed type that fits.**
-  ``[1, 2, 3]`` is written as ``CDF_BYTE`` (1 byte), not ``CDF_INT4``.  Wrap
-  the values in ``np.array([...], dtype=np.int32)`` to force a 4-byte integer.
-* **Non-negative Python ``int`` lists still prefer signed ``CDF_BYTE``.**
-  ``[0, 1, 2]`` becomes ``CDF_BYTE`` because signed types are tried before
-  unsigned types of the same width (rule 4).  Use ``dtype=np.uint8`` to get
-  ``CDF_UINT1``.
-* **Python ``float`` lists default to ``CDF_FLOAT`` (32-bit).**
-  ``[1.0, 2.0, 3.0]`` becomes ``CDF_FLOAT`` even though Python ``float`` is
-  64-bit, silently downcasting precision.  Use ``dtype=np.float64`` to keep
-  full ``CDF_DOUBLE`` precision.
-* **``uint64``. ``bool``, ``complex``, ``float16``, and ``float128``/``longdouble`` have
+* **``uint64``, ``bool``, ``complex``, ``float16``, and ``float128``/``longdouble`` have
   no mapping** and will either raise ``ValueError`` or fall through to object
   handling.  Cast to a supported NumPy ``dtype`` before saving.
 * **:class:`astropy.time.Time` is always written as ``CDF_TIME_TT2000``**

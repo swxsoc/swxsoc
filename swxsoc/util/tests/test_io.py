@@ -19,7 +19,7 @@ from swxsoc.util import const
 
 def save_for_examination(sw_data, filename):
     """Save a copy to current dir for examination with custom filename."""
-    if True:
+    if False:
        sw_data.meta["Logical_file_id"] = filename
        sw_data.save(overwrite=True)
 

@@ -1,18 +1,8 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Tuple
-from collections import OrderedDict
-from datetime import datetime
-from astropy.timeseries import TimeSeries
-from astropy.time import Time
-from astropy.nddata import NDData
-from astropy.wcs import WCS
-import astropy.units as u
+
 from ndcube import NDCollection
-from ndcube import NDCube
-from swxsoc.swxdata import SWXData
-from swxsoc.util.exceptions import warn_user
-from swxsoc.util.schema import SWXSchema
 
 __all__ = ["SWXIOHandler"]
 

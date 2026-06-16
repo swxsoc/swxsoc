@@ -11,29 +11,25 @@ import sunpy.time
 from astropy.time import Time
 
 import swxsoc
-from swxsoc.util.exceptions import warn_user
 
 # --- Backward compatibility: moved symbols re-exported from new locations ---
 from swxsoc.db.timeseries import (
     _record_dimension_timestream as _record_dimension_timestream,
-    record_timeseries as record_timeseries,
 )
-from swxsoc.net.attr import (
-    Descriptor as Descriptor,
-    DevelopmentBucket as DevelopmentBucket,
-    Instrument as Instrument,
-    Level as Level,
-    SearchTime as SearchTime,
-    walker as walker,
-)
+from swxsoc.db.timeseries import record_timeseries as record_timeseries
+from swxsoc.net.attr import Descriptor as Descriptor
+from swxsoc.net.attr import DevelopmentBucket as DevelopmentBucket
+from swxsoc.net.attr import Instrument as Instrument
+from swxsoc.net.attr import Level as Level
+from swxsoc.net.attr import SearchTime as SearchTime
+from swxsoc.net.attr import walker as walker
 from swxsoc.net.client import SWXSOCClient as SWXSOCClient
-from swxsoc.util.grafana import (
-    create_annotation as create_annotation,
-    get_dashboard_id as get_dashboard_id,
-    get_panel_id as get_panel_id,
-    query_annotations as query_annotations,
-    remove_annotation_by_id as remove_annotation_by_id,
-)
+from swxsoc.util.exceptions import warn_user
+from swxsoc.util.grafana import create_annotation as create_annotation
+from swxsoc.util.grafana import get_dashboard_id as get_dashboard_id
+from swxsoc.util.grafana import get_panel_id as get_panel_id
+from swxsoc.util.grafana import query_annotations as query_annotations
+from swxsoc.util.grafana import remove_annotation_by_id as remove_annotation_by_id
 
 __all__ = [
     "create_science_filename",

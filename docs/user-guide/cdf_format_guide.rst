@@ -218,6 +218,8 @@ real variables are CDF_REAL4, all integer variables are CDF_INT2, and flag/statu
 variables are UINT2). This is not to imply that only these data types are allowable within CDF files. 
 All CDF supported data types are available for use by SWxSOC affiliated projects.
 
+See Section 5 for the rules ``swxsoc`` uses to map a variable's NumPy ``dtype`` to a concrete CDF data type on write.
+
 For detailed information and examples, please see the `ISTP/IACG Webpage <http://spdf.gsfc.nasa.gov/istp_guide/variables.html>`
 
 --------------------------------------
@@ -360,6 +362,8 @@ Data variables require the following attributes:
 * VALIDMIN and VALIDMAX
 * VAR_TYPE
 
+See :doc:`fillval_and_masks` for how ``swxsoc`` converts missing data in-memory, using the ``NaN`` / mask representations and the on-disk ``FILLVAL`` sentinel for each dtype.
+
 In addition, the following attributes are strongly recommended for vectors, tensors and
 quaternions which are held in or relate to a particular coordinate system:
 
@@ -467,4 +471,126 @@ Note that this table is derived from :file:`swxsoc/data/swxsoc_default_variable_
 .. csv-table:: Table 4-4 SWxSOC Variable Attribute Schema
    :file: ../generated/variable_attributes.csv
    :widths: 10, 50, 10, 10, 10, 30, 30, 30
+
+====================
+5. Data Type Mapping
+====================
+
+When writing a CDF, ``swxsoc`` automatically selects a concrete CDF data type for every variable it serialises.
+That selection happens inside :py:meth:`~swxsoc.util.schema.SWXSchema.types`, which inspects the input type (``numpy.ndarray``, Python scalar/list, :class:`~astropy.time.Time`, or string array) and returns a *preference-ordered* list of CDF types that could faithfully represent the data.
+The :py:class:`~swxsoc.io.cdf_handler.CDFHandler` then writes the variable usingthe first (most preferred) entry from that list.
+
+The algorithm is adapted from the upstream ``spacepy.pycdf.istp`` type-guessing routine.
+The ordering rules are documented in the ``types`` docstring and summarised below.
+
+----------------------------
+5.1 Selection Rules
+----------------------------
+
+For a candidate CDF variable data type to be eligible it must (in order):
+
+1. Match the *kind* of the data (numeric, string, or time).
+2. Be able to represent the full range of values present in the data `[min, max]`.
+3. Provide sufficient resolution (for example, ``CDF_EPOCH16`` or
+   ``CDF_TIME_TT2000`` are required if the input :class:`~astropy.time.Time`
+   resolves below the millisecond level).
+
+When more than one CDF type satisfies these requirements, the candidates are
+sorted by:
+
+1. Type that matches the precision of the data first,
+2. Integer type before float type,
+3. Smallest type first,
+4. Signed type first,
+5. Specifically-named (``CDF_BYTE``) before generically-named (``CDF_INT1``).
+
+``CDF_TIME_TT2000`` is always preferred for :class:`~astropy.time.Time` inputs.
+
+----------------------
+5.2 NumPy Type Mapping
+----------------------
+
+When inputs are already a typed :class:`numpy.ndarray` (or :class:`astropy.units.Quantity`/:class:`~astropy.nddata.NDData` wrapping one), ``types`` uses a direct mapping to the CDF type whose NumPy counterpart matches the input ``dtype`` (or its byte-swapped equivalent).
+In practice this means the CDF type used on disk is uniquely determined by the input NumPy ``dtype``.
+
+.. list-table:: Table 5-1: NumPy ``dtype`` → CDF Type Mapping (typed arrays)
+   :widths: 20 30 25 10
    :header-rows: 1
+
+   * - NumPy ``dtype``
+     - Value range ``[min, max]``
+     - Chosen CDF type
+     - Bytes
+   * - ``int8``
+     - ``[-128, 127]``
+     - ``CDF_BYTE``
+     - 1
+   * - ``uint8``
+     - ``[0, 255]``
+     - ``CDF_UINT1``
+     - 1
+   * - ``int16``
+     - ``[-32 768, 32 767]``
+     - ``CDF_INT2``
+     - 2
+   * - ``uint16``
+     - ``[0, 65 535]``
+     - ``CDF_UINT2``
+     - 2
+   * - ``int32``
+     - ``[-2 147 483 648, 2 147 483 647]``
+     - ``CDF_INT4``
+     - 4
+   * - ``uint32``
+     - ``[0, 4 294 967 295]``
+     - ``CDF_UINT4``
+     - 4
+   * - ``int64``
+     - ``[-9.22e18, 9.22e18]``
+     - ``CDF_INT8``
+     - 8
+   * - ``float32``
+     - ``approx. [-3.4e38, 3.4e38]``
+     - ``CDF_FLOAT``
+     - 4
+   * - ``float64``
+     - ``approx. [-1.8e308, 1.8e308]``
+     - ``CDF_DOUBLE``
+     - 8
+   * - :class:`astropy.time.Time`
+     - ``approx. [1707-09-22, 2292-04-11]`` (TT2000 ``int64`` ns)
+     - ``CDF_TIME_TT2000``
+     - 8
+   * - ``S<n>`` (bytes)
+     - n/a
+     - ``CDF_CHAR``
+     - ``n`` per element
+   * - ``U<n>`` (unicode)
+     - n/a
+     - ``CDF_CHAR`` (UTF-8 encoded)
+     - up to ``4n`` per element
+
+.. note::
+   ``CDF_REAL4`` / ``CDF_REAL8`` are synonyms for ``CDF_FLOAT`` / ``CDF_DOUBLE``
+   at the binary level (``float32`` / ``float64``).  ``types`` lists the
+   ``CDF_FLOAT`` / ``CDF_DOUBLE`` form first, so that is what
+   :py:class:`~swxsoc.io.cdf_handler.CDFHandler` writes.  Similarly ``CDF_INT1``
+   is equivalent to ``CDF_BYTE``, and ``CDF_UCHAR`` is equivalent to
+   ``CDF_CHAR``; the more specifically-named variant wins (rule 5).
+
+----------------------------------
+5.3 Ambiguous / Non-Obvious Cases
+----------------------------------
+
+The rules above are deterministic, but a few combinations surprise users.
+
+* **``uint64``, ``bool``, ``complex``, ``float16``, and ``float128``/``longdouble`` have
+  no mapping** and will either raise ``ValueError`` or fall through to object
+  handling.  Cast to a supported NumPy ``dtype`` before saving.
+* **:class:`astropy.time.Time` is always written as ``CDF_TIME_TT2000``**
+  since SWxSOC 0.3.0, regardless of the input format or resolution.
+* **Unicode (``U``) arrays are encoded to UTF-8 bytes** when sized for
+  ``CDF_CHAR``; the on-disk element length is derived from the UTF-8 byte
+  length, not the 4-byte-per-character NumPy storage width.
+
+See :doc:`fillval_and_masks` for the ``FILLVAL`` sentinel associated with each CDF type and how masked / ``NaN`` values are converted on write and read.

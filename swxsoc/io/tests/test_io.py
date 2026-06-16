@@ -1,20 +1,5 @@
 """Tests for Loading and Saving data from data containers"""
 
-<<<<<<< HEAD
-from collections import OrderedDict
-from pathlib import Path
-import pytest
-import numpy as np
-from numpy.random import random
-import tempfile
-from astropy.timeseries import TimeSeries
-from astropy.time import Time
-from astropy.units import Quantity
-from astropy.nddata import NDData
-from astropy.wcs import WCS
-from ndcube import NDCube, NDCollection
-from spacepy.pycdf import CDFError, CDF
-=======
 import tempfile
 from collections import OrderedDict
 from pathlib import Path
@@ -34,18 +19,10 @@ from numpy.random import random
 from spacepy.pycdf import CDF, CDFError
 
 from swxsoc.io import fillval as fv
->>>>>>> main
 from swxsoc.swxdata import SWXData
 from swxsoc.util import const
 
 
-<<<<<<< HEAD
-def save_for_examination(sw_data, filename):
-    """Save a copy to current dir for examination with custom filename."""
-    if False:
-       sw_data.meta["Logical_file_id"] = filename
-       sw_data.save(overwrite=True)
-=======
 def save_cdf_for_examination(sw_data, filename=None):
     """Save a copy to current dir for examination with custom filename or logical id.
     No output path will put it in the current directory which is the point of this
@@ -56,17 +33,10 @@ def save_cdf_for_examination(sw_data, filename=None):
             if not filename.endswith(".cdf"):
                 filename = filename + ".cdf"
         sw_data.save(output_path=filename, overwrite=True)
->>>>>>> main
-
 
 def get_test_sw_data():
     """
-<<<<<<< HEAD
-    Function to get test swxsoc.swxdata.SWXData objects to re-use in
-    other tests
-=======
     Function to get test swxsoc.swxdata.SWXData objects to re-use in other tests
->>>>>>> main
     """
     ts = TimeSeries()
     ts.meta.update(
@@ -102,12 +72,7 @@ def get_test_sw_data():
     # Support Data / Non-Time Varying Data
     support = {
         "support_counts": NDData(
-<<<<<<< HEAD
-            data=[1],
-            meta={"CATDESC": "variable counts", "VAR_TYPE": "support_data"},
-=======
             data=[1], meta={"CATDESC": "variable counts", "VAR_TYPE": "support_data"}
->>>>>>> main
         )
     }
 
@@ -140,17 +105,13 @@ def test_cdf_io():
     with tempfile.TemporaryDirectory() as tmpdirname:
         # Convert SWXData the to a CDF File
         test_file_output_path = td.save(output_path=tmpdirname)
-<<<<<<< HEAD
-        save_for_examination(td, "io")
+        save_cdf_for_examination(td, "io")
 
         # Verify single-timeseries files don't have Default_Timeseries_Key
         with CDF(str(test_file_output_path)) as cdf_file:
             # Single timeseries should either not have this attribute or have it empty
             if "Default_Timeseries_Key" in cdf_file.attrs:
                 assert cdf_file.attrs["Default_Timeseries_Key"][0] == ""
-=======
-        save_cdf_for_examination(td, "io")
->>>>>>> main
 
         # Load the CDF to a SWXData Object
         td_loaded = SWXData.load(test_file_output_path)
@@ -182,24 +143,13 @@ def test_cdf_nrv_support_data():
         tmp_path = Path(tmpdirname)
         # Convert HermesData the to a CDF File
         test_file_output_path = td.save(output_path=tmp_path)
-<<<<<<< HEAD
-        save_for_examination(td, "nrv_support_data")
-=======
         save_cdf_for_examination(td, "nrv_support_data")
->>>>>>> main
 
         # Load the JSON file as JSON
         with CDF(str(test_file_output_path), readonly=False) as cdf_file:
             # Add Non-Record-Varying Variable
             cdf_file.new(
-<<<<<<< HEAD
-                name="Test_NRV_Var",
-                data=[1, 2, 3],
-                type=const.CDF_INT4,
-                recVary=False,
-=======
                 name="Test_NRV_Var", data=[1, 2, 3], type=const.CDF_INT4, recVary=False
->>>>>>> main
             )
             cdf_file["Test_NRV_Var"].meta["VAR_TYPE"] = "support_data"
 
@@ -226,11 +176,7 @@ def test_cdf_spectra_data():
         tmp_path = Path(tmpdirname)
         # Convert HermesData the to a CDF File
         test_file_output_path = td.save(output_path=tmp_path)
-<<<<<<< HEAD
-        save_for_examination(td, "spectra_data")
-=======
         save_cdf_for_examination(td, "spectra_data")
->>>>>>> main
 
         # Load the JSON file as JSON
         with CDF(str(test_file_output_path), readonly=False) as cdf_file:
@@ -244,7 +190,7 @@ def test_cdf_spectra_data():
         assert "Test_Spectra_Var" in td_loaded.spectra
 
 
-<<<<<<< HEAD
+
 def test_cdf_auto_prefixing_prevents_duplicates():
     """
     Test that selective prefixing only applies to conflicting variable names.
@@ -352,7 +298,7 @@ def test_cdf_auto_prefixing_prevents_duplicates():
         tmp_path = Path(tmpdirname)
         
         test_file_output_path = sw_data.save(output_path=tmp_path)
-        save_for_examination(sw_data, "auto_prefixing_prevents_duplicates")
+        save_cdf_for_examination(sw_data, "auto_prefixing_prevents_duplicates")
         
         # Verify the CDF file was created
         assert test_file_output_path.exists()
@@ -537,7 +483,7 @@ def test_cdf_selective_prefixing_unique_columns():
     with tempfile.TemporaryDirectory() as tmpdirname:
         tmp_path = Path(tmpdirname)
         test_file_output_path = sw_data.save(output_path=tmp_path)
-        save_for_examination(sw_data, "selective_prefixing_unique_columns")
+        save_cdf_for_examination(sw_data, "selective_prefixing_unique_columns")
         
         assert test_file_output_path.exists()
         
@@ -625,7 +571,6 @@ def test_cdf_selective_prefixing_unique_columns():
         # Example: import shutil; shutil.copy(test_file_output_path, "/tmp/unique_cols_test.cdf")
         pass  # <-- SET BREAKPOINT HERE
 
-=======
 def test_cdf_custom_filename():
     """
     Test that a custom filename can be provided instead of using Logical_file_id.
@@ -953,4 +898,3 @@ def test_roundtrip_string_mask_only():
         loaded = td_loaded.support["str_masked"]
         assert loaded.mask is not None
         np.testing.assert_array_equal(loaded.mask, str_mask)
->>>>>>> main

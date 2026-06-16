@@ -13,7 +13,7 @@ The class represents a schema for metadata attribute requirements, validation, a
 
 The schema class is used in many parts of the package:
 
-    - Loading/Writing data attributes in :py:class:`~swxsoc.util.io.SWXIOHandler` classes
+    - Loading/Writing data attributes in :py:class:`~swxsoc.io.base_handler.SWXIOHandler` classes
     - Deriving data attributes for :py:class:`~swxsoc.swxdata.SWXData` objects
     - Validating data attributes in the :py:class:`~swxsoc.util.validation.SWXDataValidator` class
 

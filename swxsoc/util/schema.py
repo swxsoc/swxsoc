@@ -5,20 +5,21 @@ This code is based on that provided by SpacePy see
     licenses/SPACEPY.rst
 """
 
-from pathlib import Path
+import math
 from collections import OrderedDict
 from copy import deepcopy
+from pathlib import Path
 from typing import Optional
-import math
 
 import numpy as np
+from astropy import units as u
 from astropy.table import Table
 from astropy.time import Time
-from astropy import units as u
-
 from sammi.cdf_attribute_manager import CdfAttributeManager
+
 import swxsoc
-from swxsoc.util import util, const
+import swxsoc.io.fillval as fv
+from swxsoc.util import const, util
 
 __all__ = ["SWXSchema"]
 
@@ -420,47 +421,85 @@ class SWXSchema(CdfAttributeManager):
                 raise ValueError(msg)
         return d
 
-    def _types(self, data, backward=False, encoding="utf-8"):
+    def types(self, data, encoding="utf-8"):
         """
         Find dimensions and valid types of a nested list-of-lists
 
         Any given data may be representable by a range of CDF types; infer
         the CDF types which can represent this data. This breaks down to:
-          1. Proper kind (numerical, string, time)
-          2. Proper range (stores highest and lowest number)
-          3. Sufficient resolution (EPOCH16 or TT2000 required if astropy.time has
-             microseconds or below.)
 
-        If more than one value satisfies the requirements, types are returned
-        in preferred order:
-          1. Type that matches precision of data first, then
-          2. integer type before float type, then
-          3. Smallest type first, then
-          4. signed type first, then
-          5. specifically-named (CDF_BYTE) vs. generically named (CDF_INT1)
-        So for example, EPOCH_16 is preferred over EPOCH if L{data} specifies
-        below the millisecond level (rule 1), but otherwise EPOCH is preferred
-        (rule 2). TIME_TT2000 is always preferred as of 0.3.0.
+        1. Proper kind (numerical, string, time).
+        2. Proper range (stores highest and lowest number).
+        3. Sufficient resolution (EPOCH16 or TT2000 required if
+           astropy.time has microseconds or below).
+
+        When more than one type satisfies the requirements, candidates are
+        returned in preference order:
+
+        1. Type that matches the precision of the data first,
+        2. Integer type before float type,
+        3. Smallest type first,
+        4. Signed type first,
+        5. Specifically-named (``CDF_BYTE``) before generically-named (``CDF_INT1``).
+
+        ``CDF_TIME_TT2000`` is always preferred for :class:`~astropy.time.Time`
+        inputs since SWxSOC 0.3.0.
 
         For floats, four-byte is preferred unless eight-byte is required:
-          1. absolute values between 0 and 3e-39
-          2. absolute values greater than 1.7e38
+
+        1. Absolute values between 0 and ``3e-39``.
+        2. Absolute values greater than ``1.7e38``.
+
         This will switch to an eight-byte double in some cases where four bytes
         would be sufficient for IEEE 754 encoding, but where DEC formats would
         require eight.
 
-        @param data: data for which dimensions and CDF types are desired
-        @type data: list (of lists)
-        @param backward: limit to pre-CDF3 types
-        @type backward: bool
-        @param encoding: Encoding to use for Unicode input, default utf-8
-        @type backward: str
-        @return: dimensions of L{data}, in order outside-in;
-                 CDF types which can represent this data;
-                 number of elements required (i.e. length of longest string)
-        @rtype: 3-tuple of lists ([int], [ctypes.c_long], [int])
-        @raise ValueError: if L{data} has irregular dimensions
+        Parameters
+        ----------
+        data : array-like, scalar, str, or `~astropy.time.Time`
+            The data for which dimensions and CDF types are desired. May be a
+            nested list-of-lists, a :class:`numpy.ndarray`, a Python scalar, a
+            string, or an :class:`~astropy.time.Time` instance.
+        encoding : `str`, optional
+            Encoding to use for Unicode (``U``) input when computing the
+            on-disk element length. Defaults to ``"utf-8"``.
 
+        Returns
+        -------
+        dims : `tuple` of `int`
+            Dimensions of ``data``, in order outside-in.
+        types : `list` of `int`
+            CDF type numbers (see :mod:`swxsoc.util.const`) which can
+            represent ``data``, in preferred order. The first entry is the
+            type that :py:class:`~swxsoc.io.cdf_handler.CDFHandler` uses on
+            write.
+        elements : `int`
+            Number of elements required per record (i.e. length of the
+            longest string for ``CDF_CHAR`` / ``CDF_UCHAR`` variables; ``1``
+            otherwise).
+
+        Raises
+        ------
+        ValueError
+            If ``data`` has irregular dimensions, is an empty object array,
+            or contains generic Python objects that cannot be converted to a
+            CDF type.
+
+        Notes
+        -----
+        The algorithm is adapted from
+        :py:meth:`spacepy.pycdf.istp.VarBundle._types`. See the
+        :ref:`cdf_format_guide` (Section 5, *Data Type Mapping*) for a full
+        user-facing description of the NumPy ``dtype`` → CDF type rules.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from swxsoc.util.schema import SWXSchema
+        >>> schema = SWXSchema()
+        >>> dims, types, elements = schema.types(np.array([1, 2, 3], dtype=np.int32))
+        >>> dims, types[0], elements
+        ((3,), 4, 1)
         """
         d = SWXSchema._check_well_formed(data)
         dims = d.shape
@@ -727,13 +766,13 @@ class SWXSchema(CdfAttributeManager):
         if not guess_types:
             if var_name == "time":
                 # Guess the const CDF Data Type
-                (guess_dims, guess_types, guess_elements) = self._types(var_data)
+                (guess_dims, guess_types, guess_elements) = self.types(var_data)
             elif hasattr(var_data, "value"):
                 # Support NDData use `.value`
-                (guess_dims, guess_types, guess_elements) = self._types(var_data.value)
+                (guess_dims, guess_types, guess_elements) = self.types(var_data.value)
             else:
                 # TimeSeries Quantity and Spectra NDCube use `.data`
-                (guess_dims, guess_types, guess_elements) = self._types(var_data.data)
+                (guess_dims, guess_types, guess_elements) = self.types(var_data.data)
 
         # Check the Attributes that can be derived
         var_type = self._get_var_type(var_name, var_data, guess_types[0])
@@ -744,9 +783,10 @@ class SWXSchema(CdfAttributeManager):
         if var_type in ["data", "support_data", "metadata"]:
             var_atttibutes = list(
                 filter(
-                    lambda attr_info: attr_info[0]
-                    in self.variable_attribute_schema[var_type]
-                    and attr_info[1]["derived"],
+                    lambda attr_info: (
+                        attr_info[0] in self.variable_attribute_schema[var_type]
+                        and attr_info[1]["derived"]
+                    ),
                     self.variable_attribute_schema["attribute_key"].items(),
                 )
             )
@@ -755,9 +795,10 @@ class SWXSchema(CdfAttributeManager):
         if var_name == "time":
             time_attributes = list(
                 filter(
-                    lambda attr_info: attr_info[0]
-                    in self.variable_attribute_schema["epoch"]
-                    and attr_info[1]["derived"],
+                    lambda attr_info: (
+                        attr_info[0] in self.variable_attribute_schema["epoch"]
+                        and attr_info[1]["derived"]
+                    ),
                     self.variable_attribute_schema["attribute_key"].items(),
                 )
             )
@@ -766,9 +807,10 @@ class SWXSchema(CdfAttributeManager):
         if hasattr(var_data, "wcs") and getattr(var_data, "wcs") is not None:
             spectra_attributes = list(
                 filter(
-                    lambda attr_info: attr_info[0]
-                    in self.variable_attribute_schema["spectra"]
-                    and attr_info[1]["derived"],
+                    lambda attr_info: (
+                        attr_info[0] in self.variable_attribute_schema["spectra"]
+                        and attr_info[1]["derived"]
+                    ),
                     self.variable_attribute_schema["attribute_key"].items(),
                 )
             )
@@ -850,39 +892,17 @@ class SWXSchema(CdfAttributeManager):
             return "Epoch"
 
     def _get_fillval(self, var_name, var_data, guess_type, **kwargs):
-        # Get the Variable Data
-        if guess_type == const.CDF_TIME_TT2000.value:
-            return Time("9999-12-31T23:59:59.999999", format="isot")
-        else:
-            # Get the FILLVAL for the gussed data type
-            fillval = self._fillval_helper(cdf_type=guess_type)
-            return fillval
+        """
+        Return the ISTP ``FILLVAL`` sentinel for the given CDF data type.
 
-    def _fillval_helper(self, cdf_type):
-        # Fill value, indexed by the CDF type (numeric)
-        fillvals = {}
-        # Integers
-        for i in (1, 2, 4, 8):
-            fillvals[getattr(const, "CDF_INT{}".format(i)).value] = -(2 ** (8 * i - 1))
-            if i == 8:
-                continue
-            fillvals[getattr(const, "CDF_UINT{}".format(i)).value] = 2 ** (8 * i) - 1
-        fillvals[const.CDF_EPOCH16.value] = (-1e31, -1e31)
-        fillvals[const.CDF_REAL8.value] = -1e31
-        fillvals[const.CDF_REAL4.value] = -1e31
-        fillvals[const.CDF_CHAR.value] = " "
-        fillvals[const.CDF_UCHAR.value] = " "
-        # Equivalent pairs
-        for cdf_t, equiv in (
-            (const.CDF_TIME_TT2000, const.CDF_INT8),
-            (const.CDF_EPOCH, const.CDF_REAL8),
-            (const.CDF_BYTE, const.CDF_INT1),
-            (const.CDF_FLOAT, const.CDF_REAL4),
-            (const.CDF_DOUBLE, const.CDF_REAL8),
-        ):
-            fillvals[cdf_t.value] = fillvals[equiv.value]
-        value = fillvals[cdf_type]
-        return value
+        The numeric sentinels (including those for the Epoch types
+        ``CDF_TIME_TT2000``, ``CDF_EPOCH`` and ``CDF_EPOCH16``) are defined by
+        :func:`swxsoc.io.fillval.get_fillval` and follow the ISTP Metadata Guidelines.  The
+        CDF library separately exposes a human-readable display string for the
+        Epoch types (for example ``9999-12-31T23:59:59.999999999`` for
+        ``CDF_TIME_TT2000``); only the *stored number* is returned here.
+        """
+        return fv.get_fillval(cdf_type=guess_type)
 
     def _get_format(self, var_name, var_data, cdftype, **kwargs):
         """
@@ -1450,8 +1470,10 @@ class SWXSchema(CdfAttributeManager):
         Function to get the start time of the data contained in the CDF
         given in format `YYYYMMDDThhmmss`
         """
-        # Get the Start Time from the TimeSeries
-        return data["time"][0].isot
+        # Get the Start Time from the TimeSeries.  Use ``str(...)`` to flatten
+        # any zero-dim ``MaskedNDArray`` that arises when the time column has
+        # native masking from the read path.
+        return str(data["time"][0].isot)
 
     def _get_version(self, data):
         """

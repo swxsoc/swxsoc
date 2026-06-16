@@ -154,7 +154,7 @@ def test_types():
     """Function to test getting the CDF data types for different data types"""
 
     # String Type
-    _, types, _ = SWXSchema()._types("")
+    _, types, _ = SWXSchema().types("")
     assert types == [51, 52]
 
 
@@ -282,10 +282,10 @@ def test_type_guessing():
         ((1,), [const.CDF_CHAR, const.CDF_UCHAR], 8),
     ]
     with pytest.raises(ValueError):
-        SWXSchema()._types([object()])
+        SWXSchema().types([object()])
     for s, t in zip(samples, types):
         t = (t[0], [i.value for i in t[1]], t[2])
-        assert t == SWXSchema()._types(s)
+        assert t == SWXSchema().types(s)
 
 
 def test_min_max_none():

@@ -168,6 +168,13 @@ class SWXData:
         self._default_timeseries_key = swxsoc.config["general"][
             "default_timeseries_key"
         ]
+        
+        # Override with Default_Timeseries_Key from file metadata if present
+        # This ensures multi-timeseries CDF files load correctly
+        if "Default_Timeseries_Key" in self._meta:  # only applicable in load() context
+            key_from_file = self._meta["Default_Timeseries_Key"]
+            if key_from_file and key_from_file != "":
+                self._default_timeseries_key = key_from_file
 
         if isinstance(timeseries, dict):
             self._timeseries = {}

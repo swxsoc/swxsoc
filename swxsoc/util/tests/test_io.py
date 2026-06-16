@@ -378,6 +378,14 @@ def test_cdf_auto_prefixing_prevents_duplicates():
         assert set(ts_134.colnames) == {"time", "Lat", "Lon", "Sensor_B"}
         assert set(ts_099.colnames) == {"time", "Lat", "Lon", "Sensor_C"}
         
+        # CRITICAL: Test that .time and .time_range properties work after loading
+        # This would fail with KeyError: 'Epoch' without the Default_Timeseries_Key override fix
+        loaded_time = sw_data_loaded.time  # Should access REACH-165's time (the default)
+        assert len(loaded_time) == 5
+        time_range = sw_data_loaded.time_range
+        assert time_range[0] == loaded_time.min()
+        assert time_range[1] == loaded_time.max()
+        
         # BREAKPOINT: Set breakpoint here to copy the CDF file
         # File path: test_file_output_path
         # Example: import shutil; shutil.copy(test_file_output_path, "/tmp/reach_test.cdf")
@@ -543,6 +551,14 @@ def test_cdf_selective_prefixing_unique_columns():
         assert set(ts_a.colnames) == {"time", "Voltage", "Current"}
         assert set(ts_b.colnames) == {"time", "Temperature", "Pressure"}
         assert set(ts_c.colnames) == {"time", "Altitude", "Speed", "Pressure"}
+        
+        # CRITICAL: Test that .time and .time_range properties work after loading
+        # This would fail with KeyError: 'Epoch' without the Default_Timeseries_Key override fix
+        loaded_time = sw_data_loaded.time  # Should access SAT-A's time (the default)
+        assert len(loaded_time) == 5
+        time_range = sw_data_loaded.time_range
+        assert time_range[0] == loaded_time.min()
+        assert time_range[1] == loaded_time.max()
         
         # BREAKPOINT: Set breakpoint here to copy the CDF file
         # File path: test_file_output_path

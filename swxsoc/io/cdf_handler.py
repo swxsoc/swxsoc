@@ -92,7 +92,7 @@ class CDFHandler(SWXIOHandler):
         meta = {}
         # Create a struct for storing TimeSeries
         timeseries = {}
-        default_timeseries_key = swxsoc.config["general"]["default_timeseries_key"]
+       
         # Create a Data Structure for Non-record Varying Data
         support = {}
         # Intermediate Type

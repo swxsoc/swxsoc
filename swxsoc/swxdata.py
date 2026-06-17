@@ -180,6 +180,7 @@ class SWXData:
         
         # Override with Default_Timeseries_Key from file metadata if present
         # This ensures multi-timeseries CDF files load correctly
+        
         if "Default_Timeseries_Key" in self._meta:  # only applicable in load() context
             key_from_file = self._meta["Default_Timeseries_Key"]
             if key_from_file and key_from_file != "":
@@ -202,6 +203,13 @@ class SWXData:
                 timeseries=timeseries,
                 epoch_key=self._default_timeseries_key,
             )
+
+        # 1. If _default_timeseries_key is not valid, fall back to first key
+        # 2. The Default_Timeseries_Key is first set in save() so this is if the user 
+        # checks his multi-series data right after he creates it
+        # 3. This handles multi-timeseries cases where user didn't set Default_Timeseries_Key
+        if self._default_timeseries_key not in self._timeseries and len(self._timeseries) > 0:
+            self._default_timeseries_key = next(iter(self._timeseries.keys()))
 
         # Copy the Non-Record Varying Data
         if support:

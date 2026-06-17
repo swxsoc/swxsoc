@@ -118,8 +118,11 @@ class CDFHandler(SWXIOHandler):
             # Look for variables ending with "_Epoch" (prefixed format)
             # or matching "Epoch" exactly (legacy format)
             epoch_variables = [
-                var_name for var_name in input_file.keys() if "Epoch" in var_name
+               var_name for var_name in input_file.keys()
+               if var_name == "Epoch" or var_name.endswith("_Epoch")
             ]
+         
+            
             
             # Check if there's a Default_Timeseries_Key metadata attribute
             # allows loader to track the non prefixed epoch var with the mandatory dict name for the timeseries dict key. 
@@ -156,7 +159,7 @@ class CDFHandler(SWXIOHandler):
                     f"No Epoch variables found in CDF file: {file_path}"
                 )
             
-            # Loop for each Epoch Variable
+            # Loop for each Epoch Variable (Loop for each Timeseries)
             for epoch_var, epoch_key in epoch_var_to_key.items():
                 time_data = self._load_epoch_variable(input_file, epoch_var)
                 time_attrs = self._load_metadata_attributes(input_file[epoch_var])
@@ -170,9 +173,9 @@ class CDFHandler(SWXIOHandler):
 
             # Get all the Keys for Measurement Variable Data
             # These are Keys where the underlying object is a `dict` that contains
-            # additional data, and is not the `EPOCH` variable
+            # additional data, and is not an actual Epoch variable
             variable_keys = [
-                var_name for var_name in input_file.keys() if "Epoch" not in var_name
+                var_name for var_name in input_file.keys() if var_name not in epoch_variables
             ]
             for var_name in variable_keys:
                 # Extract the Variable's Metadata
@@ -199,11 +202,17 @@ class CDFHandler(SWXIOHandler):
                     # and strip it to get the original column name - multi-timeseries code.
                     # CDF names have restrictions so real world names with hyphen conventions
                     # need to be replaced by underscores in the CDF.
+                    # Only strip prefixes for non-default timeseries (where epoch was prefixed).
+                    # For default timeseries with "Epoch", no prefixes were added during save.
+                    # Additionally, only strip if the unprefixed name exists in the file,
+                    # which indicates it's a deconfliction prefix, not an original name.
                     prefix = epoch_key_to_prefix[epoch_key]
-                    if var_name.startswith(f"{prefix}_"):
-                        original_var_name = var_name[len(prefix) + 1:]  # Strip "prefix_"
-                    else:
-                        original_var_name = var_name
+                    original_var_name = var_name
+                    if epoch_var != "Epoch" and var_name.startswith(f"{prefix}_"):
+                        candidate = var_name[len(prefix) + 1:]  # Strip "prefix_"
+                        # Only strip if the unprefixed name exists (likely writer-added prefix)
+                        if candidate in input_file.keys():
+                            original_var_name = candidate
 
                     # See if it is record-varying data with UNITS
                     if "UNITS" in var_attrs and len(var_data) == len(ts["time"]):

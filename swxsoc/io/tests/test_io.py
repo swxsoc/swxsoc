@@ -27,7 +27,7 @@ def save_cdf_for_examination(sw_data, filename=None):
     """Save a copy to current dir for examination with custom filename or logical id.
     No output path will put it in the current directory which is the point of this
     function."""
-    if False:  # change to True if you'd like to use this feature
+    if True:  # change to True if you'd like to use this feature
         if filename:
             # Add .cdf suffix if not already present
             if not filename.endswith(".cdf"):
@@ -293,6 +293,13 @@ def test_cdf_auto_prefixing_prevents_duplicates():
     
     sw_data = SWXData(timeseries=timeseries_dict, meta=meta)
     
+    # Verify .time and .time_range work before saving (tests the fallback to first key)
+    # This should NOT raise KeyError even though meta doesn't have Default_Timeseries_Key yet
+    original_time = sw_data.time  # Should access REACH-165's time (the first dict key)
+    assert len(original_time) == 5
+    original_time_range = sw_data.time_range
+    assert original_time_range[0] < original_time_range[1]
+    
     # Test that selective prefixing prevents collisions
     with tempfile.TemporaryDirectory() as tmpdirname:
         tmp_path = Path(tmpdirname)
@@ -480,6 +487,16 @@ def test_cdf_selective_prefixing_unique_columns():
     
     sw_data = SWXData(timeseries=timeseries_dict, meta=meta)
     
+    # CRITICAL: Verify .time and .time_range work BEFORE saving
+    # This tests the fallback logic when Default_Timeseries_Key isn't in meta yet
+    # Without the fix, this would raise KeyError: 'Epoch'
+    pre_save_time = sw_data.time  # Should access SAT-A's time (first dict key)
+    assert len(pre_save_time) == 5
+    pre_save_time_range = sw_data.time_range
+    assert pre_save_time_range[0] < pre_save_time_range[1]
+    # Verify it's using the first key as default
+    assert sw_data._default_timeseries_key == "SAT-A"
+    
     with tempfile.TemporaryDirectory() as tmpdirname:
         tmp_path = Path(tmpdirname)
         test_file_output_path = sw_data.save(output_path=tmp_path)
@@ -565,11 +582,166 @@ def test_cdf_selective_prefixing_unique_columns():
         time_range = sw_data_loaded.time_range
         assert time_range[0] == loaded_time.min()
         assert time_range[1] == loaded_time.max()
+        pass  
+
+
+def test_cdf_epoch_substring_not_confused():
+    """
+    Test that variables containing "Epoch" as a substring but not matching
+    the epoch patterns (exactly "Epoch" or ending with "_Epoch") are correctly
+    treated as regular measurement variables, not epoch variables.
+    
+    This tests the fix for: epoch_variables should use exact matching, not substring.
+    """
+    # Create TimeSeries with a variable that contains "Epoch" substring
+    ts = TimeSeries()
+    ts["time"] = Time(1704067200 + np.arange(5), format="unix")
+    
+    # Add a variable with "Epoch" in the name but not an actual epoch
+    ts["Epoch_quality"] = Quantity(
+        value=np.array([0, 1, 2, 3, 4], dtype=np.uint8), unit="", dtype=np.uint8
+    )
+    ts["Epoch_quality"].meta = {
+        "VAR_TYPE": "data",
+        "CATDESC": "Quality flag for epoch (not an epoch variable itself)",
+    }
+    
+    ts["data"] = Quantity(
+        value=np.random.random(5), unit="count", dtype=np.float32
+    )
+    ts["data"].meta = {
+        "VAR_TYPE": "data",
+        "CATDESC": "Test measurement",
+    }
+    
+    meta = {
+        "Descriptor": "EEA>Electron Electrostatic Analyzer",
+        "Data_level": "l1>Level 1",
+        "Data_version": "v0.0.1",
+    }
+    
+    sw_data = SWXData(timeseries=ts, meta=meta)
+    
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        tmp_path = Path(tmpdirname)
+        test_file_output_path = sw_data.save(output_path=tmp_path)
+        save_cdf_for_examination(sw_data, test_file_output_path.name)
+        assert test_file_output_path.exists()
         
-        # BREAKPOINT: Set breakpoint here to copy the CDF file
-        # File path: test_file_output_path
-        # Example: import shutil; shutil.copy(test_file_output_path, "/tmp/unique_cols_test.cdf")
-        pass  # <-- SET BREAKPOINT HERE
+        with CDF(str(test_file_output_path)) as cdf_file:
+            # Should have exactly one epoch variable: "Epoch"
+            assert "Epoch" in cdf_file
+            
+            # Epoch_quality should be a regular variable, not treated as epoch
+            assert "Epoch_quality" in cdf_file
+            
+            # Verify Epoch_quality has DEPEND_0 pointing to Epoch
+            assert cdf_file["Epoch_quality"].attrs["DEPEND_0"] == "Epoch"
+            
+            # Verify it's record-varying (like other measurements)
+            assert cdf_file["Epoch_quality"].rv() is True
+        
+        # Test round-trip: this is where it fails without the fix
+        sw_data_loaded = SWXData.load(test_file_output_path)
+        
+        # Should have one timeseries
+        assert len(sw_data_loaded.data["timeseries"]) == 1
+        
+        # Get the loaded timeseries (should be keyed by "Epoch" for single-timeseries)
+        loaded_ts = sw_data_loaded.timeseries
+        
+        # Verify Epoch_quality was loaded as a regular measurement, not confused as epoch
+        assert "Epoch_quality" in loaded_ts.colnames
+        assert "data" in loaded_ts.colnames
+        
+        # Verify data integrity
+        assert len(loaded_ts) == 5
+        np.testing.assert_array_equal(loaded_ts["Epoch_quality"].value, [0, 1, 2, 3, 4])
+
+
+def test_cdf_prefix_stripping_heuristic():
+    """
+    Test that the prefix-stripping heuristic doesn't corrupt original variable names
+    that happen to start with a timeseries prefix.
+    
+    If a variable name starts with a prefix but the unprefixed version doesn't exist
+    in the file, it's an original name and should NOT be stripped.
+    
+    Example: timeseries["REACH_134"] has column "REACH_134_Status" (original name).
+    Without heuristic: incorrectly strips to "Status"
+    With heuristic: keeps "REACH_134_Status" because "Status" doesn't exist in file
+    """
+    # Create two timeseries with different epoch keys
+    ts_a = TimeSeries()
+    ts_a["time"] = Time(1704067200 + np.arange(3), format="unix")
+    ts_a["data"] = Quantity(value=np.array([1.0, 2.0, 3.0]), unit="count", dtype=np.float32)
+    ts_a["data"].meta = {"VAR_TYPE": "data", "CATDESC": "Data from A"}
+    
+    ts_b = TimeSeries()
+    ts_b["time"] = Time(1704067200 + np.arange(3), format="unix")
+    # This variable name happens to start with the prefix but is an original name
+    ts_b["REACH_134_Status"] = Quantity(
+        value=np.array([0, 1, 2], dtype=np.uint8), unit="", dtype=np.uint8
+    )
+    ts_b["REACH_134_Status"].meta = {
+        "VAR_TYPE": "data",
+        "CATDESC": "Original variable name (not a prefixed 'Status')",
+    }
+    
+    meta = {
+        "Descriptor": "EEA>Test Instrument",
+        "Data_level": "l1>Level 1",
+        "Data_version": "v0.0.1",
+    }
+    
+    timeseries_dict = {
+        "Epoch": ts_a,
+        "REACH-134": ts_b,  # Note: hyphens, not underscores (CDF converts to underscores)
+    }
+    
+    sw_data = SWXData(timeseries=timeseries_dict, meta=meta)
+    
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        tmp_path = Path(tmpdirname)
+        test_file_output_path = sw_data.save(output_path=tmp_path)
+        save_cdf_for_examination(sw_data, "heuristic")
+        assert test_file_output_path.exists()
+        
+        # Verify CDF structure
+        with CDF(str(test_file_output_path)) as cdf_file:
+            # Should have unprefixed variables from first timeseries
+            assert "Epoch" in cdf_file
+            assert "data" in cdf_file
+            
+            # Should have prefixed epoch and the original variable name
+            assert "REACH_134_Epoch" in cdf_file
+            assert "REACH_134_Status" in cdf_file
+            
+            # "Status" should NOT exist (it's not a conflicting variable)
+            assert "Status" not in cdf_file
+        
+        # Test round-trip: verify the heuristic preserves the original name
+        sw_data_loaded = SWXData.load(test_file_output_path)
+        
+        # Should have two timeseries
+        assert len(sw_data_loaded.data["timeseries"]) == 2
+        
+        # Check first timeseries
+        loaded_ts_a = sw_data_loaded.data["timeseries"]["Epoch"]
+        assert "data" in loaded_ts_a.colnames
+        
+        # Check second timeseries - the critical test
+        loaded_ts_b = sw_data_loaded.data["timeseries"]["REACH-134"]
+        # The heuristic should preserve "REACH_134_Status" because "Status" doesn't exist
+        assert "REACH_134_Status" in loaded_ts_b.colnames
+        # Should NOT have been corrupted to "Status"
+        assert "Status" not in loaded_ts_b.colnames
+        
+        # Verify data integrity
+        np.testing.assert_array_equal(
+            loaded_ts_b["REACH_134_Status"].value, [0, 1, 2]
+        )
+
 
 def test_cdf_custom_filename():
     """

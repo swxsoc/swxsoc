@@ -870,8 +870,16 @@ def test_sw_data_generate_valid_cdf():
 
         # Validate the generated CDF File
         result = validate(file_path=test_file_output_path)
-        # Allow for: Logical Source and File ID Do not Agree + Default_Timeseries_Key non-ISTP attr
-        assert len(result) <= 2
+        
+        # Verify only the expected validation warnings are present:
+        # 1. Empty Default_Timeseries_Key (not needed for single-timeseries files)
+        # 2. Logical_source vs filename mismatch (known issue with descriptor placement)
+        assert len(result) <= 2, f"Expected at most 2 validation warnings, got {len(result)}: {result}"
+        for err in result:
+            assert (
+                ("Empty CHAR entry" in err and "Default_Timeseries_Key" in err)
+                or ("Logical_source" in err and "doesn't match filename" in err)
+            ), f"Unexpected validation error: {err}"
 
         # Remove the File
         test_file_output_path.unlink()
@@ -985,8 +993,16 @@ def test_sw_data_from_cdf():
 
         # Validate the generated CDF File
         result = validate(test_file_output_path)
-        # Allow for: Logical Source and File ID Do not Agree + Default_Timeseries_Key non-ISTP attr
-        assert len(result) <= 2
+        
+        # Verify only the expected validation warnings are present:
+        # 1. Empty Default_Timeseries_Key (not needed for single-timeseries files)
+        # 2. Logical_source vs filename mismatch (known issue with descriptor placement)
+        assert len(result) <= 2, f"Expected at most 2 validation warnings, got {len(result)}: {result}"
+        for err in result:
+            assert (
+                ("Empty CHAR entry" in err and "Default_Timeseries_Key" in err)
+                or ("Logical_source" in err and "doesn't match filename" in err)
+            ), f"Unexpected validation error: {err}"
 
         # Try to Load the CDF File in a new CDFWriter
         new_writer = SWXData.load(test_file_output_path)

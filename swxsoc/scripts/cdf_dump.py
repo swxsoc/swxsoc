@@ -5,7 +5,7 @@ from pathlib import Path
 from spacepy.pycdf import CDF
 
 
-def cdf_dump(file_path, show_data=True, max_values=10, summary=False, variable=None):
+def cdf_dump(file_path, show_data=True, max_values=100, summary=False, variable=None):
     """
     Display the contents of a CDF file in a human-readable format.
     
@@ -91,22 +91,23 @@ def cdf_dump(file_path, show_data=True, max_values=10, summary=False, variable=N
             # Sample data
             if show_data:
                 print(f"  Data (first {max_values} values):")
-                data = var[...]
-                if len(data) > 0:
-                    # Show first few values
-                    if len(data.shape) == 1:
-                        # 1D array
-                        sample = data[:max_values]
+                nrecs = len(var)
+                if nrecs > 0:
+                    # Only read the records we need, not the entire variable
+                    if len(var.shape) == 0:
+                        # Scalar per record
+                        sample = var[:min(max_values, nrecs)]
                         print(f"    {sample}")
-                        if len(data) > max_values:
-                            print(f"    ... ({len(data) - max_values} more values)")
+                        if nrecs > max_values:
+                            print(f"    ... ({nrecs - max_values} more values)")
                     else:
-                        # Multi-dimensional
-                        sample = data[:min(3, len(data))]
+                        # Vector/tensor per record; show first few records
+                        n = min(max_values, nrecs)
+                        sample = var[:n]
                         for i, row in enumerate(sample):
                             print(f"    [{i}]: {row}")
-                        if len(data) > 3:
-                            print(f"    ... ({len(data) - 3} more records)")
+                        if nrecs > n:
+                            print(f"    ... ({nrecs - n} more records)")
                 else:
                     print("    (empty)")
         

@@ -398,11 +398,7 @@ def test_cdf_auto_prefixing_prevents_duplicates():
         time_range = sw_data_loaded.time_range
         assert time_range[0] == loaded_time.min()
         assert time_range[1] == loaded_time.max()
-        
-        # BREAKPOINT: Set breakpoint here to copy the CDF file
-        # File path: test_file_output_path
-        # Example: import shutil; shutil.copy(test_file_output_path, "/tmp/reach_test.cdf")
-        pass  # <-- SET BREAKPOINT HERE
+        pass  
 
 
 def test_cdf_selective_prefixing_unique_columns():

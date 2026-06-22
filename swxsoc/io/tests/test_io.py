@@ -17,7 +17,7 @@ from astropy.wcs import WCS
 from ndcube import NDCollection, NDCube
 from numpy.random import random
 from spacepy.pycdf import CDF, CDFError
-
+import spacepy.pycdf as pycdf
 from swxsoc.io import fillval as fv
 from swxsoc.swxdata import SWXData
 from swxsoc.util import const
@@ -27,7 +27,7 @@ def save_cdf_for_examination(sw_data, filename=None):
     """Save a copy to current dir for examination with custom filename or logical id.
     No output path will put it in the current directory which is the point of this
     function."""
-    if True:  # change to True if you'd like to use this feature
+    if False:  # change to True if you'd like to use this feature
         if filename:
             # Add .cdf suffix if not already present
             if not filename.endswith(".cdf"):
@@ -109,9 +109,8 @@ def test_cdf_io():
 
         # Verify single-timeseries files don't have Default_Timeseries_Key
         with CDF(str(test_file_output_path)) as cdf_file:
-            # Single timeseries should either not have this attribute or have it empty
-            if "Default_Timeseries_Key" in cdf_file.attrs:
-                assert cdf_file.attrs["Default_Timeseries_Key"][0] == ""
+            # Single timeseries should not have this attribute at all
+            assert "Default_Timeseries_Key" not in cdf_file.attrs
 
         # Load the CDF to a SWXData Object
         td_loaded = SWXData.load(test_file_output_path)
@@ -1066,3 +1065,97 @@ def test_roundtrip_string_mask_only():
         loaded = td_loaded.support["str_masked"]
         assert loaded.mask is not None
         np.testing.assert_array_equal(loaded.mask, str_mask)
+
+
+def test_epoch_var_stale_reference_bug():
+    """
+    Regression test for the epoch_var stale reference bug in prefix stripping.
+    
+    The bug: When loading a multi-timeseries CDF, the prefix stripping logic
+    used `epoch_var` from an earlier loop, which referenced the LAST epoch
+    variable processed, not the current variable's actual DEPEND_0 epoch.
+    
+    This test manually creates a CDF file with epochs in an order that exposes
+    the bug: having "Epoch" be the LAST epoch processed causes the stale
+    `epoch_var == "Epoch"` to prevent prefix stripping for non-default timeseries.
+    """
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        tmp_path = Path(tmpdirname)
+        test_file_path = tmp_path / "epoch_bug_test.cdf"
+        
+        # Manually create a CDF file with specific epoch ordering
+        # We want "Epoch" to be the LAST epoch in the file so that after the
+        # epoch loop, epoch_var == "Epoch", which causes the bug
+        with CDF(str(test_file_path), "") as cdf_file:
+            # Write epochs in order: BETA_Epoch FIRST, then Epoch LAST
+            # This makes "Epoch" be the last one processed in the reader's loop
+            
+            # Create BETA timeseries (with prefixed epoch)
+            cdf_file.new("BETA_Epoch", data=[1704067200000, 1704067300000, 1704067400000], type=pycdf.const.CDF_TIME_TT2000)
+            cdf_file["BETA_Epoch"].attrs["VAR_TYPE"] = "support_data"
+            cdf_file["BETA_Epoch"].attrs["CATDESC"] = "BETA Epoch"
+            cdf_file["BETA_Epoch"].attrs["FIELDNAM"] = "BETA_Epoch"
+            
+            cdf_file.new("BETA_Voltage", data=[10.0, 20.0, 30.0], type=pycdf.const.CDF_FLOAT)
+            cdf_file["BETA_Voltage"].attrs["VAR_TYPE"] = "data"
+            cdf_file["BETA_Voltage"].attrs["CATDESC"] = "BETA Voltage"
+            cdf_file["BETA_Voltage"].attrs["DEPEND_0"] = "BETA_Epoch"
+            cdf_file["BETA_Voltage"].attrs["UNITS"] = "V"
+            cdf_file["BETA_Voltage"].attrs["FIELDNAM"] = "Voltage"
+            
+            # Create default timeseries (with unprefixed Epoch) AFTER BETA
+            cdf_file.new("Epoch", data=[1704067500000, 1704067600000, 1704067700000], type=pycdf.const.CDF_TIME_TT2000)
+            cdf_file["Epoch"].attrs["VAR_TYPE"] = "support_data"
+            cdf_file["Epoch"].attrs["CATDESC"] = "Default Epoch"
+            cdf_file["Epoch"].attrs["FIELDNAM"] = "Epoch"
+            
+            cdf_file.new("Voltage", data=[1.0, 2.0, 3.0], type=pycdf.const.CDF_FLOAT)
+            cdf_file["Voltage"].attrs["VAR_TYPE"] = "data"
+            cdf_file["Voltage"].attrs["CATDESC"] = "Default Voltage"
+            cdf_file["Voltage"].attrs["DEPEND_0"] = "Epoch"
+            cdf_file["Voltage"].attrs["UNITS"] = "V"
+            cdf_file["Voltage"].attrs["FIELDNAM"] = "Voltage"
+            
+            # Set global attributes to indicate this is multi-timeseries
+            # with DEFAULT as the default timeseries
+            cdf_file.attrs["Default_Timeseries_Key"] = "DEFAULT"
+            cdf_file.attrs["Descriptor"] =  "EEA>Electron Electrostatic Analyzer"
+            cdf_file.attrs["Data_level"] = "l1"
+            cdf_file.attrs["Data_version"] = "v0.0.1"
+        
+        # Now load this CDF file
+        # Epochs will be processed in order: ["BETA_Epoch", "Epoch"]
+        # After the loop, epoch_var == "Epoch"
+        #
+        # When processing "BETA_Voltage":
+        # - BUG version: checks `epoch_var != "Epoch"` → FALSE (epoch_var IS "Epoch")
+        #   So NO prefix stripping, column stays as "BETA_Voltage" (WRONG!)
+        # - FIX version: checks `result_key != "Epoch"` → TRUE (result_key is "BETA_Epoch")
+        #   So prefix IS stripped, column becomes "Voltage" (CORRECT!)
+        
+        sw_data_loaded = SWXData.load(test_file_path)
+        
+        # Should have two timeseries
+        assert "DEFAULT" in sw_data_loaded.data["timeseries"]
+        assert "BETA" in sw_data_loaded.data["timeseries"]
+        
+        ts_default = sw_data_loaded.data["timeseries"]["DEFAULT"]
+        ts_beta = sw_data_loaded.data["timeseries"]["BETA"]
+        
+        # CRITICAL TEST: Both should have "Voltage" as the column name (prefix stripped)
+        # With the BUG (using stale epoch_var == "Epoch"), BETA_Voltage won't be stripped
+        # and will appear as "BETA_Voltage" in the timeseries (WRONG!)
+        assert "Voltage" in ts_default.colnames, \
+            f"Expected 'Voltage' in DEFAULT timeseries, got {ts_default.colnames}"
+        assert "Voltage" in ts_beta.colnames, \
+            f"Expected 'Voltage' in BETA timeseries (prefix should be stripped), got {ts_beta.colnames}"
+        
+        # Should NOT have the prefixed name in the loaded timeseries
+        assert "BETA_Voltage" not in ts_beta.colnames, \
+            f"BETA_Voltage should have been stripped to 'Voltage', but found in colnames: {ts_beta.colnames}"
+        
+        # Verify data integrity
+        assert len(ts_default) == 3
+        assert len(ts_beta) == 3
+        np.testing.assert_array_almost_equal(ts_default["Voltage"].value, [1.0, 2.0, 3.0])
+        np.testing.assert_array_almost_equal(ts_beta["Voltage"].value, [10.0, 20.0, 30.0])

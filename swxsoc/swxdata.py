@@ -602,6 +602,11 @@ class SWXData:
                 )
 
     def _update_global_attribute(self, attr_name, attr_value):
+        # Skip setting attributes with None values (e.g., Default_Timeseries_Key for single-timeseries)
+        # This prevents writing empty/null attributes that aren't needed
+        if attr_value is None:
+            return
+            
         # If the attribute is set, check if we want to overwrite it
         if attr_name in self._meta and self._meta[attr_name] is not None:
             # We want to overwrite if:

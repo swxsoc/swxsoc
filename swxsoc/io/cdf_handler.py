@@ -208,7 +208,9 @@ class CDFHandler(SWXIOHandler):
                     # which indicates it's a deconfliction prefix, not an original name.
                     prefix = epoch_key_to_prefix[epoch_key]
                     original_var_name = var_name
-                    if epoch_var != "Epoch" and var_name.startswith(f"{prefix}_"):
+                    # Use result_key (the actual DEPEND_0 value) to check if this variable
+                    # belongs to the default unprefixed timeseries
+                    if result_key != "Epoch" and var_name.startswith(f"{prefix}_"):
                         candidate = var_name[len(prefix) + 1:]  # Strip "prefix_"
                         # Only strip if the unprefixed name exists (likely writer-added prefix)
                         if candidate in input_file.keys():

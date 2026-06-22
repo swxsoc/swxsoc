@@ -16,7 +16,7 @@ def cdf_dump(file_path, show_data=True, max_values=100, summary=False, variable=
     show_data : bool, optional
         If True, show sample data values. Default is True.
     max_values : int, optional
-        Maximum number of data values to display per variable. Default is 10.
+        Maximum number of data values to display per variable. Default is 100.
     summary : bool, optional
         If True, only show variable names and record counts. Default is False.
     variable : str, optional

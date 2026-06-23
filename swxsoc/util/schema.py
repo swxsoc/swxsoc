@@ -764,8 +764,17 @@ class SWXSchema(CdfAttributeManager):
         """
         measurement_attributes = OrderedDict()
 
+        # Get the variable data from the correct source
+        # For multi-timeseries with epoch_key, fetch from the specific timeseries
+        # to avoid getting the wrong variable when column names are duplicated
+        if epoch_key is not None and var_name in data.data["timeseries"].get(epoch_key, {}).columns:
+            var_data = data.data["timeseries"][epoch_key][var_name]
+        else:
+            # in multi-series context this will return the first timeseries, not the intended one.
+            # For support/spectra or single-timeseries, use __getitem__
+            var_data = data[var_name]
+            
         # Guess the const CDF Data Type
-        var_data = data[var_name]
         if not guess_types:
             if var_name == "time":
                 # Guess the const CDF Data Type
@@ -891,8 +900,14 @@ class SWXSchema(CdfAttributeManager):
             epoch_key = swxsoc.config["general"]["default_timeseries_key"]
 
         # Return the prefixed epoch name for CDF (convert hyphens to underscores)
-        # But use "Epoch" for the default timeseries_key
-        default_key = swxsoc.config["general"]["default_timeseries_key"]
+        # But use "Epoch" for the default/first timeseries
+        # For multi-timeseries, the default is the first key in insertion order
+        # (matches the rule used by the writer and _get_default_timeseries_key)
+        if "timeseries_dict" in kwargs and len(kwargs["timeseries_dict"]) > 1:
+            default_key = next(iter(kwargs["timeseries_dict"].keys()))
+        else:
+            default_key = swxsoc.config["general"]["default_timeseries_key"]
+            
         if epoch_key == default_key:
             prefixed_epoch = "Epoch"
         else:
@@ -1490,11 +1505,10 @@ class SWXSchema(CdfAttributeManager):
         "Epoch" variable in the CDF file. This is only set for files with multiple
         timeseries; single-timeseries files return None.
         """
-        if hasattr(data, 'data') and 'timeseries' in data.data:
-            timeseries_dict = data.data['timeseries']
-            if len(timeseries_dict) > 1:
-                # Return the first timeseries key (dict preserves insertion order in Python 3.7+)
-                return next(iter(timeseries_dict.keys()))
+        timeseries_dict = data.data["timeseries"]
+        if len(timeseries_dict) > 1:
+            # Return the first timeseries key (dict preserves insertion order in Python 3.7+)
+            return next(iter(timeseries_dict.keys()))
         return None
 
     def _get_start_time(self, data):

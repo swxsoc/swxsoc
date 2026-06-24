@@ -767,7 +767,11 @@ class SWXSchema(CdfAttributeManager):
         # Get the variable data from the correct source
         # For multi-timeseries with epoch_key, fetch from the specific timeseries
         # to avoid getting the wrong variable when column names are duplicated
-        if epoch_key is not None and var_name in data.data["timeseries"].get(epoch_key, {}).columns:
+        if (
+            epoch_key is not None
+            and epoch_key in data.data["timeseries"]
+            and var_name in data.data["timeseries"][epoch_key].columns
+        ):
             var_data = data.data["timeseries"][epoch_key][var_name]
         else:
             # in multi-series context this will return the first timeseries, not the intended one.

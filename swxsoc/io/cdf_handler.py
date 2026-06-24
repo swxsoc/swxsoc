@@ -698,10 +698,15 @@ class CDFHandler(SWXIOHandler):
         has_multiple_timeseries = len(data.data["timeseries"]) > 1
         conflicting_vars = set()
         
-        # Get the first (default) timeseries key for ISTP compliance
-        # In Python 3.7+, dict iteration order is guaranteed to be insertion order
-        default_epoch_key = next(iter(data.data["timeseries"].keys())) if has_multiple_timeseries else None
         
+        # Determine which timeseries should own the unprefixed "Epoch" (and other unprefixed vars).
+        # Prefer Default_Timeseries_Key when present to keep round-trips stable.
+        default_epoch_key = None
+        if has_multiple_timeseries:
+             default_epoch_key = data.meta.get("Default_Timeseries_Key")
+             if default_epoch_key not in data.data["timeseries"]:
+                 default_epoch_key = next(iter(data.data["timeseries"]))
+                 
         if has_multiple_timeseries:
             # Build a dict of var_name -> list of epoch_keys that have it
             var_to_epochs = {}

@@ -1012,7 +1012,7 @@ def test_sw_data_from_cdf():
 
         # Validate the generated CDF File
         result2 = validate(test_file_output_path2)
-        # Allow for: Logical Source and File ID Do not Agree + Default_Timeseries_Key non-ISTP attr
+        # Allow for logical source vs filename mismatch only (result should match original save)
         assert len(result2) <= 1
         assert len(result) == len(result2)
 

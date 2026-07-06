@@ -21,6 +21,7 @@ import spacepy.pycdf as pycdf
 from swxsoc.io import fillval as fv
 from swxsoc.swxdata import SWXData
 from swxsoc.util import const
+from swxsoc.util.exceptions import SWXUserWarning
 
 
 def save_cdf_for_examination(sw_data, filename=None):
@@ -162,6 +163,69 @@ def test_cdf_nrv_support_data():
 
         assert "Test_NRV_Var" in td_loaded.support
         assert "Test_Support_Var" in td_loaded.timeseries.columns
+
+
+def test_with_no_epoch_var():
+    """
+    Test loading a CDF file with no epoch variables (only support/NRV data).
+    
+    This tests that:
+    1. A warning is issued when no Epoch variables are found in the CDF file
+    2. Loading fails with a clear ValueError explaining that SWXData requires time series data
+    
+    SWXData cannot be created without at least one timeseries with time data,
+    as it is fundamental to the data model and required for metadata derivation.
+    """
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        tmp_path = Path(tmpdirname)
+        test_file_path = tmp_path / "no_epoch_test.cdf"
+        
+        # Manually create a CDF file with only NRV/support variables (no Epoch)
+        with CDF(str(test_file_path), "") as cdf_file:
+            # Add global attributes
+            cdf_file.attrs["Descriptor"] = "TEST>Test Instrument"
+            cdf_file.attrs["Data_level"] = "l1>Level 1"
+            cdf_file.attrs["Data_version"] = "v0.0.1"
+            
+            # Add Non-Record-Varying Variable
+            cdf_file.new(
+                name="Config_Value", 
+                data=[1, 2, 3], 
+                type=pycdf.const.CDF_INT4, 
+                recVary=False
+            )
+            cdf_file["Config_Value"].attrs["VAR_TYPE"] = "support_data"
+            cdf_file["Config_Value"].attrs["CATDESC"] = "Configuration values"
+            cdf_file["Config_Value"].attrs["FIELDNAM"] = "Config_Value"
+            
+            # Add another NRV variable
+            cdf_file.new(
+                name="Calibration_Factor",
+                data=1.5,
+                type=pycdf.const.CDF_FLOAT,
+                recVary=False
+            )
+            cdf_file["Calibration_Factor"].attrs["VAR_TYPE"] = "support_data"
+            cdf_file["Calibration_Factor"].attrs["CATDESC"] = "Calibration factor"
+            cdf_file["Calibration_Factor"].attrs["FIELDNAM"] = "Calibration_Factor"
+            cdf_file["Calibration_Factor"].attrs["UNITS"] = ""
+        
+        # Attempting to load should issue a warning AND then fail with ValueError
+        # because SWXData requires time series data
+        with pytest.warns(
+            SWXUserWarning, match="No Epoch variables found in CDF file"
+        ) as warning_list:
+            with pytest.raises(
+                KeyError, match="Cannot create SWXData without time series data"
+            ):
+                SWXData.load(test_file_path)
+        
+        # Verify the warning was issued from the CDF handler
+        assert len(warning_list) == 1
+        warning = warning_list[0]
+        assert "cdf_handler.py" in warning.filename
+        print(f"Warning issued from: {warning.filename}:{warning.lineno}")
+        print(f"Warning message: {warning.message}")
 
 
 def test_cdf_spectra_data():

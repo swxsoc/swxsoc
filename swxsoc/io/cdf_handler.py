@@ -48,18 +48,6 @@ class CDFHandler(SWXIOHandler):
     #                          HELPER METHODS FOR MULTI-TIMESERIES
     # ================================================================================================
 
-    @staticmethod
-    def _cdf_name_to_dict_key(cdf_name: str) -> str:
-        """Convert CDF variable name format to dict key format.
-        CDF uses underscores, dict keys use hyphens."""
-        return cdf_name.replace("_", "-")
-
-    @staticmethod
-    def _dict_key_to_cdf_name(dict_key: str) -> str:
-        """Convert dict key format to CDF variable name format.
-        Dict keys use hyphens, CDF uses underscores."""
-        return dict_key.replace("-", "_")
-
     # ================================================================================================
     #                                   CDF READER
     # ================================================================================================
@@ -139,8 +127,9 @@ class CDFHandler(SWXIOHandler):
             epoch_var_to_key = {}
             for epoch_var in epoch_variables:
                 if epoch_var.endswith("_Epoch"):
-                    # Prefixed format: "REACH_165_Epoch" -> "REACH-165"
-                    epoch_key = self._cdf_name_to_dict_key(epoch_var[:-6])  # Remove "_Epoch" suffix
+                    # Prefixed format: "REACH_165_Epoch" -> "REACH_165"
+                    # Dict keys now match CDF naming (use underscores), no conversion needed
+                    epoch_key = epoch_var[:-6]  # Remove "_Epoch" suffix
                 elif epoch_var == "Epoch" and default_ts_key is not None:
                     # Unprefixed "Epoch" with a default key specified in metadata
                     epoch_key = default_ts_key
@@ -149,9 +138,9 @@ class CDFHandler(SWXIOHandler):
                     epoch_key = epoch_var
                 epoch_var_to_key[epoch_var] = epoch_key
             
-            # Build prefix mapping once (epoch_key -> CDF prefix with underscores)
-            # to avoid repeated string replacements when processing variables
-            epoch_key_to_prefix = {key: self._dict_key_to_cdf_name(key) for key in epoch_var_to_key.values()}
+            # Build prefix mapping (epoch_key -> CDF prefix)
+            # Dict keys now match CDF naming, so this is an identity mapping
+            epoch_key_to_prefix = {key: key for key in epoch_var_to_key.values()}
             
             # Make sure at least one Epoch variable is present in the CDF
             if len(epoch_variables) == 0:
@@ -728,8 +717,9 @@ class CDFHandler(SWXIOHandler):
         written_conflicting_vars = set()
 
         for epoch_key, ts in data.data["timeseries"].items():
-            # Sanitize the epoch_key for use as a prefix (replace hyphens with underscores)
-            prefix = self._dict_key_to_cdf_name(epoch_key)
+            # Dict keys now match CDF naming convention (use underscores)
+            # so they can be used directly as prefixes
+            prefix = epoch_key
             
             # Determine the Epoch variable name for this timeseries
             # First timeseries uses unprefixed "Epoch" for ISTP compliance

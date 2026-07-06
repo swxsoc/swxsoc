@@ -230,6 +230,23 @@ class SWXData:
             self._spectra = NDCollection([])
 
         # ================================================
+        #           VALIDATE MULTI-TIMESERIES DICT KEYS
+        # ================================================
+        
+        # For multi-timeseries, dict keys must not contain hyphens because:
+        # 1. CDF format only allows underscores (not hyphens) in variable names
+        # 2. Dict keys become prefixes in CDF (e.g., "KEY_Epoch", "KEY_variable")
+        # 3. To avoid lossy conversion, keys should match CDF naming directly
+        if len(self._timeseries) > 1:
+            for key in self._timeseries:
+                if '-' in key:
+                    raise ValueError(
+                        f"Multi-timeseries dict key '{key}' contains hyphens. "
+                        f"Dict keys must use underscores (not hyphens) for CDF compatibility. "
+                        f"For example, use 'REACH_134' instead of 'REACH-134'."
+                    )
+
+        # ================================================
         #           DERIVE METADATA ATTRIBUTES
         # ================================================
 
@@ -451,9 +468,10 @@ class SWXData:
             
             # Handle prefixed epoch keys from multi-timeseries CDF files
             # If epoch_key is in prefixed format (e.g., "REACH_165_Epoch"),
-            # convert back to the original key format (e.g., "REACH-165")
-            if epoch_key.endswith("_Epoch"): # it is either Epoch or something_epoch. the first is the single timeseries case, the second is the multi-timeseries case with prefixed keys. In the second case we want to convert back to the original key format.
-                epoch_key = epoch_key[:-6].replace("_", "-")  # Remove "_Epoch" and convert _ to -
+            # strip the "_Epoch" suffix to get the dict key (e.g., "REACH_165")
+            # Dict keys now use underscores to match CDF naming, so no conversion needed
+            if epoch_key.endswith("_Epoch"):
+                epoch_key = epoch_key[:-6]  # Remove "_Epoch" suffix
             # If it's just "Epoch", keep it as-is (default timeseries key)
             
         else:

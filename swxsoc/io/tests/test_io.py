@@ -28,7 +28,7 @@ def save_cdf_for_examination(sw_data, filename=None):
     """Save a copy to current dir for examination with custom filename or logical id.
     No output path will put it in the current directory which is the point of this
     function."""
-    if False:  # change to True if you'd like to use this feature
+    if True:  # change to True if you'd like to use this feature
         if filename:
             # Add .cdf suffix if not already present
             if not filename.endswith(".cdf"):
@@ -228,6 +228,50 @@ def test_with_no_epoch_var():
         print(f"Warning message: {warning.message}")
 
 
+def test_epoch_key_with_hyphen_rejected():
+    """
+    Test that epoch keys with hyphens are rejected with a clear error message.
+    
+    Multi-timeseries dict keys MUST use underscores only (no hyphens) to match
+    CDF variable naming conventions. Hyphens are not valid in CDF variable names,
+    so using them in dict keys would cause round-trip failures.
+    
+    This test verifies that SWXData.__init__() validates dict keys and rejects
+    invalid characters with a helpful error message.
+    
+    Invalid: "REACH-134", "SAT-A" (contain hyphens)
+    Valid: "REACH_134", "SAT_A" (underscores only)
+    """
+    # Create two TimeSeries
+    ts1 = TimeSeries()
+    ts1["time"] = Time([1704067200, 1704067201, 1704067202], format="unix")
+    ts1["voltage"] = Quantity([1.0, 2.0, 3.0], unit="V", dtype=np.float32)
+    ts1["voltage"].meta = {"VAR_TYPE": "data", "CATDESC": "Voltage measurement"}
+    
+    ts2 = TimeSeries()
+    ts2["time"] = Time([1704067200, 1704067201, 1704067202], format="unix")
+    ts2["current"] = Quantity([4.0, 5.0, 6.0], unit="A", dtype=np.float32)
+    ts2["current"].meta = {"VAR_TYPE": "data", "CATDESC": "Current measurement"}
+    
+    # Attempt to create SWXData with invalid hyphenated dict keys
+    timeseries_dict = {
+        "REACH_134": ts1,  # Valid (underscores)
+        "REACH-172": ts2,  # Invalid (contains hyphen)
+    }
+    
+    meta = {
+        "Descriptor": "EEA>Electron Electrostatic Analyzer",
+        "Data_level": "l1>Level 1",
+        "Data_version": "v0.0.1",
+    }
+    
+    # Should raise ValueError about invalid characters in dict key
+    with pytest.raises(ValueError, match=".*hyphen.*|.*invalid.*character.*|.*REACH-172.*"):
+        sw_data = SWXData(timeseries=timeseries_dict, meta=meta)
+
+
+
+
 def test_cdf_spectra_data():
     """
     Test Loading High-Dimensional/ Spectra data with CDF IO Handler
@@ -343,9 +387,9 @@ def test_cdf_auto_prefixing_prevents_duplicates():
 
     # Create SWXData with multiple TimeSeries keyed by satellite name
     timeseries_dict = {
-        "REACH-165": ts1,
-        "REACH-134": ts2,
-        "REACH-099": ts3,
+        "REACH_165": ts1,
+        "REACH_134": ts2,
+        "REACH_099": ts3,
     }
     
     meta = {
@@ -358,7 +402,7 @@ def test_cdf_auto_prefixing_prevents_duplicates():
     
     # Verify .time and .time_range work before saving (tests the fallback to first key)
     # This should NOT raise KeyError even though meta doesn't have Default_Timeseries_Key yet
-    original_time = sw_data.time  # Should access REACH-165's time (the first dict key)
+    original_time = sw_data.time  # Should access REACH_165's time (the first dict key)
     assert len(original_time) == 5
     original_time_range = sw_data.time_range
     assert original_time_range[0] < original_time_range[1]
@@ -376,14 +420,14 @@ def test_cdf_auto_prefixing_prevents_duplicates():
         # Verify all prefixed variables exist in the CDF file
         with CDF(str(test_file_output_path)) as cdf_file:
             # First timeseries uses unprefixed "Epoch" for ISTP compliance
-            assert "Epoch" in cdf_file  # REACH-165 is first, gets default "Epoch"
+            assert "Epoch" in cdf_file  # REACH_165 is first, gets default "Epoch"
             assert "REACH_134_Epoch" in cdf_file
             assert "REACH_099_Epoch" in cdf_file
-            assert "REACH_165_Epoch" not in cdf_file  # REACH-165 uses unprefixed "Epoch"
+            assert "REACH_165_Epoch" not in cdf_file  # REACH_165 uses unprefixed "Epoch"
             
             # Lat and Lon conflict - first occurrence unprefixed, rest prefixed
-            assert "Lat" in cdf_file  # REACH-165 (first) gets unprefixed
-            assert "Lon" in cdf_file  # REACH-165 (first) gets unprefixed
+            assert "Lat" in cdf_file  # REACH_165 (first) gets unprefixed
+            assert "Lon" in cdf_file  # REACH_165 (first) gets unprefixed
             assert "REACH_134_Lat" in cdf_file
             assert "REACH_134_Lon" in cdf_file
             assert "REACH_099_Lat" in cdf_file
@@ -417,29 +461,29 @@ def test_cdf_auto_prefixing_prevents_duplicates():
             
             # Verify Default_Timeseries_Key global attribute is written for multi-timeseries files
             assert "Default_Timeseries_Key" in cdf_file.attrs
-            assert cdf_file.attrs["Default_Timeseries_Key"][0] == "REACH-165"
+            assert cdf_file.attrs["Default_Timeseries_Key"][0] == "REACH_165"
         
         # Test round-trip: Load the file back and verify structure
         sw_data_loaded = SWXData.load(test_file_output_path)
         
         # Verify the TimeSeries structure is reconstructed correctly
         # All original keys should be preserved after round-trip
-        assert "REACH-165" in sw_data_loaded.data["timeseries"]  # Original key preserved
-        assert "REACH-134" in sw_data_loaded.data["timeseries"]
-        assert "REACH-099" in sw_data_loaded.data["timeseries"]
+        assert "REACH_165" in sw_data_loaded.data["timeseries"]  # Original key preserved
+        assert "REACH_134" in sw_data_loaded.data["timeseries"]
+        assert "REACH_099" in sw_data_loaded.data["timeseries"]
         
         # Verify columns are unprefixed in the loaded TimeSeries
-        ts_165 = sw_data_loaded.data["timeseries"]["REACH-165"]  # Original key preserved
+        ts_165 = sw_data_loaded.data["timeseries"]["REACH_165"]  # Original key preserved
         assert "Lat" in ts_165.colnames
         assert "Lon" in ts_165.colnames
         assert "Sensor_A" in ts_165.colnames
         
-        ts_134 = sw_data_loaded.data["timeseries"]["REACH-134"]
+        ts_134 = sw_data_loaded.data["timeseries"]["REACH_134"]
         assert "Lat" in ts_134.colnames
         assert "Lon" in ts_134.colnames
         assert "Sensor_B" in ts_134.colnames
         
-        ts_099 = sw_data_loaded.data["timeseries"]["REACH-099"]
+        ts_099 = sw_data_loaded.data["timeseries"]["REACH_099"]
         assert "Lat" in ts_099.colnames
         assert "Lon" in ts_099.colnames
         assert "Sensor_C" in ts_099.colnames
@@ -456,7 +500,7 @@ def test_cdf_auto_prefixing_prevents_duplicates():
         
         # CRITICAL: Test that .time and .time_range properties work after loading
         # This would fail with KeyError: 'Epoch' without the Default_Timeseries_Key override fix
-        loaded_time = sw_data_loaded.time  # Should access REACH-165's time (the default)
+        loaded_time = sw_data_loaded.time  # Should access REACH_165's time (the default)
         assert len(loaded_time) == 5
         time_range = sw_data_loaded.time_range
         assert time_range[0] == loaded_time.min()
@@ -533,9 +577,9 @@ def test_cdf_selective_prefixing_unique_columns():
 
     # Create SWXData with multiple TimeSeries with unique column names
     timeseries_dict = {
-        "SAT-A": ts1,
-        "SAT-B": ts2,
-        "SAT-C": ts3,
+        "SAT_A": ts1,
+        "SAT_B": ts2,
+        "SAT_C": ts3,
     }
     
     meta = {
@@ -549,12 +593,12 @@ def test_cdf_selective_prefixing_unique_columns():
     # CRITICAL: Verify .time and .time_range work BEFORE saving
     # This tests the fallback logic when Default_Timeseries_Key isn't in meta yet
     # Without the fix, this would raise KeyError: 'Epoch'
-    pre_save_time = sw_data.time  # Should access SAT-A's time (first dict key)
+    pre_save_time = sw_data.time  # Should access SAT_A's time (first dict key)
     assert len(pre_save_time) == 5
     pre_save_time_range = sw_data.time_range
     assert pre_save_time_range[0] < pre_save_time_range[1]
     # Verify it's using the first key as default
-    assert sw_data._default_timeseries_key == "SAT-A"
+    assert sw_data._default_timeseries_key == "SAT_A"
     
     with tempfile.TemporaryDirectory() as tmpdirname:
         tmp_path = Path(tmpdirname)
@@ -565,10 +609,10 @@ def test_cdf_selective_prefixing_unique_columns():
         
         with CDF(str(test_file_output_path)) as cdf_file:
             # First timeseries uses unprefixed "Epoch" for ISTP compliance
-            assert "Epoch" in cdf_file  # SAT-A is first, gets default "Epoch"
+            assert "Epoch" in cdf_file  # SAT_A is first, gets default "Epoch"
             assert "SAT_B_Epoch" in cdf_file
             assert "SAT_C_Epoch" in cdf_file
-            assert "SAT_A_Epoch" not in cdf_file  # SAT-A uses unprefixed "Epoch"
+            assert "SAT_A_Epoch" not in cdf_file  # SAT_A uses unprefixed "Epoch"
             
             # Unique columns should NOT be prefixed
             assert "Voltage" in cdf_file
@@ -577,10 +621,10 @@ def test_cdf_selective_prefixing_unique_columns():
             assert "Altitude" in cdf_file
             assert "Speed" in cdf_file
             
-            # Pressure conflicts between SAT-B and SAT-C - first occurrence unprefixed
-            # SAT-B is first to have Pressure, so it's unprefixed
-            assert "Pressure" in cdf_file  # SAT-B (first occurrence) gets unprefixed
-            assert "SAT_C_Pressure" in cdf_file  # SAT-C (second occurrence) gets prefixed
+            # Pressure conflicts between SAT_B and SAT_C - first occurrence unprefixed
+            # SAT_B is first to have Pressure, so it's unprefixed
+            assert "Pressure" in cdf_file  # SAT_B (first occurrence) gets unprefixed
+            assert "SAT_C_Pressure" in cdf_file  # SAT_C (second occurrence) gets prefixed
             assert "SAT_B_Pressure" not in cdf_file  # First occurrence stays unprefixed
             
             # Should NOT have prefixed unique variables
@@ -590,8 +634,8 @@ def test_cdf_selective_prefixing_unique_columns():
             assert "SAT_C_Speed" not in cdf_file
             
             # Verify DEPEND_0 linkage - first epoch unprefixed, others prefixed
-            assert cdf_file["Voltage"].attrs["DEPEND_0"] == "Epoch"  # SAT-A uses unprefixed Epoch
-            assert cdf_file["Current"].attrs["DEPEND_0"] == "Epoch"  # SAT-A uses unprefixed Epoch
+            assert cdf_file["Voltage"].attrs["DEPEND_0"] == "Epoch"  # SAT_A uses unprefixed Epoch
+            assert cdf_file["Current"].attrs["DEPEND_0"] == "Epoch"  # SAT_A uses unprefixed Epoch
             assert cdf_file["Temperature"].attrs["DEPEND_0"] == "SAT_B_Epoch"
             assert cdf_file["Pressure"].attrs["DEPEND_0"] == "SAT_B_Epoch"  # First Pressure occurrence
             assert cdf_file["Altitude"].attrs["DEPEND_0"] == "SAT_C_Epoch"
@@ -600,26 +644,26 @@ def test_cdf_selective_prefixing_unique_columns():
             
             # Verify Default_Timeseries_Key global attribute is written for multi-timeseries files
             assert "Default_Timeseries_Key" in cdf_file.attrs
-            assert cdf_file.attrs["Default_Timeseries_Key"][0] == "SAT-A"
+            assert cdf_file.attrs["Default_Timeseries_Key"][0] == "SAT_A"
         
         # Test round-trip
         sw_data_loaded = SWXData.load(test_file_output_path)
         
         # All original keys should be preserved after round-trip
-        assert "SAT-A" in sw_data_loaded.data["timeseries"]  # Original key preserved
-        assert "SAT-B" in sw_data_loaded.data["timeseries"]
-        assert "SAT-C" in sw_data_loaded.data["timeseries"]
+        assert "SAT_A" in sw_data_loaded.data["timeseries"]  # Original key preserved
+        assert "SAT_B" in sw_data_loaded.data["timeseries"]
+        assert "SAT_C" in sw_data_loaded.data["timeseries"]
         
         # Verify unique columns are preserved
-        ts_a = sw_data_loaded.data["timeseries"]["SAT-A"]  # Original key preserved
+        ts_a = sw_data_loaded.data["timeseries"]["SAT_A"]  # Original key preserved
         assert "Voltage" in ts_a.colnames
         assert "Current" in ts_a.colnames
         
-        ts_b = sw_data_loaded.data["timeseries"]["SAT-B"]
+        ts_b = sw_data_loaded.data["timeseries"]["SAT_B"]
         assert "Temperature" in ts_b.colnames
         assert "Pressure" in ts_b.colnames
         
-        ts_c = sw_data_loaded.data["timeseries"]["SAT-C"]
+        ts_c = sw_data_loaded.data["timeseries"]["SAT_C"]
         assert "Altitude" in ts_c.colnames
         assert "Speed" in ts_c.colnames
         assert "Pressure" in ts_c.colnames
@@ -636,7 +680,7 @@ def test_cdf_selective_prefixing_unique_columns():
         
         # CRITICAL: Test that .time and .time_range properties work after loading
         # This would fail with KeyError: 'Epoch' without the Default_Timeseries_Key override fix
-        loaded_time = sw_data_loaded.time  # Should access SAT-A's time (the default)
+        loaded_time = sw_data_loaded.time  # Should access SAT_A's time (the default)
         assert len(loaded_time) == 5
         time_range = sw_data_loaded.time_range
         assert time_range[0] == loaded_time.min()
@@ -755,7 +799,7 @@ def test_cdf_prefix_stripping_heuristic():
     
     timeseries_dict = {
         "Epoch": ts_a,
-        "REACH-134": ts_b,  # Note: hyphens, not underscores (CDF converts to underscores)
+        "REACH_134": ts_b,  # Uses underscores (CDF-compatible naming)
     }
     
     sw_data = SWXData(timeseries=timeseries_dict, meta=meta)
@@ -790,7 +834,7 @@ def test_cdf_prefix_stripping_heuristic():
         assert "data" in loaded_ts_a.colnames
         
         # Check second timeseries - the critical test
-        loaded_ts_b = sw_data_loaded.data["timeseries"]["REACH-134"]
+        loaded_ts_b = sw_data_loaded.data["timeseries"]["REACH_134"]
         # The heuristic should preserve "REACH_134_Status" because "Status" doesn't exist
         assert "REACH_134_Status" in loaded_ts_b.colnames
         # Should NOT have been corrupted to "Status"

@@ -267,10 +267,8 @@ def test_epoch_key_with_hyphen_rejected():
     
     # Should raise ValueError about invalid characters in dict key
     with pytest.raises(ValueError, match=".*hyphen.*|.*invalid.*character.*|.*REACH-172.*"):
-        sw_data = SWXData(timeseries=timeseries_dict, meta=meta)
-
-
-
+        SWXData(timeseries=timeseries_dict, meta=meta)
+        
 
 def test_cdf_spectra_data():
     """

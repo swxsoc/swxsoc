@@ -221,7 +221,8 @@ def test_with_no_epoch_var():
                 SWXData.load(test_file_path)
         
         # Verify the warning was issued from the CDF handler
-        assert len(warning_list) == 1
+        assert any("No Epoch variables found in CDF file" 
+            in str(w.message) for w in warning_list)  
         warning = warning_list[0]
         assert "cdf_handler.py" in warning.filename
         print(f"Warning issued from: {warning.filename}:{warning.lineno}")

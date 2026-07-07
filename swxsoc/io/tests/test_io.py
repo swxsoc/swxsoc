@@ -223,11 +223,17 @@ def test_with_no_epoch_var():
         # Verify the warning was issued from the CDF handler
         assert any("No Epoch variables found in CDF file" 
             in str(w.message) for w in warning_list)  
-        warning = warning_list[0]
-        assert "cdf_handler.py" in warning.filename
-        print(f"Warning issued from: {warning.filename}:{warning.lineno}")
-        print(f"Warning message: {warning.message}")
-
+        for w in warning_list:
+            print(f"\nWarning is from: {w.filename}")
+            print(f"Warning is:        {w.message}")    
+        # Find the specific warning about no epoch variables
+        target_warnings = [w for w in warning_list 
+                   if "No Epoch variables found in CDF file" in str(w.message)
+                   and w.category == SWXUserWarning]
+        assert len(target_warnings) >= 1, "Expected warning about no Epoch variables"
+        assert "cdf_handler.py" in target_warnings[0].filename    
+            
+        
 
 def test_epoch_key_with_hyphen_rejected():
     """
@@ -798,7 +804,7 @@ def test_cdf_prefix_stripping_heuristic():
     
     timeseries_dict = {
         "Epoch": ts_a,
-        "REACH_134": ts_b,  # Uses underscores (CDF-compatible naming)
+        "REACH_134": ts_b,  # Note: hyphens, not underscores (CDF converts to underscores)
     }
     
     sw_data = SWXData(timeseries=timeseries_dict, meta=meta)

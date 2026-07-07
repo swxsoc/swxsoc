@@ -1510,13 +1510,13 @@ class SWXSchema(CdfAttributeManager):
         timeseries; single-timeseries files return None.
         """
         timeseries_dict = data.data["timeseries"]
-        if len(timeseries_dict) <= 1: 
-             return None
+        if len(timeseries_dict) <= 1:
+            return None
 
         # This function after all is the derivation function for Default_Timeseries_Key
         existing = data.meta.get("Default_Timeseries_Key")
         if existing:
-             return existing
+            return existing
         # Return the first timeseries key (dict preserves insertion order in Python 3.7+)
         return next(iter(timeseries_dict.keys()))
 

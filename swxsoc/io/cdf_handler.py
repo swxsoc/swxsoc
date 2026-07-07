@@ -147,6 +147,10 @@ class CDFHandler(SWXIOHandler):
                 warn_user(
                     f"No Epoch variables found in CDF file: {file_path}"
                 )
+                raise ValueError(
+                    "Cannot load CDF file without Epoch variables. "
+                    "SWXData requires at least one time series with time data."
+                )
             
             # Loop for each Epoch Variable (Loop for each Timeseries)
             for epoch_var, epoch_key in epoch_var_to_key.items():

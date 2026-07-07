@@ -61,7 +61,7 @@ Default_Timeseries_Key:
     (default) timeseries uses an unprefixed "Epoch" variable, while other timeseries use prefixed 
     epoch variables (e.g., "REACH_165_Epoch"). This asymmetric prefixing strategy prevents 
     reconstruction of the original dictionary key from the variable name alone - we cannot infer 
-    that "Epoch" originally mapped to "REACH-165" without additional metadata. This attribute 
+    that "Epoch" originally mapped to "REACH_165" without additional metadata. This attribute 
     solves that problem by explicitly storing the original key, enabling proper round-trip 
     preservation of the timeseries structure when reading the CDF file. Alternative design: 
     Always prefix all epoch variables (symmetric) would eliminate need for this attribute but 

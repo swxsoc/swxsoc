@@ -28,7 +28,7 @@ def save_cdf_for_examination(sw_data, filename=None):
     """Save a copy to current dir for examination with custom filename or logical id.
     No output path will put it in the current directory which is the point of this
     function."""
-    if True:  # change to True if you'd like to use this feature
+    if False:  # change to True if you'd like to use this feature
         if filename:
             # Add .cdf suffix if not already present
             if not filename.endswith(".cdf"):
@@ -216,7 +216,7 @@ def test_with_no_epoch_var():
             SWXUserWarning, match="No Epoch variables found in CDF file"
         ) as warning_list:
             with pytest.raises(
-                KeyError, match="Cannot create SWXData without time series data"
+                ValueError, match="Cannot load CDF file without Epoch variables"
             ):
                 SWXData.load(test_file_path)
         

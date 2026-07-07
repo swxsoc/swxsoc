@@ -440,7 +440,7 @@ def test_get_timeseres_epoch_key():
         q = Quantity(value=random((5)), dtype=np.uint16)
         _ = SWXData.get_timeseres_epoch_key(test_data.data["timeseries"], q)
 
-    # Add sedond Epoch
+    # Add second Epoch
     ts = get_test_timeseries(n=4)
     test_data.add_timeseries(epoch_key="Epoch2", timeseries=ts)
 

@@ -835,7 +835,7 @@ class SWXSchema(CdfAttributeManager):
                 continue
             # If the attribute can take values for multiple dimensions of the var data
             if "iterable" in attr_schema and attr_schema["iterable"]:
-                # Get the "root" attriubte name.
+                # Get the "root" attribute name.
                 # Ex: CNAMEi -> CNAME , DEPEND_i -> DEPEND_
                 attr_root = attr_name.rstrip("i")
                 # Get the number of dimensions to iterate over for the attribute

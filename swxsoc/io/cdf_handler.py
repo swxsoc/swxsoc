@@ -73,6 +73,15 @@ class CDFHandler(SWXIOHandler):
             return var_name
         return f"{self._sanitize_epoch_key(epoch_key)}_{var_name}"
 
+    def _strip_epoch_prefix(self, var_name: str, epoch_key: str) -> str:
+        default_timeseries_key = swxsoc.config["general"]["default_timeseries_key"]
+        if epoch_key == default_timeseries_key:
+            return var_name
+        prefix = self._sanitize_epoch_key(epoch_key)
+        if var_name.startswith(f"{prefix}_"):
+            return var_name[len(prefix) + 1 :]
+        return var_name
+
     # ================================================================================================
     #                                   CDF READER
     # ================================================================================================
@@ -166,7 +175,8 @@ class CDFHandler(SWXIOHandler):
             epoch_prefix_to_key = {
                 self._sanitize_epoch_key(epoch_key): epoch_key
                 for epoch_key in timeseries.keys()
-                # Default epoch variables remain unprefixed for compatibility.
+                # Keep default epoch data variables unprefixed to preserve
+                # backward compatibility with existing CDF files.
                 if epoch_key != default_timeseries_key
             }
             for var_name in variable_keys:
@@ -184,15 +194,14 @@ class CDFHandler(SWXIOHandler):
                         epoch_key = epoch_var_to_key[depend_0]
                         # For SWxSOC-written files, non-default epoch data
                         # variables are prefixed by sanitized epoch key.
-                        if epoch_key != default_timeseries_key:
-                            prefix = self._sanitize_epoch_key(epoch_key)
-                            if var_name.startswith(f"{prefix}_"):
-                                column_name = var_name[len(prefix) + 1 :]
+                        column_name = self._strip_epoch_prefix(var_name, epoch_key)
                     else:
                         for prefix, ts_epoch_key in epoch_prefix_to_key.items():
                             if var_name.startswith(f"{prefix}_"):
                                 epoch_key = ts_epoch_key
-                                column_name = var_name[len(prefix) + 1 :]
+                                column_name = self._strip_epoch_prefix(
+                                    var_name, ts_epoch_key
+                                )
                                 break
 
                     # Find the TimeSeries Epoch for this Record-Varying Variable

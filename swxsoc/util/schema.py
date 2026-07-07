@@ -831,10 +831,7 @@ class SWXSchema(CdfAttributeManager):
         # Derive Attributes Specific to VAR_TYPE
         for attr_name, attr_schema in derived_attributes:
             # Epoch variables should not have DEPEND_0 pointing to themselves.
-            if (
-                attr_name == "DEPEND_0"
-                and (var_name == "time" or var_name == "Epoch" or var_name.endswith("_Epoch"))
-            ):
+            if attr_name == "DEPEND_0" and self._is_epoch_variable_name(var_name):
                 continue
             # If the attribute can take values for multiple dimensions of the var data
             if "iterable" in attr_schema and attr_schema["iterable"]:
@@ -871,6 +868,10 @@ class SWXSchema(CdfAttributeManager):
                 )
 
         return measurement_attributes
+
+    @staticmethod
+    def _is_epoch_variable_name(var_name: str) -> bool:
+        return var_name == "time" or var_name == "Epoch" or var_name.endswith("_Epoch")
 
     def _get_num_dimensions(self, var_name, var_data, guess_type, **kwargs):
         """

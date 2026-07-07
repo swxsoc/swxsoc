@@ -444,6 +444,14 @@ def test_get_timeseres_epoch_key():
     ts = get_test_timeseries(n=4)
     test_data.add_timeseries(epoch_key="Epoch2", timeseries=ts)
 
+    # DEPEND_0 may store a prefixed CDF epoch variable name
+    assert (
+        SWXData.get_timeseres_epoch_key(
+            test_data.data["timeseries"], q, {"DEPEND_0": "Epoch2_Epoch"}
+        )
+        == "Epoch2"
+    )
+
     # Multiple Epochs
     with pytest.raises(ValueError):
         q = Quantity(value=random((4)), dtype=np.uint16)

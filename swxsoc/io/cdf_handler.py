@@ -44,6 +44,35 @@ class CDFHandler(SWXIOHandler):
         # CDF Schema
         self.schema = SWXSchema()
 
+    @staticmethod
+    def _sanitize_epoch_key(epoch_key: str) -> str:
+        return epoch_key.replace("-", "_")
+
+    @staticmethod
+    def _desanitize_epoch_key(epoch_key: str) -> str:
+        return epoch_key.replace("_", "-")
+
+    @staticmethod
+    def _is_epoch_variable_name(var_name: str) -> bool:
+        return var_name == "Epoch" or var_name.endswith("_Epoch")
+
+    def _get_cdf_epoch_var_name(self, epoch_key: str) -> str:
+        default_timeseries_key = swxsoc.config["general"]["default_timeseries_key"]
+        if epoch_key == default_timeseries_key:
+            return "Epoch"
+        return f"{self._sanitize_epoch_key(epoch_key)}_Epoch"
+
+    def _get_epoch_key_from_cdf_epoch_var(self, epoch_var_name: str) -> str:
+        if epoch_var_name == "Epoch":
+            return swxsoc.config["general"]["default_timeseries_key"]
+        return self._desanitize_epoch_key(epoch_var_name[: -len("_Epoch")])
+
+    def _get_cdf_data_var_name(self, epoch_key: str, var_name: str) -> str:
+        default_timeseries_key = swxsoc.config["general"]["default_timeseries_key"]
+        if epoch_key == default_timeseries_key:
+            return var_name
+        return f"{self._sanitize_epoch_key(epoch_key)}_{var_name}"
+
     # ================================================================================================
     #                                   CDF READER
     # ================================================================================================
@@ -100,10 +129,16 @@ class CDFHandler(SWXIOHandler):
 
             # First Variables we need to add are time/Epoch
             epoch_variables = [
-                var_name for var_name in input_file.keys() if "Epoch" in var_name
+                var_name
+                for var_name in input_file.keys()
+                if self._is_epoch_variable_name(var_name)
             ]
+            epoch_var_to_key = {
+                epoch_var: self._get_epoch_key_from_cdf_epoch_var(epoch_var)
+                for epoch_var in epoch_variables
+            }
             # Make sure the Default "Epoch" is present in the CDF
-            if default_timeseries_key not in epoch_variables:
+            if len(epoch_variables) == 0:
                 warn_user(
                     f"Epoch Variable {default_timeseries_key} not found in CDF file: {file_path}"
                 )
@@ -111,20 +146,28 @@ class CDFHandler(SWXIOHandler):
             for epoch_var in epoch_variables:
                 time_data = self._load_epoch_variable(input_file, epoch_var)
                 time_attrs = self._load_metadata_attributes(input_file[epoch_var])
+                epoch_key = epoch_var_to_key[epoch_var]
                 # Create a new TimeSeries
-                timeseries[epoch_var] = TimeSeries()
+                timeseries[epoch_key] = TimeSeries()
                 # Create the Time object
-                timeseries[epoch_var]["time"] = time_data
+                timeseries[epoch_key]["time"] = time_data
                 # Create the Metadata
-                timeseries[epoch_var]["time"].meta = OrderedDict()
-                timeseries[epoch_var]["time"].meta.update(time_attrs)
+                timeseries[epoch_key]["time"].meta = OrderedDict()
+                timeseries[epoch_key]["time"].meta.update(time_attrs)
 
             # Get all the Keys for Measurement Variable Data
             # These are Keys where the underlying object is a `dict` that contains
             # additional data, and is not the `EPOCH` variable
             variable_keys = [
-                var_name for var_name in input_file.keys() if "Epoch" not in var_name
+                var_name
+                for var_name in input_file.keys()
+                if not self._is_epoch_variable_name(var_name)
             ]
+            epoch_prefix_to_key = {
+                self._sanitize_epoch_key(epoch_key): epoch_key
+                for epoch_key in timeseries.keys()
+                if epoch_key != default_timeseries_key
+            }
             for var_name in variable_keys:
                 # Extract the Variable's Metadata
                 var_attrs = self._load_metadata_attributes(input_file[var_name])
@@ -132,10 +175,28 @@ class CDFHandler(SWXIOHandler):
                 # Extract the Variable's Data
                 var_data: np.ndarray = input_file[var_name][...]
                 if input_file[var_name].rv():
+                    column_name = var_name
+                    epoch_key = None
+
+                    depend_0 = var_attrs.get("DEPEND_0")
+                    if isinstance(depend_0, str) and depend_0 in epoch_var_to_key:
+                        epoch_key = epoch_var_to_key[depend_0]
+                    else:
+                        for prefix, ts_epoch_key in epoch_prefix_to_key.items():
+                            if var_name.startswith(f"{prefix}_"):
+                                epoch_key = ts_epoch_key
+                                column_name = var_name[len(prefix) + 1 :]
+                                break
+
                     # Find the TimeSeries Epoch for this Record-Varying Variable
-                    epoch_key = SWXData.get_timeseres_epoch_key(
-                        timeseries, var_data, var_attrs
-                    )
+                    if epoch_key is None:
+                        epoch_key = SWXData.get_timeseres_epoch_key(
+                            timeseries, var_data, var_attrs
+                        )
+                    elif epoch_key != default_timeseries_key:
+                        prefix = self._sanitize_epoch_key(epoch_key)
+                        if var_name.startswith(f"{prefix}_"):
+                            column_name = var_name[len(prefix) + 1 :]
                     ts = timeseries[epoch_key]
 
                     # See if it is record-varying data with UNITS
@@ -144,17 +205,17 @@ class CDFHandler(SWXIOHandler):
                         if len(var_data.shape) > 1:
                             # Load as Spectra Data
                             self._load_spectra_variable(
-                                spectra, var_name, var_data, var_attrs, ts.time
+                                spectra, column_name, var_data, var_attrs, ts.time
                             )
                         else:
                             # Load as Record-Varying `data`
                             self._load_timeseries_variable(
-                                ts, var_name, var_data, var_attrs
+                                ts, column_name, var_data, var_attrs
                             )
                     else:
                         # Load as `support`
                         self._load_support_variable(
-                            support, var_name, var_data, var_attrs
+                            support, column_name, var_data, var_attrs
                         )
                 else:
                     # Load Non-Record-Varying Data as `support`
@@ -622,14 +683,16 @@ class CDFHandler(SWXIOHandler):
             for var_name in ts.colnames:
                 var_data = ts[var_name]
                 if var_name == "time":
-                    self._write_time_variable(epoch_key, var_data, cdf_file)
+                    cdf_var_name = self._get_cdf_epoch_var_name(epoch_key)
+                    self._write_time_variable(cdf_var_name, var_data, cdf_file)
                     self._convert_variable_attributes_to_cdf(
-                        epoch_key, var_data, cdf_file
+                        cdf_var_name, var_data, cdf_file
                     )
                 else:
-                    self._write_timeseries_variable(var_name, var_data, cdf_file)
+                    cdf_var_name = self._get_cdf_data_var_name(epoch_key, var_name)
+                    self._write_timeseries_variable(cdf_var_name, var_data, cdf_file)
                     self._convert_variable_attributes_to_cdf(
-                        var_name, var_data, cdf_file
+                        cdf_var_name, var_data, cdf_file
                     )
 
         # Loop through the NDData Data Structure (Not all record-varying)
@@ -731,7 +794,9 @@ class CDFHandler(SWXIOHandler):
             recVary=(var_data.meta["VAR_TYPE"] == "data"),
         )
 
-    def _write_time_variable(self, epoch_key: str, var_data: Time, cdf_file: pycdf.CDF):
+    def _write_time_variable(
+        self, cdf_var_name: str, var_data: Time, cdf_file: pycdf.CDF
+    ):
         """
         Write the Epoch column. Falls back to the historical datetime-based
         write path when the column is not masked; for a masked time column
@@ -740,7 +805,7 @@ class CDFHandler(SWXIOHandler):
         """
         mask = self._get_mask(var_data)
         if mask is None:
-            cdf_file[epoch_key] = var_data.to_datetime()
+            cdf_file[cdf_var_name] = var_data.to_datetime()
             return
 
         # ``Time`` supports native masking; ``Masked(Time)`` exposes ``.unmasked``.
@@ -758,7 +823,7 @@ class CDFHandler(SWXIOHandler):
         ttns = np.asarray(pycdf.lib.v_datetime_to_tt2000(dt_array), dtype=np.int64)
         ttns[mask] = fv.get_fillval(cdf_type=const.CDF_TIME_TT2000.value)
         cdf_file.new(
-            name=epoch_key,
+            name=cdf_var_name,
             data=ttns,
             type=const.CDF_TIME_TT2000,
         )

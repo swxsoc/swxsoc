@@ -741,6 +741,7 @@ class SWXSchema(CdfAttributeManager):
         data,
         var_name: str,
         guess_types: Optional[list[int]] = None,
+        epoch_key: Optional[str] = None,
     ) -> OrderedDict:
         """
         Function to derive metadata for the given measurement.
@@ -753,6 +754,8 @@ class SWXSchema(CdfAttributeManager):
             The name of the measurement to derive metadata for
         guess_types : `list[int]`, optional
             Guessed CDF Type of the variable
+        epoch_key : `str`, optional
+            Key of the timeseries epoch the variable belongs to.
 
         Returns
         -------
@@ -762,7 +765,16 @@ class SWXSchema(CdfAttributeManager):
         measurement_attributes = OrderedDict()
 
         # Guess the const CDF Data Type
-        var_data = data[var_name]
+        if (
+            epoch_key is not None
+            and hasattr(data, "data")
+            and "timeseries" in data.data
+            and epoch_key in data.data["timeseries"]
+            and var_name in data.data["timeseries"][epoch_key].columns
+        ):
+            var_data = data.data["timeseries"][epoch_key][var_name]
+        else:
+            var_data = data[var_name]
         if not guess_types:
             if var_name == "time":
                 # Guess the const CDF Data Type
@@ -818,6 +830,8 @@ class SWXSchema(CdfAttributeManager):
 
         # Derive Attributes Specific to VAR_TYPE
         for attr_name, attr_schema in derived_attributes:
+            if var_name == "time" and attr_name == "DEPEND_0":
+                continue
             # If the attribute can take values for multiple dimensions of the var data
             if "iterable" in attr_schema and attr_schema["iterable"]:
                 # Get the "root" attriubte name.
@@ -849,6 +863,7 @@ class SWXSchema(CdfAttributeManager):
                     var_data,
                     guess_types[0],
                     timeseries_dict=data.data["timeseries"],
+                    epoch_key=epoch_key,
                 )
 
         return measurement_attributes
@@ -871,16 +886,21 @@ class SWXSchema(CdfAttributeManager):
         # Find the TimeSeries Epoch for this Record-Varying Variable
         from swxsoc.swxdata import SWXData
 
-        if "timeseries_dict" in kwargs:
+        default_timeseries_key = swxsoc.config["general"]["default_timeseries_key"]
+        if "epoch_key" in kwargs and kwargs["epoch_key"] is not None:
+            epoch_key = kwargs["epoch_key"]
+        elif "timeseries_dict" in kwargs:
             timeseries_dict = kwargs["timeseries_dict"]
 
             epoch_key = SWXData.get_timeseres_epoch_key(
                 timeseries_dict, var_data, var_data.meta
             )
         else:
-            epoch_key = swxsoc.config["general"]["default_timeseries_key"]
+            epoch_key = default_timeseries_key
 
-        return epoch_key
+        if epoch_key == default_timeseries_key:
+            return "Epoch"
+        return f"{epoch_key.replace('-', '_')}_Epoch"
 
     def _get_display_type(self, var_name, var_data, guess_type, **kwargs):
         return "time_series"

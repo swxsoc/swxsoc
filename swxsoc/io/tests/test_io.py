@@ -185,6 +185,91 @@ def test_cdf_spectra_data():
         assert "Test_Spectra_Var" in td_loaded.spectra
 
 
+def test_cdf_auto_prefixing_prevents_duplicates():
+    """Duplicate column names across epochs are prefixed and round-trip correctly."""
+
+    def _make_satellite_timeseries(lat_values, lon_values, sensor_values):
+        ts = TimeSeries()
+        ts["time"] = Time(
+            [
+                "2024-01-01T00:00:00",
+                "2024-01-01T00:00:01",
+                "2024-01-01T00:00:02",
+                "2024-01-01T00:00:03",
+                "2024-01-01T00:00:04",
+            ]
+        )
+        ts["Lat"] = Quantity(np.asarray(lat_values), unit="deg")
+        ts["Lon"] = Quantity(np.asarray(lon_values), unit="deg")
+        ts["Sensor_A"] = Quantity(np.asarray(sensor_values), unit="ct")
+        ts["Lat"].meta = OrderedDict({"CATDESC": "Latitude", "VAR_TYPE": "data"})
+        ts["Lon"].meta = OrderedDict({"CATDESC": "Longitude", "VAR_TYPE": "data"})
+        ts["Sensor_A"].meta = OrderedDict(
+            {"CATDESC": "Sensor A", "VAR_TYPE": "data"}
+        )
+        return ts
+
+    ts_default = _make_satellite_timeseries(
+        lat_values=[1, 2, 3, 4, 5],
+        lon_values=[11, 12, 13, 14, 15],
+        sensor_values=[101, 102, 103, 104, 105],
+    )
+    ts_default.meta.update(
+        {
+            "Descriptor": "EEA>Electron Electrostatic Analyzer",
+            "Data_level": "l1>Level 1",
+            "Data_version": "v0.0.1",
+        }
+    )
+    sw_data = SWXData(timeseries=ts_default)
+    sw_data.add_timeseries(
+        epoch_key="REACH-165",
+        timeseries=_make_satellite_timeseries(
+            lat_values=[21, 22, 23, 24, 25],
+            lon_values=[31, 32, 33, 34, 35],
+            sensor_values=[201, 202, 203, 204, 205],
+        ),
+    )
+    sw_data.add_timeseries(
+        epoch_key="REACH-134",
+        timeseries=_make_satellite_timeseries(
+            lat_values=[41, 42, 43, 44, 45],
+            lon_values=[51, 52, 53, 54, 55],
+            sensor_values=[301, 302, 303, 304, 305],
+        ),
+    )
+    sw_data._derive_metadata()
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        out_path = sw_data.save(output_path=tmpdirname)
+        with CDF(str(out_path)) as cdf_file:
+            assert "Epoch" in cdf_file
+            assert "REACH_165_Epoch" in cdf_file
+            assert "REACH_134_Epoch" in cdf_file
+            assert "Lat" in cdf_file
+            assert "REACH_165_Lat" in cdf_file
+            assert "REACH_134_Lat" in cdf_file
+
+            assert cdf_file["Lat"].attrs["DEPEND_0"] == "Epoch"
+            assert cdf_file["REACH_165_Lat"].attrs["DEPEND_0"] == "REACH_165_Epoch"
+            assert cdf_file["REACH_134_Lat"].attrs["DEPEND_0"] == "REACH_134_Epoch"
+            assert "DEPEND_0" not in cdf_file["Epoch"].attrs
+            assert "DEPEND_0" not in cdf_file["REACH_165_Epoch"].attrs
+            assert "DEPEND_0" not in cdf_file["REACH_134_Epoch"].attrs
+
+        loaded = SWXData.load(out_path)
+        assert set(loaded.data["timeseries"].keys()) == {"Epoch", "REACH-165", "REACH-134"}
+        assert "Lat" in loaded.data["timeseries"]["REACH-165"].colnames
+        assert np.allclose(
+            loaded.data["timeseries"]["REACH-165"]["Lat"].value,
+            np.asarray([21, 22, 23, 24, 25]),
+        )
+        assert np.allclose(
+            loaded.data["timeseries"]["REACH-134"]["Sensor_A"].value,
+            np.asarray([301, 302, 303, 304, 305]),
+        )
+
+
 def test_cdf_custom_filename():
     """
     Test that a custom filename can be provided instead of using Logical_file_id.

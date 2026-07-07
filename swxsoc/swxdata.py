@@ -427,6 +427,12 @@ class SWXData:
         # Find the TimeSeries Epoch for this Record-Varying Variable
         if var_meta is not None and "DEPEND_0" in var_meta:
             epoch_key = var_meta["DEPEND_0"]
+            default_timeseries_key = swxsoc.config["general"]["default_timeseries_key"]
+            if isinstance(epoch_key, str):
+                if epoch_key == "Epoch":
+                    epoch_key = default_timeseries_key
+                elif epoch_key.endswith("_Epoch"):
+                    epoch_key = epoch_key[: -len("_Epoch")].replace("_", "-")
         else:
             # Check which epoch key to use
             potential_epoch_keys = []
@@ -535,7 +541,7 @@ class SWXData:
             # Time Measurement Attributes
             for col in ts.columns:
                 for attr_name, attr_value in self.schema.derive_measurement_attributes(
-                    self, col
+                    self, col, epoch_key=epoch_key
                 ).items():
                     self._update_measurement_attribute(
                         data_structure=ts,

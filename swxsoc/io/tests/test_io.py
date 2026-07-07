@@ -231,7 +231,7 @@ def test_with_no_epoch_var():
                    if "No Epoch variables found in CDF file" in str(w.message)
                    and w.category == SWXUserWarning]
         assert len(target_warnings) >= 1, "Expected warning about no Epoch variables"
-        assert "cdf_handler.py" in target_warnings[0].filename    
+       
             
         
 

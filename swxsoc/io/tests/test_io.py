@@ -804,7 +804,7 @@ def test_cdf_prefix_stripping_heuristic():
     
     timeseries_dict = {
         "Epoch": ts_a,
-        "REACH_134": ts_b,  # Note: hyphens, not underscores (CDF converts to underscores)
+        "REACH_134": ts_b,  # We, like CDF, no longer support hyphens 
     }
     
     sw_data = SWXData(timeseries=timeseries_dict, meta=meta)

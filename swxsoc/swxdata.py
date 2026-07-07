@@ -373,10 +373,6 @@ class SWXData:
         else:
             raise KeyError(
                 f"Variable {var_name} not found in SWXData object. "
-                "Cannot create SWXData without time series data. "
-                "At least one non-empty TimeSeries with time data is required. "
-                "If loading from a CDF file, ensure it contains at least one Epoch variable "
-                "(named 'Epoch' or ending with '_Epoch')."
                 )
 
     @staticmethod

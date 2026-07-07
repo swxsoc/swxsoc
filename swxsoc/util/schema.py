@@ -864,6 +864,9 @@ class SWXSchema(CdfAttributeManager):
                 derive_kwargs = {"timeseries_dict": data.data["timeseries"]}
                 if epoch_key is not None:
                     derive_kwargs["epoch_key"] = epoch_key
+                # Pass Default_Timeseries_Key so _get_depend() matches what the writer will emit
+                if "Default_Timeseries_Key" in data.meta:
+                    derive_kwargs["default_timeseries_key"] = data.meta["Default_Timeseries_Key"]
                 measurement_attributes[attr_name] = derivation_fn(
                     var_name,
                     var_data,
@@ -907,7 +910,10 @@ class SWXSchema(CdfAttributeManager):
         # But use "Epoch" for the default/first timeseries
         # For multi-timeseries, the default is the first key in insertion order
         # (matches the rule used by the writer and _get_default_timeseries_key)
-        if "timeseries_dict" in kwargs and len(kwargs["timeseries_dict"]) > 1:
+        # But copilot is not satisfied with the insertion order assumptiion so
+        if "default_timeseries_key" in kwargs:
+            default_key = kwargs["default_timeseries_key"]
+        elif "timeseries_dict" in kwargs and len(kwargs["timeseries_dict"]) > 1:
             default_key = next(iter(kwargs["timeseries_dict"].keys()))
         else:
             default_key = swxsoc.config["general"]["default_timeseries_key"]
@@ -915,7 +921,7 @@ class SWXSchema(CdfAttributeManager):
         if epoch_key == default_key:
             prefixed_epoch = "Epoch"
         else:
-            prefixed_epoch = f"{epoch_key.replace('-', '_')}_Epoch"
+            prefixed_epoch = f"{epoch_key}_Epoch"
         return prefixed_epoch
 
     def _get_display_type(self, var_name, var_data, guess_type, **kwargs):

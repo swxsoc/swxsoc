@@ -830,6 +830,7 @@ class SWXSchema(CdfAttributeManager):
 
         # Derive Attributes Specific to VAR_TYPE
         for attr_name, attr_schema in derived_attributes:
+            # Epoch variables should not have DEPEND_0 pointing to themselves.
             if var_name == "time" and attr_name == "DEPEND_0":
                 continue
             # If the attribute can take values for multiple dimensions of the var data

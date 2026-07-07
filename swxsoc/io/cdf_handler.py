@@ -181,6 +181,10 @@ class CDFHandler(SWXIOHandler):
                     depend_0 = var_attrs.get("DEPEND_0")
                     if isinstance(depend_0, str) and depend_0 in epoch_var_to_key:
                         epoch_key = epoch_var_to_key[depend_0]
+                        if epoch_key != default_timeseries_key:
+                            prefix = self._sanitize_epoch_key(epoch_key)
+                            if var_name.startswith(f"{prefix}_"):
+                                column_name = var_name[len(prefix) + 1 :]
                     else:
                         for prefix, ts_epoch_key in epoch_prefix_to_key.items():
                             if var_name.startswith(f"{prefix}_"):
@@ -193,10 +197,6 @@ class CDFHandler(SWXIOHandler):
                         epoch_key = SWXData.get_timeseres_epoch_key(
                             timeseries, var_data, var_attrs
                         )
-                    elif epoch_key != default_timeseries_key:
-                        prefix = self._sanitize_epoch_key(epoch_key)
-                        if var_name.startswith(f"{prefix}_"):
-                            column_name = var_name[len(prefix) + 1 :]
                     ts = timeseries[epoch_key]
 
                     # See if it is record-varying data with UNITS

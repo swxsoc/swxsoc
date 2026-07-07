@@ -46,10 +46,12 @@ class CDFHandler(SWXIOHandler):
 
     @staticmethod
     def _sanitize_epoch_key(epoch_key: str) -> str:
+        # Current naming convention reserves "_" as the CDF-safe substitute for "-".
         return epoch_key.replace("-", "_")
 
     @staticmethod
     def _desanitize_epoch_key(epoch_key: str) -> str:
+        # Reverse mapping for SWxSOC-generated names; assumes "_" originated from "-".
         return epoch_key.replace("_", "-")
 
     @staticmethod
@@ -149,7 +151,9 @@ class CDFHandler(SWXIOHandler):
             # Make sure the Default "Epoch" is present in the CDF
             if len(epoch_variables) == 0:
                 warn_user(
-                    f"Epoch Variable {default_timeseries_key} not found in CDF file: {file_path}"
+                    "Epoch Variable "
+                    f"{swxsoc.config['general']['default_timeseries_key']} "
+                    f"not found in CDF file: {file_path}"
                 )
             # Loop for each Epoch Variable
             for epoch_var in epoch_variables:

@@ -253,6 +253,10 @@ def test_cdf_auto_prefixing_prevents_duplicates():
             assert cdf_file["Lat"].attrs["DEPEND_0"] == "Epoch"
             assert cdf_file["REACH_165_Lat"].attrs["DEPEND_0"] == "REACH_165_Epoch"
             assert cdf_file["REACH_134_Lat"].attrs["DEPEND_0"] == "REACH_134_Epoch"
+            assert cdf_file["REACH_165_Lon"].attrs["DEPEND_0"] == "REACH_165_Epoch"
+            assert cdf_file["REACH_134_Lon"].attrs["DEPEND_0"] == "REACH_134_Epoch"
+            assert cdf_file["REACH_165_Sensor_A"].attrs["DEPEND_0"] == "REACH_165_Epoch"
+            assert cdf_file["REACH_134_Sensor_A"].attrs["DEPEND_0"] == "REACH_134_Epoch"
             assert "DEPEND_0" not in cdf_file["Epoch"].attrs
             assert "DEPEND_0" not in cdf_file["REACH_165_Epoch"].attrs
             assert "DEPEND_0" not in cdf_file["REACH_134_Epoch"].attrs

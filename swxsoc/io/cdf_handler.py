@@ -166,6 +166,7 @@ class CDFHandler(SWXIOHandler):
             epoch_prefix_to_key = {
                 self._sanitize_epoch_key(epoch_key): epoch_key
                 for epoch_key in timeseries.keys()
+                # Default epoch variables remain unprefixed for compatibility.
                 if epoch_key != default_timeseries_key
             }
             for var_name in variable_keys:
@@ -181,6 +182,8 @@ class CDFHandler(SWXIOHandler):
                     depend_0 = var_attrs.get("DEPEND_0")
                     if isinstance(depend_0, str) and depend_0 in epoch_var_to_key:
                         epoch_key = epoch_var_to_key[depend_0]
+                        # For SWxSOC-written files, non-default epoch data
+                        # variables are prefixed by sanitized epoch key.
                         if epoch_key != default_timeseries_key:
                             prefix = self._sanitize_epoch_key(epoch_key)
                             if var_name.startswith(f"{prefix}_"):

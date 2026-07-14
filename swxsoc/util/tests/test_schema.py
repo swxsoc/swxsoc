@@ -1,17 +1,19 @@
-import pytest
 import tempfile
 from collections import OrderedDict
-import yaml
+
+import astropy.units as u
 import numpy as np
-from numpy.random import random
+import pytest
+import yaml
+from astropy.table import Table
 from astropy.time import Time
 from astropy.timeseries import TimeSeries
-from astropy.table import Table
-import astropy.units as u
+from numpy.random import random
 from spacepy.pycdf import CDF
+
 from swxsoc.swxdata import SWXData
-from swxsoc.util.schema import SWXSchema
 from swxsoc.util import const
+from swxsoc.util.schema import SWXSchema
 
 
 def get_test_sw_data():
@@ -496,7 +498,7 @@ def test_time_units():
 def test_derive_measurement_attributes_invalid_epoch_key():
     """
     Test that derive_measurement_attributes handles invalid epoch_key gracefully.
-    
+
     Regression test for issue where calling derive_measurement_attributes with an
     invalid epoch_key would raise AttributeError when trying to access .columns
     on an empty dict returned by .get(epoch_key, {}).
@@ -507,7 +509,7 @@ def test_derive_measurement_attributes_invalid_epoch_key():
     time_col = Time(time, format="unix")
     ts["time"] = time_col
     ts["time"].meta = OrderedDict({"CATDESC": "Epoch Time"})
-    
+
     quant = u.Quantity(value=random(size=(10)), unit="m", dtype=np.uint16)
     ts["measurement"] = quant
     ts["measurement"].meta = OrderedDict(
@@ -516,20 +518,18 @@ def test_derive_measurement_attributes_invalid_epoch_key():
             "CATDESC": "Test Data",
         }
     )
-    
+
     # Add required global metadata
     template = SWXData.global_attribute_template("eea", "l2", "0.0.0")
     sw_data = SWXData(timeseries=ts, meta=template)
     schema = SWXSchema()
-    
+
     # Call with an invalid epoch_key - should not raise AttributeError
     # Instead, it should fall back to using data[var_name]
     result = schema.derive_measurement_attributes(
-        sw_data, 
-        "measurement",
-        epoch_key="invalid_epoch_key_that_does_not_exist"
+        sw_data, "measurement", epoch_key="invalid_epoch_key_that_does_not_exist"
     )
-    
+
     # Verify we get a valid result (OrderedDict with attributes)
     assert isinstance(result, OrderedDict)
     # Should have derived some attributes

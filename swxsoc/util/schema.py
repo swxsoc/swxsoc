@@ -777,7 +777,7 @@ class SWXSchema(CdfAttributeManager):
             # in multi-series context this will return the first timeseries, not the intended one.
             # For support/spectra or single-timeseries, use __getitem__
             var_data = data[var_name]
-            
+
         # Guess the const CDF Data Type
         if not guess_types:
             if var_name == "time":
@@ -866,7 +866,9 @@ class SWXSchema(CdfAttributeManager):
                     derive_kwargs["epoch_key"] = epoch_key
                 # Pass Default_Timeseries_Key so _get_depend() matches what the writer will emit
                 if "Default_Timeseries_Key" in data.meta:
-                    derive_kwargs["default_timeseries_key"] = data.meta["Default_Timeseries_Key"]
+                    derive_kwargs["default_timeseries_key"] = data.meta[
+                        "Default_Timeseries_Key"
+                    ]
                 measurement_attributes[attr_name] = derivation_fn(
                     var_name,
                     var_data,
@@ -917,12 +919,13 @@ class SWXSchema(CdfAttributeManager):
             default_key = next(iter(kwargs["timeseries_dict"].keys()))
         else:
             default_key = swxsoc.config["general"]["default_timeseries_key"]
-            
+
+        # Resolve the Final Epoch Variable Name for the DEPEND CDF Variable Attr
         if epoch_key == default_key:
-            prefixed_epoch = "Epoch"
+            epoch_var_name = "Epoch"
         else:
-            prefixed_epoch = f"{epoch_key}_Epoch"
-        return prefixed_epoch
+            epoch_var_name = f"{epoch_key}_Epoch"
+        return epoch_var_name
 
     def _get_display_type(self, var_name, var_data, guess_type, **kwargs):
         return "time_series"
@@ -1510,7 +1513,7 @@ class SWXSchema(CdfAttributeManager):
     def _get_default_timeseries_key(self, data):
         """
         Function to get the default timeseries key for multi-timeseries CDF files.
-        
+
         Returns the key of the first timeseries, which corresponds to the unprefixed
         "Epoch" variable in the CDF file. This is only set for files with multiple
         timeseries; single-timeseries files return None.

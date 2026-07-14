@@ -177,10 +177,10 @@ class SWXData:
         self._default_timeseries_key = swxsoc.config["general"][
             "default_timeseries_key"
         ]
-        
+
         # Override with Default_Timeseries_Key from file metadata if present
         # This ensures multi-timeseries CDF files load correctly
-        
+
         if "Default_Timeseries_Key" in self._meta:  # only applicable in load() context
             key_from_file = self._meta["Default_Timeseries_Key"]
             if key_from_file and key_from_file != "":
@@ -205,10 +205,13 @@ class SWXData:
             )
 
         # 1. If _default_timeseries_key is not valid, fall back to first key
-        # 2. The Default_Timeseries_Key is first set in save() so this is if the user 
+        # 2. The Default_Timeseries_Key is first set in save() so this is if the user
         # checks his multi-series data right after he creates it
         # 3. This handles multi-timeseries cases where user didn't set Default_Timeseries_Key
-        if self._default_timeseries_key not in self._timeseries and len(self._timeseries) > 0:
+        if (
+            self._default_timeseries_key not in self._timeseries
+            and len(self._timeseries) > 0
+        ):
             self._default_timeseries_key = next(iter(self._timeseries.keys()))
 
         # Copy the Non-Record Varying Data
@@ -232,14 +235,14 @@ class SWXData:
         # ================================================
         #           VALIDATE MULTI-TIMESERIES DICT KEYS
         # ================================================
-        
+
         # For multi-timeseries, dict keys must not contain hyphens because:
         # 1. CDF format only allows underscores (not hyphens) in variable names
         # 2. Dict keys become prefixes in CDF (e.g., "KEY_Epoch", "KEY_variable")
         # 3. To avoid lossy conversion, keys should match CDF naming directly
         if len(self._timeseries) > 1:
             for key in self._timeseries:
-                if '-' in key:
+                if "-" in key:
                     raise ValueError(
                         f"Multi-timeseries dict key '{key}' contains hyphens. "
                         f"Dict keys must use underscores (not hyphens) for CDF compatibility. "
@@ -371,9 +374,7 @@ class SWXData:
         if var_name in self.spectra:
             return self.spectra[var_name]
         else:
-            raise KeyError(
-                f"Variable {var_name} not found in SWXData object. "
-                )
+            raise KeyError(f"Variable {var_name} not found in SWXData object. ")
 
     @staticmethod
     def global_attribute_template(
@@ -460,23 +461,24 @@ class SWXData:
 
         # Find the TimeSeries Epoch for this Record-Varying Variable
         if var_meta is not None and "DEPEND_0" in var_meta:
-            epoch_key = var_meta["DEPEND_0"]
-            
+            epoch_var_name = var_meta["DEPEND_0"]
+
             # Handle prefixed epoch keys from multi-timeseries CDF files
-            # If epoch_key is in prefixed format (e.g., "REACH_165_Epoch"),
+            # If epoch_var_name is in prefixed format (e.g., "REACH_165_Epoch"),
             # strip the "_Epoch" suffix to get the dict key (e.g., "REACH_165")
             # Dict keys now use underscores to match CDF naming, so no conversion needed
-            if epoch_key.endswith("_Epoch"):
-                epoch_key = epoch_key[:-6]  # Remove "_Epoch" suffix
+            if epoch_var_name.endswith("_Epoch"):
+                epoch_key = epoch_var_name[:-6]  # Remove "_Epoch" suffix
             # If it's just "Epoch", keep it as-is (default timeseries key)
-            
+            else:
+                epoch_key = epoch_var_name
+
         else:
-            
             # Legacy fallback when DEPEND_0 not specified
             # Check which epoch key to use
-            # When var_meta is None or does not have DEPEND_0, we try to find the epoch by matching the length of the time axis to the length of the variable data. 
-            # This only works for 1D variables and if there is only one timeseries with a matching length. 
-            # If there are multiple timeseries with a matching length, we raise an error since we don't know which one to use. 
+            # When var_meta is None or does not have DEPEND_0, we try to find the epoch by matching the length of the time axis to the length of the variable data.
+            # This only works for 1D variables and if there is only one timeseries with a matching length.
+            # If there are multiple timeseries with a matching length, we raise an error since we don't know which one to use.
             # If there are no timeseries with a matching length, we raise an error since we can't find an epoch for this variable.
 
             potential_epoch_keys = []
@@ -585,10 +587,11 @@ class SWXData:
             # Time Measurement Attributes
             for col in ts.columns:
                 for attr_name, attr_value in self.schema.derive_measurement_attributes(
-                    self, col, 
+                    self,
+                    col,
                     # Derive attributes for each measurement, passing epoch_key
                     # to identify which timeseries the measurement belongs to
-                    epoch_key=epoch_key
+                    epoch_key=epoch_key,
                 ).items():
                     self._update_measurement_attribute(
                         data_structure=ts,
@@ -626,7 +629,7 @@ class SWXData:
         # This prevents writing empty/null attributes that aren't needed
         if attr_value is None:
             return
-            
+
         # If the attribute is set, check if we want to overwrite it
         if attr_name in self._meta and self._meta[attr_name] is not None:
             # We want to overwrite if:

@@ -1,14 +1,16 @@
 """
 Python function to dump CDF file contents similar to cdfdump command.
 """
+
 from pathlib import Path
+
 from spacepy.pycdf import CDF
 
 
 def cdf_dump(file_path, show_data=True, max_values=100, summary=False, variable=None):
     """
     Display the contents of a CDF file in a human-readable format.
-    
+
     Parameters
     ----------
     file_path : str or Path
@@ -23,15 +25,15 @@ def cdf_dump(file_path, show_data=True, max_values=100, summary=False, variable=
         If provided, only show information for this specific variable. Default is None (show all).
     """
     file_path = Path(file_path)
-    
+
     if not file_path.exists():
         print(f"Error: File not found: {file_path}")
         return
-    
+
     print("=" * 80)
     print(f"CDF FILE: {file_path.name}")
     print("=" * 80)
-    
+
     with CDF(str(file_path)) as cdf_file:
         # Filter variables if specific variable requested
         if variable:
@@ -42,7 +44,7 @@ def cdf_dump(file_path, show_data=True, max_values=100, summary=False, variable=
             var_list = [variable]
         else:
             var_list = sorted(cdf_file.keys())
-        
+
         # Summary mode - just show variables and record counts
         if summary:
             print("\nVARIABLES (Summary):")
@@ -53,7 +55,7 @@ def cdf_dump(file_path, show_data=True, max_values=100, summary=False, variable=
             print("-" * 80)
             print(f"Total variables: {len(var_list)}")
             return
-        
+
         # Global Attributes
         if not variable:  # Only show global attributes when showing all variables
             print("\nGLOBAL ATTRIBUTES:")
@@ -61,23 +63,23 @@ def cdf_dump(file_path, show_data=True, max_values=100, summary=False, variable=
             for attr_name in sorted(cdf_file.attrs.keys()):
                 attr_value = cdf_file.attrs[attr_name]
                 print(f"  {attr_name:30s} : {attr_value}")
-        
+
         # Variables
         print("\n" + "=" * 80)
         print("VARIABLES:")
         print("=" * 80)
-        
+
         for var_name in var_list:
             var = cdf_file[var_name]
-            
+
             print(f"\n VAR: {var_name}")
             print("-" * 80)
-            
+
             # Variable info
             print(f"  Type: {var.type()}")
             print(f"  Shape: {var.shape}")
             print(f"  Recs: {len(var)}")  # Changed to match cdfdump format
-            
+
             # Variable attributes
             if var.attrs:
                 print("  Attributes:")
@@ -87,7 +89,7 @@ def cdf_dump(file_path, show_data=True, max_values=100, summary=False, variable=
                     if isinstance(attr_value, str) and len(attr_value) > 60:
                         attr_value = attr_value[:57] + "..."
                     print(f"    {attr_name:28s} : {attr_value}")
-            
+
             # Sample data
             if show_data:
                 print(f"  Data (first {max_values} values):")
@@ -96,7 +98,7 @@ def cdf_dump(file_path, show_data=True, max_values=100, summary=False, variable=
                     # Only read the records we need, not the entire variable
                     if len(var.shape) == 0:
                         # Scalar per record
-                        sample = var[:min(max_values, nrecs)]
+                        sample = var[: min(max_values, nrecs)]
                         print(f"    {sample}")
                         if nrecs > max_values:
                             print(f"    ... ({nrecs - max_values} more values)")
@@ -110,7 +112,7 @@ def cdf_dump(file_path, show_data=True, max_values=100, summary=False, variable=
                             print(f"    ... ({nrecs - n} more records)")
                 else:
                     print("    (empty)")
-        
+
         print("\n" + "=" * 80)
         print(f"Total variables: {len(var_list)}")
         print("=" * 80)
@@ -118,20 +120,22 @@ def cdf_dump(file_path, show_data=True, max_values=100, summary=False, variable=
 
 if __name__ == "__main__":
     import sys
-    
+
     if len(sys.argv) < 2:
-        print("Usage: python cdf_dump.py <cdf_file_path> [-v VARIABLE] [--no-data] [--summary]")
+        print(
+            "Usage: python cdf_dump.py <cdf_file_path> [-v VARIABLE] [--no-data] [--summary]"
+        )
         print("  -v VARIABLE : Show only the specified variable")
         print("  --no-data   : Hide data values, show only structure and metadata")
         print("  --summary   : Show only variable names and record counts")
         sys.exit(1)
-    
+
     # Parse arguments
     file_path = None
     variable = None
     show_data = True
     summary = False
-    
+
     i = 1
     while i < len(sys.argv):
         arg = sys.argv[i]
@@ -149,9 +153,9 @@ if __name__ == "__main__":
             i += 1
         else:
             i += 1
-    
+
     if not file_path:
         print("Error: No CDF file specified")
         sys.exit(1)
-    
+
     cdf_dump(file_path, show_data=show_data, summary=summary, variable=variable)

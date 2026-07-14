@@ -98,14 +98,18 @@ class CDFHandler(SWXIOHandler):
                     input_global_attrs[attr_name] = input_file.attrs[attr_name][0]
             meta.update(input_global_attrs)
 
+            # Set of Variables in the CDF file
+            all_var_names = set(input_file.keys())
+
             # First Variables we need to add are time/Epoch
             # Look for variables ending with "_Epoch" (prefixed format)
             # or matching "Epoch" exactly (legacy format)
             epoch_variables = [
                 var_name
-                for var_name in input_file.keys()
+                for var_name in all_var_names
                 if var_name == "Epoch" or var_name.endswith("_Epoch")
             ]
+            epoch_var_set = set(epoch_variables)
 
             # Make sure at least one Epoch variable is present in the CDF
             if len(epoch_variables) == 0:
@@ -163,7 +167,7 @@ class CDFHandler(SWXIOHandler):
             variable_keys = [
                 var_name
                 for var_name in input_file.keys()
-                if var_name not in epoch_variables
+                if var_name not in epoch_var_set
             ]
             for var_name in variable_keys:
                 # Extract the Variable's Metadata
@@ -201,7 +205,7 @@ class CDFHandler(SWXIOHandler):
                     if result_key != "Epoch" and var_name.startswith(f"{prefix}_"):
                         candidate = var_name[len(prefix) + 1 :]  # Strip "prefix_"
                         # Only strip if the unprefixed name exists (likely writer-added prefix)
-                        if candidate in input_file.keys():
+                        if candidate in all_var_names:
                             original_var_name = candidate
 
                     # See if it is record-varying data with UNITS
@@ -684,15 +688,14 @@ class CDFHandler(SWXIOHandler):
         has_multiple_timeseries = len(data.data["timeseries"]) > 1
         conflicting_vars = set()
 
-        # Determine which timeseries should own the unprefixed "Epoch" (and other unprefixed vars).
-        # Prefer Default_Timeseries_Key when present to keep round-trips stable.
         default_epoch_key = None
         if has_multiple_timeseries:
+            # Determine which timeseries should own the unprefixed "Epoch" (and other unprefixed vars).
+            # Prefer Default_Timeseries_Key when present to keep round-trips stable.
             default_epoch_key = data.meta.get("Default_Timeseries_Key")
             if default_epoch_key not in data.data["timeseries"]:
                 default_epoch_key = next(iter(data.data["timeseries"]))
 
-        if has_multiple_timeseries:
             # Build a dict of var_name -> list of epoch_keys that have it.
             # Example: given two timeseries
             #   timeseries["REACH_165"] has columns: time, Lat, Lon, Sensor_A

@@ -227,9 +227,6 @@ def test_with_no_epoch_var():
             "No Epoch variables found in CDF file" in str(w.message)
             for w in warning_list
         )
-        for w in warning_list:
-            print(f"\nWarning is from: {w.filename}")
-            print(f"Warning is:        {w.message}")
         # Find the specific warning about no epoch variables
         target_warnings = [
             w
@@ -512,7 +509,6 @@ def test_cdf_auto_prefixing_prevents_duplicates():
         time_range = sw_data_loaded.time_range
         assert time_range[0] == loaded_time.min()
         assert time_range[1] == loaded_time.max()
-        pass
 
 
 def test_cdf_selective_prefixing_unique_columns():
@@ -686,7 +682,6 @@ def test_cdf_selective_prefixing_unique_columns():
         time_range = sw_data_loaded.time_range
         assert time_range[0] == loaded_time.min()
         assert time_range[1] == loaded_time.max()
-        pass
 
 
 def test_cdf_epoch_substring_not_confused():

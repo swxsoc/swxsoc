@@ -741,6 +741,7 @@ class SWXSchema(CdfAttributeManager):
         data,
         var_name: str,
         guess_types: Optional[list[int]] = None,
+        epoch_key: Optional[str] = None,
     ) -> OrderedDict:
         """
         Function to derive metadata for the given measurement.
@@ -753,6 +754,8 @@ class SWXSchema(CdfAttributeManager):
             The name of the measurement to derive metadata for
         guess_types : `list[int]`, optional
             Guessed CDF Type of the variable
+        epoch_key : `str`, optional
+            The epoch key that this measurement belongs to (for timeseries data)
 
         Returns
         -------
@@ -761,8 +764,21 @@ class SWXSchema(CdfAttributeManager):
         """
         measurement_attributes = OrderedDict()
 
+        # Get the variable data from the correct source
+        # For multi-timeseries with epoch_key, fetch from the specific timeseries
+        # to avoid getting the wrong variable when column names are duplicated
+        if (
+            epoch_key is not None
+            and epoch_key in data.data["timeseries"]
+            and var_name in data.data["timeseries"][epoch_key].columns
+        ):
+            var_data = data.data["timeseries"][epoch_key][var_name]
+        else:
+            # in multi-series context this will return the first timeseries, not the intended one.
+            # For support/spectra or single-timeseries, use __getitem__
+            var_data = data[var_name]
+
         # Guess the const CDF Data Type
-        var_data = data[var_name]
         if not guess_types:
             if var_name == "time":
                 # Guess the const CDF Data Type
@@ -844,11 +860,20 @@ class SWXSchema(CdfAttributeManager):
                 # Get the Derivation Function to be used for the given attribute
                 derivation_fn = getattr(self, attr_schema["derivation_fn"])
                 # Derive the Metadata Attribute using the configured function
+                # Build kwargs for derivation function
+                derive_kwargs = {"timeseries_dict": data.data["timeseries"]}
+                if epoch_key is not None:
+                    derive_kwargs["epoch_key"] = epoch_key
+                # Pass Default_Timeseries_Key so _get_depend() matches what the writer will emit
+                if "Default_Timeseries_Key" in data.meta:
+                    derive_kwargs["default_timeseries_key"] = data.meta[
+                        "Default_Timeseries_Key"
+                    ]
                 measurement_attributes[attr_name] = derivation_fn(
                     var_name,
                     var_data,
                     guess_types[0],
-                    timeseries_dict=data.data["timeseries"],
+                    **derive_kwargs,
                 )
 
         return measurement_attributes
@@ -871,7 +896,10 @@ class SWXSchema(CdfAttributeManager):
         # Find the TimeSeries Epoch for this Record-Varying Variable
         from swxsoc.swxdata import SWXData
 
-        if "timeseries_dict" in kwargs:
+        # If epoch_key was explicitly passed, use it
+        if "epoch_key" in kwargs:
+            epoch_key = kwargs["epoch_key"]
+        elif "timeseries_dict" in kwargs:
             timeseries_dict = kwargs["timeseries_dict"]
 
             epoch_key = SWXData.get_timeseres_epoch_key(
@@ -880,7 +908,24 @@ class SWXSchema(CdfAttributeManager):
         else:
             epoch_key = swxsoc.config["general"]["default_timeseries_key"]
 
-        return epoch_key
+        # Return the prefixed epoch name for CDF (convert hyphens to underscores)
+        # But use "Epoch" for the default/first timeseries
+        # For multi-timeseries, the default is the first key in insertion order
+        # (matches the rule used by the writer and _get_default_timeseries_key)
+        # But copilot is not satisfied with the insertion order assumptiion so
+        if "default_timeseries_key" in kwargs:
+            default_key = kwargs["default_timeseries_key"]
+        elif "timeseries_dict" in kwargs and len(kwargs["timeseries_dict"]) > 1:
+            default_key = next(iter(kwargs["timeseries_dict"].keys()))
+        else:
+            default_key = swxsoc.config["general"]["default_timeseries_key"]
+
+        # Resolve the Final Epoch Variable Name for the DEPEND CDF Variable Attr
+        if epoch_key == default_key:
+            epoch_var_name = "Epoch"
+        else:
+            epoch_var_name = f"{epoch_key}_Epoch"
+        return epoch_var_name
 
     def _get_display_type(self, var_name, var_data, guess_type, **kwargs):
         return "time_series"
@@ -1464,6 +1509,25 @@ class SWXSchema(CdfAttributeManager):
         Function to get the date that the CDF was generated.
         """
         return Time.now().strftime("%Y-%m-%d")
+
+    def _get_default_timeseries_key(self, data):
+        """
+        Function to get the default timeseries key for multi-timeseries CDF files.
+
+        Returns the key of the first timeseries, which corresponds to the unprefixed
+        "Epoch" variable in the CDF file. This is only set for files with multiple
+        timeseries; single-timeseries files return None.
+        """
+        timeseries_dict = data.data["timeseries"]
+        if len(timeseries_dict) <= 1:
+            return None
+
+        # This function after all is the derivation function for Default_Timeseries_Key
+        existing = data.meta.get("Default_Timeseries_Key")
+        if existing:
+            return existing
+        # Return the first timeseries key (dict preserves insertion order in Python 3.7+)
+        return next(iter(timeseries_dict.keys()))
 
     def _get_start_time(self, data):
         """

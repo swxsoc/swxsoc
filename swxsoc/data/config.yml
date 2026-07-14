@@ -147,6 +147,34 @@ missions_data:
             extension: .json
             time_format: "%Y%m%dT%H%M%S"
 
+  impax: # The Imaging Microburst Precipitation with Atmospheric X-ray emissions (IMPAX) CubeSat
+    file_extension: cdf
+    min_valid_time: 2026-01-01T00:00:00
+    max_valid_time: now
+    valid_data_levels:
+      - raw
+      - l0
+      - l1
+      - ql
+      - l2
+      - l3
+    instruments:
+      - name: iaxis
+        shortname: iaxis
+        fullname: IAXIS
+        targetname: IAXIS
+        instrument_package: impax_iaxis
+      - name: ifire
+        shortname: ifire
+        fullname: IFIRE
+        targetname: IFIRE
+        instrument_package: impax_ifire
+      - name: craft
+        shortname: craft
+        fullname: IMPAX Spacecraft
+        targetname: IMPAX
+        instrument_package: impax_craft
+
 logger:
   # Threshold for the logging messages. Logging messages that are less severe
   # than this level will be ignored. The levels are 'DEBUG', 'INFO', 'WARNING', 'ERROR'

@@ -57,7 +57,7 @@
 				"ms-toolsai.jupyter-renderers",
 				"ms-toolsai.jupyter-keymap",
 				"jithurjacob.nbpreviewer"
-			],
+			]
 		}
 	},
 	// Mount to a volume if you'd like to persist data to your disk

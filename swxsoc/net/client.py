@@ -316,7 +316,7 @@ class SWXSOCClient(BaseClient):
                         matched_files.append(this_s3_file)
         else:
             swxsoc.log.info("Searching for all files")
-        
+
         # remove duplicates
         unique_matched_files = []
         seen = []
@@ -339,7 +339,7 @@ class SWXSOCClient(BaseClient):
                 info = parse_science_filename(s3_object["Key"])
             except ValueError:
                 swxsoc.log.warning(
-                    f"Failed to parse filename {s3_object['Key']}."
+                    f"Failed to parse filename {s3_object['Key']}.", exc_info=True
                 )
                 info = {}
 
@@ -397,7 +397,9 @@ class SWXSOCClient(BaseClient):
                         }
                         content.append(metadata)
             except (ClientError, NoCredentialsError) as e:
-                swxsoc.log.warning(f"Error accessing bucket {bucket_name}: {e}")
+                swxsoc.log.warning(
+                    f"Error accessing bucket {bucket_name}: {e}", exc_info=True
+                )
                 if isinstance(e, NoCredentialsError):
                     error_code = "NoCredentialsError"
                 elif isinstance(e, ClientError):

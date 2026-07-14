@@ -248,7 +248,7 @@ class SWXSOCClient(BaseClient):
         # Get the Mission Configuration
         mission_config = swxsoc.config["mission"]
         mission_name = mission_config["mission_name"]
-        swxsoc.log.info(f"Using mission configuration for {mission_name}")
+        swxsoc.log.debug(f"Using mission configuration for {mission_name}")
 
         instrument = query.get("instrument")
         levels = query.get("level")

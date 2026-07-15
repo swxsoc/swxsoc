@@ -437,17 +437,7 @@ A template of the required metadata can be obtained using the
     >>> from collections import OrderedDict
     >>> from swxsoc.swxdata import SWXData
     >>> SWXData.global_attribute_template()
-    OrderedDict([('Data_level', None),
-             ('Data_version', None),
-             ('Descriptor', None),
-             ('Discipline', None),
-             ('Instrument_type', None),
-             ('Mission_group', None),
-             ('PI_affiliation', None),
-             ('PI_name', None),
-             ('Project', None), 
-             ('Source_name', None),
-             ('TEXT', None)])
+    OrderedDict({'Data_level': None, 'Data_version': None, 'Descriptor': None, 'Discipline': None, 'Instrument_type': None, 'Mission_group': None, 'PI_affiliation': None, 'PI_name': None, 'Project': None, 'Source_name': None, 'TEXT': None})
 
 
 You can also pass arguments into the function to get a partially populated template:: 
@@ -459,17 +449,7 @@ You can also pass arguments into the function to get a partially populated templ
     ...     data_level='l1',
     ...     version='0.1.0'
     ... )
-    OrderedDict([('Data_level', 'L1>Level 1'),
-             ('Data_version', '0.1.0'),
-             ('Descriptor', 'EEA>Electron Electrostatic Analyzer'),
-             ('Discipline', None),
-             ('Instrument_type', None),
-             ('Mission_group', None),
-             ('PI_affiliation', None),
-             ('PI_name', None),
-             ('Project', None), 
-             ('Source_name', None),
-             ('TEXT', None)])
+    OrderedDict({'Data_level': 'L1>Level 1', 'Data_version': '0.1.0', 'Descriptor': 'EEA>Electron Electrostatic Analyzer', 'Discipline': None, 'Instrument_type': None, 'Mission_group': None, 'PI_affiliation': None, 'PI_name': None, 'Project': None, 'Source_name': None, 'TEXT': None})
 
 This can make the definition of global metadata easier since instrument teams or users only need 
 to supply pieces of metadata that are in this template. Additional metadata items can be added 
@@ -521,7 +501,7 @@ A template of the required metadata can be obtained using the
     >>> from collections import OrderedDict
     >>> from swxsoc.swxdata import SWXData
     >>> SWXData.measurement_attribute_template()
-    OrderedDict([('CATDESC', None)])
+    OrderedDict({'CATDESC': None})
 
 If you use the :py:func:`~swxsoc.swxdata.SWXData.add_measurement` function, it will 
 automatically fill most of them in for you. Additional pieces of metadata can be added if desired.

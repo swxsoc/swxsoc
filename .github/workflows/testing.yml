@@ -33,7 +33,7 @@ jobs:
 
     # Run tests on Windows, Linux, and MacOS
     - name: Run Tests
-      run: pytest --pyargs swxsoc --cov swxsoc
+      run: pytest swxsoc docs --cov swxsoc
     
     # Upload coverage reports to Codecov
     - name: Upload coverage to Codecov

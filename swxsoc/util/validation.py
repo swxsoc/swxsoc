@@ -1,9 +1,11 @@
-from pathlib import Path
 from abc import ABC, abstractmethod
-import numpy as np
+from pathlib import Path
 from typing import Union
+
+import numpy as np
 from spacepy.pycdf import CDF, CDFError
 from spacepy.pycdf.istp import FileChecks, VariableChecks
+
 from swxsoc.util.schema import SWXSchema
 
 __all__ = ["validate", "SWXDataValidator", "CDFValidator"]

@@ -41,7 +41,7 @@ If you do not use our developer environment, you can run the following code to s
 .. doctest::
 
   >>> from swxsoc import util
-  >>> print(util.config._get_user_configdir())
+  >>> print(util.config._get_user_configdir()) # doctest: +SKIP
   /home/vscode/.config/swxsoc
 
 .. note:: 

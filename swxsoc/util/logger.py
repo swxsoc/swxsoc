@@ -84,6 +84,17 @@ def _init_log(config=None):
         # ``_set_defaults``, so propagation to the root logger would cause
         # each record to be emitted twice.
         log.propagate = False
+
+        # In AWS Lambda environments, override the configured log level
+        # (DEBUG outside production, INFO in production) and silence the
+        # noisy boto3/botocore loggers.
+        lambda_environment = os.getenv("LAMBDA_ENVIRONMENT")
+        if lambda_environment is not None:
+            log.setLevel(
+                logging.INFO if lambda_environment == "PRODUCTION" else logging.DEBUG
+            )
+            logging.getLogger("botocore").setLevel(logging.CRITICAL)
+            logging.getLogger("boto3").setLevel(logging.CRITICAL)
     finally:
         logging.setLoggerClass(orig_logger_cls)
 

@@ -34,7 +34,8 @@ dependencies = [
   'ndcube>=2.2.0',
   'parfive>=2.1.0',
   'pyyaml>=5.3.1',
-  'boto3>=1.35.26'
+  'boto3>=1.35.26',
+  'slack_sdk>=3.19.5'
 ]
 
 [project.urls]
@@ -81,6 +82,7 @@ testpaths = [
    "swxsoc/io/tests",
    "swxsoc/net/tests",
    "swxsoc/db/tests",
+   "swxsoc/comm/tests",
    "docs"
 ]
 doctest_plus = "enabled"

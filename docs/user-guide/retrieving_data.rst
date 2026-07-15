@@ -4,7 +4,7 @@
 Retrieving and Downloading Data
 **************************************
 
-The `~swxsoc.util.util.SWXSOCClient` class in the `swxsoc` package is a FIDO client used for querying and downloading data from the SWxSOC buckets. Below are some examples demonstrating how to use this client for searching and downloading data.
+The `~swxsoc.net.client.SWXSOCClient` class in the `swxsoc` package is a FIDO client used for querying and downloading data from the SWxSOC buckets. Below are some examples demonstrating how to use this client for searching and downloading data.
 
 .. warning::
 
@@ -12,7 +12,7 @@ The `~swxsoc.util.util.SWXSOCClient` class in the `swxsoc` package is a FIDO cli
 
 Attributes for Searching Data
 =============================
-The `~swxsoc.util.util.SWXSOCClient` class supports the following attributes for searching data:
+The `~swxsoc.net.client.SWXSOCClient` class supports the following attributes for searching data:
 
 - `Instrument`: The instrument name for the data (e.g., 'EEA', 'SHARP').
 - `Level`: The data level (e.g., 'L1', 'L2').
@@ -30,7 +30,8 @@ Example 1: Search by a combination of Attributes
 To search for data based on multiple attributes such as instrument, level, and time::
 
     # Import necessary modules
-    from swxsoc.util.util import SWXSOCClient, AttrAnd, Instrument, Level, SearchTime, DevelopmentBucket
+    from swxsoc.net.attr import AttrAnd, Instrument, Level, SearchTime, DevelopmentBucket
+    from swxsoc.net.client import SWXSOCClient
 
     # Initialize the FIDO client
     fido_client = SWXSOCClient()
@@ -62,7 +63,8 @@ Example 2: Search by a single Attribute
 To search for data based on a single attribute such as instrument::
 
     # Import necessary modules
-    from swxsoc.util.util import SWXSOCClient, AttrAnd, Instrument
+    from swxsoc.net.attr import AttrAnd, Instrument
+    from swxsoc.net.client import SWXSOCClient
 
     # Initialize the SWxSOC client
     fido_client = SWXSOCClient()
@@ -91,7 +93,7 @@ Example 3: Search all data
 To search for all data::
 
     # Import necessary modules
-    from swxsoc.util.util import SWXSOCClient
+    from swxsoc.net.client import SWXSOCClient
 
     # Initialize the SWxSOC client
     fido_client = SWXSOCClient()
@@ -120,16 +122,17 @@ To search for all data::
 
 Downloading Data
 ================
-The `~swxsoc.util.util.SWXSOCClient` class also supports downloading data from the SWxSOC buckets. Below are some examples demonstrating how to queue the download of data using this client. Note this requires the `~swxsoc.util.util.SWXSOCClient` class to have already been used to search for data as well as a parfive Downloader object to be initialized.
+The `~swxsoc.net.client.SWXSOCClient` class also supports downloading data from the SWxSOC buckets. Below are some examples demonstrating how to queue the download of data using this client. Note this requires the `~swxsoc.net.client.SWXSOCClient` class to have already been used to search for data as well as a parfive Downloader object to be initialized.
 
 For more information on the `parfive` package, see the `parfive documentation <https://parfive.readthedocs.io/en/latest/api/parfive.Downloader.html>`_.
 
 Example to Download Data
 ------------------------
-Below is an example demonstrating how to download data using the `~swxsoc.util.util.SWXSOCClient` class::
+Below is an example demonstrating how to download data using the `~swxsoc.net.client.SWXSOCClient` class::
 
     # Import necessary modules
-    from swxsoc.util.util import SWXSOCClient, AttrAnd, Instrument, Level, SearchTime, DevelopmentBucket
+    from swxsoc.net.attr import AttrAnd, Instrument, Level, SearchTime, DevelopmentBucket
+    from swxsoc.net.client import SWXSOCClient
     from parfive import Downloader
 
     # Initialize the SWxSOC client

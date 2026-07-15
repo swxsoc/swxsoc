@@ -1,4 +1,6 @@
 # see license/LICENSE.rst
+import os
+
 try:
     from ._version import version as __version__
     from ._version import version_tuple
@@ -14,9 +16,12 @@ config = load_config()
 
 log = _init_log(config=config)
 
+_package_directory = os.path.dirname(os.path.abspath(__file__))
+_data_directory = os.path.abspath(os.path.join(_package_directory, "data"))
+
 
 # Function to reconfigure the module for testing
-def _reconfigure():
+def reconfigure():
     """
     Reconfigure the module by reloading the configuration.
 
@@ -26,10 +31,10 @@ def _reconfigure():
     without restarting the Python session.
 
     Example:
-        from swxsoc import _reconfigure
+        from swxsoc import reconfigure
 
         # Reconfigure the module to reload the configuration
-        _reconfigure()
+        reconfigure()
     """
     global config
     config = load_config()
@@ -37,5 +42,3 @@ def _reconfigure():
 
 # Then you can be explicit to control what ends up in the namespace,
 __all__ = ["config", "print_config"]
-
-# log.info(f"swxsoc version: {__version__}")

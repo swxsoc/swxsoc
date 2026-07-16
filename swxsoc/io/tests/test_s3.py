@@ -1,6 +1,7 @@
 """Tests for swxsoc.io.s3 (S3 helper functions)"""
 
 import os
+import tempfile
 from pathlib import Path
 
 import boto3
@@ -225,7 +226,7 @@ def test_get_science_file_downloads_from_s3(monkeypatch, s3_client, tmp_path):
 
     path = get_science_file("instrument-bucket", "file_key.cdf", "parsed.cdf")
 
-    assert path == Path("/tmp") / "parsed.cdf"
+    assert path == Path(tempfile.gettempdir()) / "parsed.cdf"
     assert path.read_text() == "data"
 
 
@@ -258,7 +259,7 @@ def test_push_science_file_uploads(monkeypatch, s3_client):
     monkeypatch.setattr(s3, "create_s3_client_session", lambda: s3_client)
 
     filename = "hermes_eea_l1_hk_20230205T000006_v1.0.01.cdf"
-    local_file = Path("/tmp") / filename
+    local_file = Path(tempfile.gettempdir()) / filename
     local_file.write_text("data")
 
     new_key = push_science_file(parse_science_filename, "test-bucket", filename)

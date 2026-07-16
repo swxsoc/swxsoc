@@ -6,6 +6,7 @@ between the incoming and instrument-specific S3 buckets.
 """
 
 import os
+import tempfile
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -210,9 +211,10 @@ def download_file_from_s3(
     s3_client, source_bucket: str, file_key: str, parsed_file_key: str
 ) -> Path:
     """
-    Download a file from S3 to ``/tmp``.
+    Download a file from S3 to the OS temp directory.
 
-    NOTE: This function downloads the file to the ``/tmp`` directory.
+    NOTE: This function downloads the file to ``tempfile.gettempdir()``.
+    In AWS Lambda this resolves to ``/tmp``.
 
     Parameters
     ----------
@@ -223,7 +225,7 @@ def download_file_from_s3(
     file_key : str
         The key of the object to download.
     parsed_file_key : str
-        The file name to use when saving to ``/tmp``.
+        The file name to use when saving to the temp directory.
 
     Returns
     -------
@@ -232,8 +234,8 @@ def download_file_from_s3(
     """
     swxsoc.log.info(f"Downloading file {parsed_file_key} from {source_bucket}")
 
-    # Assume the file will be downloaded to /tmp
-    download_path = Path("/tmp") / parsed_file_key
+    # Use the platform temp directory (Lambda resolves this to /tmp).
+    download_path = Path(tempfile.gettempdir()) / parsed_file_key
     swxsoc.log.debug(f"Downloading {file_key} from {source_bucket} to {download_path}")
 
     # Download the file from the source bucket to the specified path
@@ -246,16 +248,18 @@ def upload_file_to_s3(
     s3_client, filename: str, destination_bucket: str, file_key: str
 ) -> Path:
     """
-    Upload a file from ``/tmp`` to an S3 bucket.
+    Upload a file from the OS temp directory (or an absolute path) to S3.
 
-    NOTE: This function assumes that the file to be uploaded is located in ``/tmp``.
+    NOTE: Relative ``filename`` values are resolved against
+    ``tempfile.gettempdir()``. Absolute paths are used as-is.
 
     Parameters
     ----------
     s3_client : boto3.client
         The S3 client to use.
     filename : str
-        The file name (relative to ``/tmp``) to upload.
+        The file name to upload. Relative paths are resolved against the temp
+        directory.
     destination_bucket : str
         The name of the destination bucket.
     file_key : str
@@ -268,8 +272,9 @@ def upload_file_to_s3(
     """
     swxsoc.log.info(f"Uploading file {file_key} to {destination_bucket}")
 
-    # Assume the file is located in /tmp
-    upload_path = Path("/tmp") / filename
+    upload_path = Path(filename)
+    if not upload_path.is_absolute():
+        upload_path = Path(tempfile.gettempdir()) / upload_path
     swxsoc.log.debug(
         f"Uploading {upload_path} to bucket {destination_bucket} as {file_key}"
     )
@@ -362,7 +367,7 @@ def get_science_file(
     file_key : str
         The key of the object in the bucket.
     parsed_file_key : str
-        The file name to use when saving to ``/tmp``.
+        The file name to use when saving to the temp directory.
     dry_run : bool, optional
         Indicates whether the operation is a dry run. Defaults to ``False``.
 
@@ -395,7 +400,7 @@ def get_science_file(
         bucket=instrument_bucket_name,
         file_key=file_key,
     ):
-        # Download the file from S3 to /tmp
+        # Download the file from S3 to the OS temp directory.
         return download_file_from_s3(
             s3_client, instrument_bucket_name, file_key, parsed_file_key
         )

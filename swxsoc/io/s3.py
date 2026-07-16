@@ -7,25 +7,12 @@ between the incoming and instrument-specific S3 buckets.
 
 import os
 from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
 
 import boto3
 
 import swxsoc
-
-__all__ = [
-    "create_s3_client_session",
-    "parse_file_key",
-    "create_s3_file_key",
-    "list_files_in_bucket",
-    "check_file_existence_in_target_buckets",
-    "object_exists",
-    "download_file_from_s3",
-    "upload_file_to_s3",
-    "copy_file_in_s3",
-    "get_science_file",
-    "push_science_file",
-]
 
 
 def create_s3_client_session():
@@ -40,7 +27,7 @@ def create_s3_client_session():
     try:
         return boto3.client("s3")
     except Exception as e:
-        swxsoc.log.error({"status": "ERROR", "message": e})
+        swxsoc.log.error({"status": "ERROR", "message": e}, exc_info=True)
         raise e
 
 
@@ -83,42 +70,56 @@ def create_s3_file_key(science_file_parser: Callable, old_file_key: str) -> str:
     str
         The new S3 key for the file within its instrument bucket.
     """
-    descriptor_mapping = {
-        "spec": "spectrum",
-        "eventlist": "eventlist",
-        "hk": "housekeeping",
-    }
+    try:
+        # Skip parsing and put any files whose filename contains "latest" into their own directory
+        file_name = Path(old_file_key).name
+        if "latest" in file_name:
+            return f"latest/{file_name}"
 
-    parsed_file_key = parse_file_key(old_file_key)
+        science_file = science_file_parser(old_file_key)
+        time_value = science_file["time"].value
 
-    science_file = science_file_parser(parsed_file_key)
+        if isinstance(time_value, datetime):
+            timestamp = time_value
+        else:
+            timestamp = datetime.strptime(time_value, "%Y-%m-%dT%H:%M:%S.%f")
 
-    mission_name = swxsoc.config["mission"]["mission_name"]
-    instrument = science_file["instrument"]
-    level = science_file["level"]
+        year = timestamp.year
+        month = f"{timestamp.month:02d}"
+        day = f"{timestamp.day:02d}"
+        level = science_file["level"]
+        descriptor = science_file.get("descriptor")
 
-    valid_data_levels = swxsoc.config["mission"].get(
-        "valid_data_levels", ["l0", "l1", "l2", "l3", "l4", "ql"]
-    )
+        if not descriptor:
+            descriptor = "unknown"
 
-    if "latest" in parsed_file_key.lower():
-        descriptor = "latest"
-    else:
-        descriptor = descriptor_mapping.get(
-            (science_file.get("descriptor") or "").lower(), level
+        # Short names to long names mapping for descriptors
+        descriptor_mapping = {
+            "spec": "spectrum",
+            "eventlist": "eventlist",
+            "hk": "housekeeping",
+        }
+
+        if descriptor in descriptor_mapping:
+            descriptor = descriptor_mapping[descriptor]
+
+        # Get first valid_data_level from config
+        valid_data_levels = swxsoc.config.get("mission").get(
+            "valid_data_levels", ["l0", "l1", "ql"]
         )
-        if level not in valid_data_levels:
-            descriptor = level
 
-    time = science_file["time"]
+        if level == valid_data_levels[0]:
+            new_file_key = f"{level}/{year}/{month}/{day}/{old_file_key}"
+        else:
+            new_file_key = f"{level}/{descriptor}/{year}/{month}/{day}/{old_file_key}"
 
-    new_file_key = (
-        f"{mission_name.capitalize()}/{instrument}/{level}/{descriptor}/"
-        f"{time.strftime('%Y')}/{time.strftime('%m')}/{time.strftime('%d')}/"
-        f"{parsed_file_key}"
-    )
+        return new_file_key
 
-    return new_file_key
+    except Exception as e:
+        swxsoc.log.error(
+            {"status": "ERROR", "message": str(e), "file_key": old_file_key}
+        )
+        raise
 
 
 def list_files_in_bucket(s3_client, bucket_name: str) -> list:
@@ -168,13 +169,14 @@ def check_file_existence_in_target_buckets(
     bool
         ``True`` if the file exists in any target bucket other than the source, else ``False``.
     """
-    for bucket in target_buckets:
-        if bucket == source_bucket:
-            continue
-
-        if object_exists(s3_client, bucket, file_key):
-            swxsoc.log.info(f"File {file_key} already exists in bucket {bucket}")
+    for target_bucket in target_buckets:
+        if object_exists(s3_client, target_bucket, file_key):
+            print(f"File {file_key} from {source_bucket} exists in {target_bucket}")
             return True
+        else:
+            print(
+                f"File {file_key} from {source_bucket} does not exist in {target_bucket}"
+            )
 
     return False
 
@@ -210,6 +212,8 @@ def download_file_from_s3(
     """
     Download a file from S3 to ``/tmp``.
 
+    NOTE: This function downloads the file to the ``/tmp`` directory.
+
     Parameters
     ----------
     s3_client : boto3.client
@@ -226,9 +230,15 @@ def download_file_from_s3(
     pathlib.Path
         The path of the downloaded file.
     """
+    swxsoc.log.info(f"Downloading file {parsed_file_key} from {source_bucket}")
+
+    # Assume the file will be downloaded to /tmp
     download_path = Path("/tmp") / parsed_file_key
     swxsoc.log.debug(f"Downloading {file_key} from {source_bucket} to {download_path}")
+
+    # Download the file from the source bucket to the specified path
     s3_client.download_file(source_bucket, file_key, str(download_path))
+
     return download_path
 
 
@@ -237,6 +247,8 @@ def upload_file_to_s3(
 ) -> Path:
     """
     Upload a file from ``/tmp`` to an S3 bucket.
+
+    NOTE: This function assumes that the file to be uploaded is located in ``/tmp``.
 
     Parameters
     ----------
@@ -254,10 +266,15 @@ def upload_file_to_s3(
     pathlib.Path
         The local path of the file that was uploaded.
     """
+    swxsoc.log.info(f"Uploading file {file_key} to {destination_bucket}")
+
+    # Assume the file is located in /tmp
     upload_path = Path("/tmp") / filename
     swxsoc.log.debug(
         f"Uploading {upload_path} to bucket {destination_bucket} as {file_key}"
     )
+
+    # Upload file to the destination bucket with the specified key
     s3_client.upload_file(str(upload_path), destination_bucket, file_key)
     return upload_path
 
@@ -293,15 +310,31 @@ def copy_file_in_s3(
     -------
     None
     """
+    # Create copy source object
     copy_source = {"Bucket": source_bucket, "Key": file_key}
     swxsoc.log.debug(
         f"Copying {file_key} from {source_bucket} to {destination_bucket} as {new_file_key}"
     )
-    s3_client.copy(copy_source, destination_bucket, new_file_key)
+    # Copy file from source bucket to destination bucket
+    s3_client.copy_object(
+        CopySource=copy_source,
+        Bucket=destination_bucket,
+        Key=new_file_key,
+    )
+    swxsoc.log.debug(
+        f"Source file {file_key} copied from {source_bucket} to {destination_bucket}"
+    )
 
-    if delete_source_file:
-        swxsoc.log.debug(f"Deleting {file_key} from {source_bucket}")
+    # Verify the file was copied successfully
+    success = object_exists(s3_client, destination_bucket, new_file_key)
+    swxsoc.log.debug(
+        f"File copy verification for {new_file_key} in {destination_bucket}: {success}"
+    )
+
+    # Delete source file if requested (move operation)
+    if delete_source_file and success:
         s3_client.delete_object(Bucket=source_bucket, Key=file_key)
+        swxsoc.log.debug(f"Source file {file_key} deleted from {source_bucket}")
 
 
 def get_science_file(
@@ -338,16 +371,31 @@ def get_science_file(
     pathlib.Path
         The local path of the science file.
     """
-    if dry_run or os.getenv("USE_INSTRUMENT_TEST_DATA") == "True":
-        swxsoc.log.info("Dry Run or Test Data - File will not be downloaded")
-        return Path("/tmp") / parsed_file_key
+    if dry_run:
+        swxsoc.log.info("Dry Run - File will not be downloaded")
+        return Path(file_key)
+
+    if os.getenv("USE_INSTRUMENT_TEST_DATA") == "True":
+        swxsoc.log.info("Using test data from instrument package")
+        return Path(file_key)
 
     file_path = os.getenv("SDC_AWS_FILE_PATH")
     if file_path:
+        swxsoc.log.info(
+            f"Using file path specified in environment variables: {file_path}"
+        )
         return Path(file_path)
 
+    # Initialize S3 Client
     s3_client = create_s3_client_session()
-    if object_exists(s3_client, instrument_bucket_name, file_key):
+
+    # Verify object eists in S3 Bucket
+    if object_exists(
+        s3_client=s3_client,
+        bucket=instrument_bucket_name,
+        file_key=file_key,
+    ):
+        # Download the file from S3 to /tmp
         return download_file_from_s3(
             s3_client, instrument_bucket_name, file_key, parsed_file_key
         )
@@ -365,6 +413,7 @@ def push_science_file(
 ) -> str:
     """
     Upload a science file to the destination bucket, unless this is a dry run.
+    Generates the file key for the new file using the given parser.
 
     Parameters
     ----------
@@ -382,6 +431,7 @@ def push_science_file(
     str
         The key of the newly uploaded (or would-be uploaded) file.
     """
+    # Generate file key for new file
     new_file_key = create_s3_file_key(science_filename_parser, calibrated_filename)
 
     if dry_run:
@@ -393,10 +443,15 @@ def push_science_file(
         return new_file_key
 
     if os.getenv("SDC_AWS_FILE_PATH"):
-        swxsoc.log.info("SDC_AWS_FILE_PATH is set - File will not be uploaded to S3")
+        swxsoc.log.info(
+            "SDC_AWS_FILE_PATH is set. File Processed Locally - File will not be uploaded to S3"
+        )
         return new_file_key
 
+    # Initialize S3 Client
     s3_client = create_s3_client_session()
+
+    # Upload the file to the destination bucket
     upload_file_to_s3(
         s3_client=s3_client,
         destination_bucket=destination_bucket,

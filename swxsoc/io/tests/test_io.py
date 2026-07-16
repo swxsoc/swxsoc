@@ -7,7 +7,6 @@ from pathlib import Path
 import astropy.units as u
 import numpy as np
 import pytest
-import spacepy.pycdf as pycdf
 from astropy.nddata import NDData
 from astropy.table import Table
 from astropy.time import Time

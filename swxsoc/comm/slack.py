@@ -44,9 +44,11 @@ def get_slack_client(slack_token: str) -> WebClient:
     WebClient or None
         The initialized Slack client, or ``None`` if no token is available.
     """
+    # If the slack token is not set, try to get it from the environment
     if not slack_token:
         slack_token = os.environ.get("SLACK_TOKEN")
 
+    # If the slack token is still not set, return None
     if not slack_token:
         log.error(
             {
@@ -56,6 +58,7 @@ def get_slack_client(slack_token: str) -> WebClient:
         )
         return None
 
+    # Initialize the slack client
     return WebClient(token=slack_token)
 
 
@@ -74,6 +77,7 @@ def is_file_manifest(file_name: str) -> bool:
         ``True`` if the file is a manifest file, ``False`` otherwise.
     """
     base_name = os.path.basename(file_name)
+    # Check if the file starts with file_manifest prefix
     return base_name.startswith("file_manifest")
 
 
@@ -122,9 +126,11 @@ def generate_file_pipeline_message(
 
             return (slack_message, secondary_message)
 
+        # Check for specific alert type message
         if alert_type and alert_type in alert:
             slack_message = alert[alert_type]
 
+        # Add bucket name to the message if provided
         if bucket_name:
             slack_message += f" (Bucket: _{bucket_name}_ )"
 

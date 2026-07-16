@@ -2,6 +2,7 @@
 This module provides general utility functions.
 """
 
+import os
 import re
 from datetime import datetime
 from pathlib import Path
@@ -11,28 +12,11 @@ import sunpy.time
 from astropy.time import Time
 
 import swxsoc
-
-# --- Backward compatibility: moved symbols re-exported from new locations ---
-from swxsoc.db.timeseries import (
-    _record_dimension_timestream as _record_dimension_timestream,
-)
-from swxsoc.db.timeseries import record_timeseries as record_timeseries
-from swxsoc.net.attr import Descriptor as Descriptor
-from swxsoc.net.attr import DevelopmentBucket as DevelopmentBucket
-from swxsoc.net.attr import Instrument as Instrument
-from swxsoc.net.attr import Level as Level
-from swxsoc.net.attr import SearchTime as SearchTime
-from swxsoc.net.attr import walker as walker
-from swxsoc.net.client import SWXSOCClient as SWXSOCClient
 from swxsoc.util.exceptions import warn_user
-from swxsoc.util.grafana import create_annotation as create_annotation
-from swxsoc.util.grafana import get_dashboard_id as get_dashboard_id
-from swxsoc.util.grafana import get_panel_id as get_panel_id
-from swxsoc.util.grafana import query_annotations as query_annotations
-from swxsoc.util.grafana import remove_annotation_by_id as remove_annotation_by_id
 
 __all__ = [
     "create_science_filename",
+    "is_production_environment",
     "parse_science_filename",
 ]
 
@@ -50,6 +34,24 @@ TIME_PATTERNS = {
     "%Y%j_%H%M%S": re.compile(r"\d{7}_\d{6}"),  # YYYYJJJ_HHMMSS
     "%Y%m%d": re.compile(r"(?<!\d)\d{8}(?!\d)"),  # YYYYMMDD
 }
+
+
+def is_production_environment() -> bool:
+    """
+    Determine whether the pipeline is running in a production environment.
+
+    Reads the ``LAMBDA_ENVIRONMENT`` environment variable, which is set by
+    the SWxSOC AWS Lambda pipeline. This is the single source of truth for
+    dev/prod detection used across bucket naming, Timestream logging, and
+    reprocessing Lambda invocation.
+
+    Returns
+    -------
+    bool
+        ``True`` if ``LAMBDA_ENVIRONMENT`` is set to ``"PRODUCTION"``,
+        ``False`` otherwise (including when it is unset).
+    """
+    return os.getenv("LAMBDA_ENVIRONMENT") == "PRODUCTION"
 
 
 def create_science_filename(
@@ -652,46 +654,3 @@ def parse_science_filename(filepath: str) -> dict:
         )
 
     return result
-
-
-def get_instrument_package(instrument_name: str) -> str:
-    """
-    Determines the package name of the correct instrument package to use for processing a file based on the instrument name.
-    This is determined through two possibilities:
-    1. The instrument name is directly mapped to a package in the instrument configuration under "instrument_package".
-    2. The package is default determined by "{mission__name}_{instrument_name}"
-
-    Parameters
-    ----------
-    instrument_name : str
-        The name of the instrument to find the package for.
-
-    Returns
-    -------
-    str
-        The name of the package to use for processing files from the specified instrument.
-
-    Raises
-    ------
-    ValueError
-        If the instrument name is not recognized as one of the mission's instruments.
-    """
-    mission_config = swxsoc.config["mission"]
-
-    # sanitize instrument name for matching (e.g. case insensitive)
-    instrument_name = instrument_name.lower()
-
-    # check if the instrument is available for the mission
-    if instrument_name not in mission_config["inst_names"]:
-        raise ValueError(
-            f"Instrument, {instrument_name}, is not recognized. Must be one of {list(mission_config['inst_names'])}."
-        )
-
-    # get the instrument configuration
-    inst_package = mission_config["inst_packages"].get(instrument_name)
-    if inst_package:
-        # if a package is explicitly defined for the instrument, use it
-        return inst_package
-    else:
-        # otherwise, default to the convention of {mission_name}_{instrument_name}
-        return f"{mission_config['mission_name'].lower()}_{instrument_name.lower()}"

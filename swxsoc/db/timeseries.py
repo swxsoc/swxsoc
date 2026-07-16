@@ -17,8 +17,14 @@ import numpy as np
 from astropy.timeseries import TimeSeries
 
 import swxsoc
+from swxsoc.util.util import is_production_environment
 
-__all__ = ["record_timeseries", "_record_dimension_timestream"]
+__all__ = [
+    "record_timeseries",
+    "_record_dimension_timestream",
+    "create_timestream_client_session",
+    "log_to_timestream",
+]
 
 
 def _get_timestream_names() -> tuple[str, str, str]:
@@ -50,11 +56,132 @@ def _get_timestream_names() -> tuple[str, str, str]:
     database_name = f"{mission_name}_sdc_aws_logs"
     table_name = f"{mission_name}_measures_table"
 
-    if os.getenv("LAMBDA_ENVIRONMENT") != "PRODUCTION":
+    if not is_production_environment():
         database_name = f"dev-{database_name}"
         table_name = f"dev-{table_name}"
 
     return database_name, table_name, mission_name
+
+
+def create_timestream_client_session(region: str = "us-east-1"):
+    """
+    Create a boto3 Timestream write client session.
+
+    Parameters
+    ----------
+    region : str, optional
+        The AWS region to create the client in. Defaults to ``"us-east-1"``.
+
+    Returns
+    -------
+    boto3.client
+        The boto3 Timestream write client.
+    """
+    try:
+        return boto3.client("timestream-write", region_name=region)
+    except Exception as e:
+        swxsoc.log.error({"status": "ERROR", "message": e})
+        raise e
+
+
+def log_to_timestream(
+    timestream_client,
+    action_type: str,
+    file_key: str,
+    new_file_key: str = None,
+    source_bucket: str = None,
+    destination_bucket: str = None,
+) -> None:
+    """
+    Log an S3 pipeline action (e.g. upload, move, delete) to Timestream for audit purposes.
+
+    This is distinct from :func:`record_timeseries`: ``log_to_timestream`` records
+    discrete S3 file-movement *actions* to the ``sdc_aws_s3_bucket_log_table``
+    (audit trail), while ``record_timeseries`` records science *measurements* to
+    the ``{mission}_measures_table``.
+
+    Parameters
+    ----------
+    timestream_client : boto3.client
+        The Timestream write client.
+    action_type : str
+        The type of action performed (e.g. ``"PUT"``, ``"DELETE"``).
+    file_key : str
+        The name of the file the action was performed on.
+    new_file_key : str, optional
+        The new name of the file, if renamed/moved.
+    source_bucket : str, optional
+        The name of the source bucket. Either this or ``destination_bucket`` is required.
+    destination_bucket : str, optional
+        The name of the destination bucket. Either this or ``source_bucket`` is required.
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    Database and table names read the ``SWXSOC_MISSION`` environment variable
+    directly (not ``swxsoc.config``) and special-case ``hermes``/unset to the
+    un-prefixed ``sdc_aws_logs`` / ``sdc_aws_s3_bucket_log_table`` names, to
+    preserve the exact historical Timestream names used by existing
+    dashboards. Dev/prod detection is consolidated onto
+    :func:`swxsoc.util.util.is_production_environment`.
+    """
+    swxsoc.log.debug("Logging to Timestream")
+    current_time = str(int(time.time() * 1000))
+    try:
+        if not source_bucket and not destination_bucket:
+            raise ValueError("A Source or Destination Buckets is required")
+
+        # Check environment variable for SWXSOC_MISSION
+        mission_name = os.getenv("SWXSOC_MISSION")
+        if not mission_name or mission_name == "hermes":
+            database_name = "sdc_aws_logs"
+            table_name = "sdc_aws_s3_bucket_log_table"
+        else:
+            database_name = f"{mission_name}_sdc_aws_logs"
+            table_name = f"{mission_name}_sdc_aws_s3_bucket_log_table"
+
+        if not is_production_environment():
+            database_name = f"dev-{database_name}"
+            table_name = f"dev-{table_name}"
+
+        # Write to Timestream
+        timestream_client.write_records(
+            DatabaseName=database_name,
+            TableName=table_name,
+            Records=[
+                {
+                    "Time": current_time,
+                    "Dimensions": [
+                        {"Name": "action_type", "Value": action_type},
+                        {
+                            "Name": "source_bucket",
+                            "Value": source_bucket or "N/A",
+                        },
+                        {
+                            "Name": "destination_bucket",
+                            "Value": destination_bucket or "N/A",
+                        },
+                        {"Name": "file_key", "Value": file_key},
+                        {
+                            "Name": "new_file_key",
+                            "Value": new_file_key or "N/A",
+                        },
+                    ],
+                    "MeasureName": "timestamp",
+                    "MeasureValue": str(datetime.now(timezone.utc).timestamp()),
+                    "MeasureValueType": "DOUBLE",
+                },
+            ],
+        )
+
+        swxsoc.log.debug(f"File {file_key} Successfully Logged to Timestream")
+
+    except Exception as e:
+        swxsoc.log.error({"status": "ERROR", "message": e})
+        raise e
 
 
 def record_timeseries(
@@ -107,7 +234,7 @@ def record_timeseries(
     The boolean check is performed first since `bool` is a subclass of `int` in Python. This ensures
     boolean flags are correctly identified and not mistakenly stored as numeric DOUBLE values.
     """
-    timestream_client = boto3.client("timestream-write", region_name="us-east-1")
+    timestream_client = create_timestream_client_session()
 
     # Validate Instrument name
     instrument_name = (
@@ -289,7 +416,7 @@ def _record_dimension_timestream(
     :type timestamp: str, optional
     :return: None
     """
-    timestream_client = boto3.client("timestream-write", region_name="us-east-1")
+    timestream_client = create_timestream_client_session()
 
     # Use current time in milliseconds if no timestamp is provided
     if not timestamp:

@@ -14,7 +14,7 @@ from astropy.utils.exceptions import AstropyUserWarning
 
 from swxsoc import config, log
 from swxsoc.util.exceptions import SWXUserWarning
-from swxsoc.util.logger import MyLogger
+from swxsoc.util.logger import MyLogger, _init_log
 
 """This code is based on that provided by SunPy see
     licenses/SUNPY.rst
@@ -162,13 +162,6 @@ def test_log_format_real_output():
     )
 
 
-# no obvious way to do the following
-# TODO: test for the following configs  use_color, log_warnings, log_exceptions, log_file_format
-
-
-# Most of the logging functionality is tested in Astropy's tests for AstropyLogger
-
-
 def test_swxsoc_warnings_logging():
     # Test that our logger intercepts our warnings but not Astropy warnings
 
@@ -204,3 +197,64 @@ def test_swxsoc_warnings_logging():
 
     # Restore the state of warnings logging prior to this test
     log._showwarning_orig = previous
+
+
+def test_init_log_lambda_environment_production(monkeypatch):
+    """
+    Test that _init_log() sets INFO level and silences boto3/botocore when
+    LAMBDA_ENVIRONMENT=PRODUCTION.
+    """
+    monkeypatch.setenv("LAMBDA_ENVIRONMENT", "PRODUCTION")
+    # _set_defaults() re-installs astropy's warnings.showwarning hook, which
+    # conflicts with pytest's own hook management. These tests only target the
+    # LAMBDA_ENVIRONMENT branch added after _set_defaults(), so stub it out.
+    monkeypatch.setattr(log, "_set_defaults", lambda: None)
+    original_level = log.level
+    logging.getLogger("botocore").setLevel(logging.DEBUG)
+    logging.getLogger("boto3").setLevel(logging.DEBUG)
+
+    try:
+        new_log = _init_log(config=config)
+
+        assert new_log.getEffectiveLevel() == logging.INFO
+        assert logging.getLogger("botocore").getEffectiveLevel() == logging.CRITICAL
+        assert logging.getLogger("boto3").getEffectiveLevel() == logging.CRITICAL
+    finally:
+        log.setLevel(original_level)
+        logging.getLogger("botocore").setLevel(logging.NOTSET)
+        logging.getLogger("boto3").setLevel(logging.NOTSET)
+
+
+def test_init_log_lambda_environment_development(monkeypatch):
+    """
+    Test that _init_log() sets DEBUG level when LAMBDA_ENVIRONMENT is set but not PRODUCTION.
+    """
+    monkeypatch.setenv("LAMBDA_ENVIRONMENT", "DEVELOPMENT")
+    monkeypatch.setattr(log, "_set_defaults", lambda: None)
+    original_level = log.level
+
+    try:
+        new_log = _init_log(config=config)
+
+        assert new_log.getEffectiveLevel() == logging.DEBUG
+    finally:
+        log.setLevel(original_level)
+
+
+def test_init_log_no_lambda_environment(monkeypatch):
+    """
+    Test that _init_log() does not touch the log level outside of Lambda.
+    """
+    monkeypatch.delenv("LAMBDA_ENVIRONMENT", raising=False)
+    monkeypatch.setattr(log, "_set_defaults", lambda: None)
+    original_level = log.level
+    # Sentinel level unrelated to the LAMBDA_ENVIRONMENT branch: since
+    # _set_defaults() is stubbed out, this should be left untouched.
+    log.setLevel(logging.WARNING)
+
+    try:
+        new_log = _init_log(config=config)
+
+        assert new_log.getEffectiveLevel() == logging.WARNING
+    finally:
+        log.setLevel(original_level)

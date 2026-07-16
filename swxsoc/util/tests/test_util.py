@@ -298,31 +298,16 @@ def test_extract_time_warnings(use_mission, filename, expected_warning, caplog):
         swx_logger.removeHandler(caplog.handler)
 
 
-def test_get_instrument_package_hermes(use_mission):
-    # Mission: hermes
-    assert util.get_instrument_package("eea") == "hermes_eea"
-    assert util.get_instrument_package("EEA") == "hermes_eea"
-    assert util.get_instrument_package("nemisis") == "hermes_nemisis"
-    assert util.get_instrument_package("Nemisis") == "hermes_nemisis"
-    with pytest.raises(ValueError):
-        util.get_instrument_package("not_an_inst")
+def test_is_production_environment_unset(monkeypatch):
+    monkeypatch.delenv("LAMBDA_ENVIRONMENT", raising=False)
+    assert util.is_production_environment() is False
 
 
-@pytest.mark.parametrize("use_mission", ["padre"], indirect=True)
-def test_get_instrument_package_padre(use_mission):
-    # Mission: padre
-    assert util.get_instrument_package("meddea") == "padre_meddea"
-    assert util.get_instrument_package("MEDDEA") == "padre_meddea"
-    assert util.get_instrument_package("sharp") == "padre_sharp"
-    assert util.get_instrument_package("SHARP") == "padre_sharp"
-    with pytest.raises(ValueError):
-        util.get_instrument_package("fake")
+def test_is_production_environment_development(monkeypatch):
+    monkeypatch.setenv("LAMBDA_ENVIRONMENT", "DEVELOPMENT")
+    assert util.is_production_environment() is False
 
 
-@pytest.mark.parametrize("use_mission", ["swxsoc_pipeline"], indirect=True)
-def test_get_instrument_package_swxsoc_pipeline(use_mission):
-    # Mission: swxsoc_pipeline
-    assert util.get_instrument_package("reach") == "swxsoc_reach"
-    assert util.get_instrument_package("REACH") == "swxsoc_reach"
-    with pytest.raises(ValueError):
-        util.get_instrument_package("unknown")
+def test_is_production_environment_production(monkeypatch):
+    monkeypatch.setenv("LAMBDA_ENVIRONMENT", "PRODUCTION")
+    assert util.is_production_environment() is True

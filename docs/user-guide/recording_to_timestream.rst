@@ -13,7 +13,7 @@ Measurements can be anything such as housekeeping data or science data as long a
 
 Writing data
 ============
-The primary interface to write data into the Timestream datase is the `~swxsoc.util.util.record_timeseries` function.
+The primary interface to write data into the Timestream datase is the `~swxsoc.db.timeseries.record_timeseries` function.
 Its primary input is a `~astropy.timeseries.TimeSeries` object.
 The column names will be used as the label for the measurement.
 
@@ -28,7 +28,7 @@ Example Usage
                     n_samples=5)
     ts['volt1'] = [1., 4., 5., 6., 4.] * u.volt
 
-    from swxsoc.util.util import record_timeseries
+    from swxsoc.db.timeseries import record_timeseries
 
     record_timeseries(ts, instrument_name='test')
 

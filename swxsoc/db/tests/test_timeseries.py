@@ -561,3 +561,107 @@ def test_record_timeseries_uses_mission_agnostic_database_name(
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
     assert "dev-swxsoc_sdc_aws_logs" in backend.databases
     assert "dev-demo_sdc_aws_logs" not in backend.databases
+
+
+def test_get_timestream_names_development(monkeypatch):
+    monkeypatch.delenv("LAMBDA_ENVIRONMENT", raising=False)
+    database_name, table_name, mission_name = timeseries._get_timestream_names()
+    assert database_name.startswith("dev-")
+    assert table_name.startswith("dev-")
+    assert mission_name == "hermes"
+
+
+def test_get_timestream_names_production(monkeypatch):
+    monkeypatch.setenv("LAMBDA_ENVIRONMENT", "PRODUCTION")
+    database_name, table_name, mission_name = timeseries._get_timestream_names()
+    assert not database_name.startswith("dev-")
+    assert not table_name.startswith("dev-")
+    assert mission_name == "hermes"
+
+
+def test_create_timestream_client_session(aws_credentials):
+    with mock_aws():
+        client = timeseries.create_timestream_client_session()
+        assert client.meta.service_model.service_name == "timestream-write"
+        assert client.meta.region_name == "us-east-1"
+
+
+@pytest.fixture(scope="function")
+def mocked_log_timestream(aws_credentials):
+    """A mocked Timestream client with the hermes S3-log database/table created."""
+    with mock_aws():
+        client = boto3.client("timestream-write", region_name="us-east-1")
+        client.create_database(DatabaseName="dev-sdc_aws_logs")
+        client.create_table(
+            DatabaseName="dev-sdc_aws_logs",
+            TableName="dev-sdc_aws_s3_bucket_log_table",
+            RetentionProperties={
+                "MemoryStoreRetentionPeriodInHours": 24,
+                "MagneticStoreRetentionPeriodInDays": 7,
+            },
+        )
+        yield client
+
+
+def test_log_to_timestream_development(monkeypatch, mocked_log_timestream):
+    monkeypatch.delenv("SWXSOC_MISSION", raising=False)
+    monkeypatch.delenv("LAMBDA_ENVIRONMENT", raising=False)
+
+    timeseries.log_to_timestream(
+        mocked_log_timestream,
+        action_type="PUT",
+        file_key="file.cdf",
+        source_bucket="hermes-incoming",
+        destination_bucket="hermes-eea",
+    )
+
+    backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
+    records = (
+        backend.databases["dev-sdc_aws_logs"]
+        .tables["dev-sdc_aws_s3_bucket_log_table"]
+        .records
+    )
+    assert len(records) == 1
+    dimensions = {d["Name"]: d["Value"] for d in records[0]["Dimensions"]}
+    assert dimensions["action_type"] == "PUT"
+    assert dimensions["source_bucket"] == "hermes-incoming"
+    assert dimensions["destination_bucket"] == "hermes-eea"
+    assert dimensions["file_key"] == "file.cdf"
+    assert dimensions["new_file_key"] == "N/A"
+
+
+def test_log_to_timestream_requires_a_bucket(mocked_log_timestream):
+    with pytest.raises(ValueError):
+        timeseries.log_to_timestream(
+            mocked_log_timestream, action_type="PUT", file_key="file.cdf"
+        )
+
+
+def test_log_to_timestream_production_uses_unprefixed_names(
+    monkeypatch, aws_credentials
+):
+    monkeypatch.delenv("SWXSOC_MISSION", raising=False)
+    monkeypatch.setenv("LAMBDA_ENVIRONMENT", "PRODUCTION")
+
+    with mock_aws():
+        client = boto3.client("timestream-write", region_name="us-east-1")
+        client.create_database(DatabaseName="sdc_aws_logs")
+        client.create_table(
+            DatabaseName="sdc_aws_logs",
+            TableName="sdc_aws_s3_bucket_log_table",
+            RetentionProperties={
+                "MemoryStoreRetentionPeriodInHours": 24,
+                "MagneticStoreRetentionPeriodInDays": 7,
+            },
+        )
+
+        timeseries.log_to_timestream(
+            client,
+            action_type="DELETE",
+            file_key="file.cdf",
+            source_bucket="hermes-eea",
+        )
+
+        backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]
+        assert "sdc_aws_logs" in backend.databases
+        assert "dev-sdc_aws_logs" not in backend.databases

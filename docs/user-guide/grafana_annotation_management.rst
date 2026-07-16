@@ -9,9 +9,9 @@ Overview
 --------
 The following functions are introduced for managing Grafana annotations:
 
-- `~swxsoc.util.util.query_annotations`: Retrieve annotations within a specified timeframe and optionally filter by tags, dashboard, and panel names.
-- `~swxsoc.util.util.create_annotation`: Create a new annotation with custom details like start time, end time, tags, and descriptive text.
-- `~swxsoc.util.util.remove_annotation_by_id`: Remove annotations by their unique ID.
+- `~swxsoc.util.grafana.query_annotations`: Retrieve annotations within a specified timeframe and optionally filter by tags, dashboard, and panel names.
+- `~swxsoc.util.grafana.create_annotation`: Create a new annotation with custom details like start time, end time, tags, and descriptive text.
+- `~swxsoc.util.grafana.remove_annotation_by_id`: Remove annotations by their unique ID.
 
 Prerequisites
 -------------
@@ -110,7 +110,7 @@ Retrieve annotations for a specific time range, dashboard, and panel, filtered b
 .. code-block:: python
 
    from datetime import datetime
-   from swxsoc.util import util
+   from swxsoc.util import grafana
 
    # Parameters
    start_time = datetime(2024, 9, 16, 13, 30, 0)
@@ -120,7 +120,7 @@ Retrieve annotations for a specific time range, dashboard, and panel, filtered b
    tags = ["meddea", "test"]
 
    # Query annotations
-   annotations = util.query_annotations(
+   annotations = grafana.query_annotations(
        start_time=start_time,
        end_time=end_time,
        tags=tags,
@@ -140,7 +140,7 @@ Add a new annotation with custom details.
    annotation_text = "Observed solar flare"
 
    # Create annotation
-   new_annotation = util.create_annotation(
+   new_annotation = grafana.create_annotation(
        start_time=start_time,
        end_time=end_time,
        text=annotation_text,
@@ -159,7 +159,7 @@ Delete an annotation by its unique ID.
 .. code-block:: python
 
    if "id" in new_annotation:
-       removal_successful = util.remove_annotation_by_id(new_annotation["id"])
+       removal_successful = grafana.remove_annotation_by_id(new_annotation["id"])
        print("Annotation Removed:", removal_successful)
 
 Complete Example
@@ -171,7 +171,7 @@ Below is a complete example that integrates all the functions to manage annotati
 
    import logging
    from datetime import datetime
-   from swxsoc.util import util
+   from swxsoc.util import grafana
 
    # Configure logging
    logging.basicConfig(level=logging.INFO)
@@ -187,7 +187,7 @@ Below is a complete example that integrates all the functions to manage annotati
    # Main workflow
    try:
        # Query annotations
-       annotations = util.query_annotations(
+       annotations = grafana.query_annotations(
            start_time=start_time,
            end_time=end_time,
            dashboard_name=dashboard_name,
@@ -200,11 +200,11 @@ Below is a complete example that integrates all the functions to manage annotati
        for annotation in annotations:
            annotation_id = annotation.get("id")
            if annotation_id:
-               util.remove_annotation_by_id(annotation_id)
+               grafana.remove_annotation_by_id(annotation_id)
                logging.info("Removed Annotation ID %s", annotation_id)
 
        # Create a new annotation
-       new_annotation = util.create_annotation(
+       new_annotation = grafana.create_annotation(
            start_time=start_time,
            end_time=end_time,
            text=annotation_text,

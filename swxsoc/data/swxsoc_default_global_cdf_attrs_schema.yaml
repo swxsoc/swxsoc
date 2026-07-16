@@ -54,6 +54,24 @@ Data_version:
   derived: false
   required: true
   overwrite: false
+Default_Timeseries_Key:
+  description: >
+    This attribute identifies which timeseries key corresponds to the unprefixed "Epoch" variable 
+    in multi-timeseries CDF files. Design trade-off: To maintain ISTP compliance, the first 
+    (default) timeseries uses an unprefixed "Epoch" variable, while other timeseries use prefixed 
+    epoch variables (e.g., "REACH_165_Epoch"). This asymmetric prefixing strategy prevents 
+    reconstruction of the original dictionary key from the variable name alone - we cannot infer 
+    that "Epoch" originally mapped to "REACH_165" without additional metadata. This attribute 
+    solves that problem by explicitly storing the original key, enabling proper round-trip 
+    preservation of the timeseries structure when reading the CDF file. Alternative design: 
+    Always prefix all epoch variables (symmetric) would eliminate need for this attribute but 
+    would violate ISTP standards which expect unprefixed "Epoch" as the primary time variable. 
+    Only set for multi-timeseries files; single-timeseries files do not require this attribute.
+  default: null
+  derived: true
+  derivation_fn: _get_default_timeseries_key
+  required: false
+  overwrite: true
 Descriptor:
   description: >
     This attribute identifies the name of the instrument or sensor that collected the data. Both

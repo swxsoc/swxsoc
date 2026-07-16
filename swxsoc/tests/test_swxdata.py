@@ -1,22 +1,25 @@
 """Tests for CDF Files to and from data containers"""
 
+import tempfile
 from collections import OrderedDict
 from pathlib import Path
-import pytest
+
+import astropy.units as u
 import numpy as np
-from numpy.random import random
-import tempfile
-from astropy.timeseries import TimeSeries
+import pytest
+from astropy.nddata import NDData
 from astropy.table import Column
 from astropy.time import Time
+from astropy.timeseries import TimeSeries
 from astropy.units import Quantity
-import astropy.units as u
-from astropy.nddata import NDData
 from astropy.wcs import WCS
+
 from ndcube import NDCube, NDCollection
 
 # Skip all tests in this module if spacepy is not available
 spacepy = pytest.importorskip("spacepy.pycdf")
+from matplotlib.axes import Axes
+from numpy.random import random
 from spacepy.pycdf import CDFError
 
 from swxsoc.swxdata import SWXData
@@ -877,7 +880,16 @@ def test_sw_data_generate_valid_cdf():
 
         # Validate the generated CDF File
         result = validate(file_path=test_file_output_path)
-        assert len(result) <= 1  # Logical Source and File ID Do not Agree
+
+        # Verify only the expected validation warning is present:
+        # Logical_source vs filename mismatch (known issue with descriptor placement)
+        assert len(result) <= 1, (
+            f"Expected at most 1 validation warning, got {len(result)}: {result}"
+        )
+        for err in result:
+            assert "Logical_source" in err and "doesn't match filename" in err, (
+                f"Unexpected validation error: {err}"
+            )
 
         # Remove the File
         test_file_output_path.unlink()
@@ -991,7 +1003,16 @@ def test_sw_data_from_cdf():
 
         # Validate the generated CDF File
         result = validate(test_file_output_path)
-        assert len(result) <= 1  # Logical Source and File ID Do not Agree
+
+        # Verify only the expected validation warning is present:
+        # Logical_source vs filename mismatch (known issue with descriptor placement)
+        assert len(result) <= 1, (
+            f"Expected at most 1 validation warning, got {len(result)}: {result}"
+        )
+        for err in result:
+            assert "Logical_source" in err and "doesn't match filename" in err, (
+                f"Unexpected validation error: {err}"
+            )
 
         # Try to Load the CDF File in a new CDFWriter
         new_writer = SWXData.load(test_file_output_path)
@@ -1005,7 +1026,8 @@ def test_sw_data_from_cdf():
 
         # Validate the generated CDF File
         result2 = validate(test_file_output_path2)
-        assert len(result2) <= 1  # Logical Source and File ID Do not Agree
+        # Allow for logical source vs filename mismatch only (result should match original save)
+        assert len(result2) <= 1
         assert len(result) == len(result2)
 
 

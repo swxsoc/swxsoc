@@ -11,7 +11,7 @@ readme = "README.rst"
 dynamic = ["version"]
 authors = [{name = "Steven Christe", email="steven.d.christe@nasa.gov"},
            {name = "Damian Barrous Dumme", email="damianbarrous@gmail.com"},
-           {name = "Andrew Robbertz", email="a.robbertz@gmail.com"}]
+           {name = "Andrew Robbertz", email="andrew.l.robbertz@nasa.gov"}]
 license = {file = "LICENSE.rst"}
 requires-python = ">=3.10"
 keywords = ["swxsoc", "nasa mission", "space weather"]
@@ -97,6 +97,7 @@ write_to = "swxsoc/_version.py"
 testpaths = [
    "swxsoc/tests",
    "swxsoc/util/tests",
+   "swxsoc/io/tests",
    "swxsoc/net/tests",
    "swxsoc/db/tests",
    "docs"
@@ -114,6 +115,7 @@ omit = [
   'swxsoc/*/tests/*',
   'swxsoc/extern/*',
   'swxsoc/version*',
+  'swxsoc/scripts/*',
   '*/swxsoc/__init*',
   '*/swxsoc/conftest.py',
   '*/swxsoc/*setup_package*',
@@ -121,6 +123,7 @@ omit = [
   '*/swxsoc/*/tests/*',
   '*/swxsoc/extern/*',
   '*/swxsoc/version*',
+  '*/swxsoc/scripts/*',
 ]
 
 [tool.rstcheck]

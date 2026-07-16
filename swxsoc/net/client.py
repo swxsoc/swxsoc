@@ -245,6 +245,11 @@ class SWXSOCClient(BaseClient):
         """
         from swxsoc.util.util import parse_science_filename
 
+        # Get the Mission Configuration
+        mission_config = swxsoc.config["mission"]
+        mission_name = mission_config["mission_name"]
+        swxsoc.log.debug(f"Using mission configuration for {mission_name}")
+
         instrument = query.get("instrument")
         levels = query.get("level")
         start_time = query.get("startTime")
@@ -271,7 +276,7 @@ class SWXSOCClient(BaseClient):
         instrument_buckets = {
             f"{swxsoc.config['mission']['inst_to_targetname'][inst]}": (
                 f"{'dev-' if use_development_bucket else ''}"
-                f"{swxsoc.config['mission']['mission_name']}-{inst}"
+                f"{swxsoc.config['mission']['mission_name']}-{inst}".replace("_", "-")
             )
             for inst in swxsoc.config["mission"]["inst_names"]
         }
@@ -291,6 +296,7 @@ class SWXSOCClient(BaseClient):
 
         files_in_s3 = cls.list_files_in_s3(instrument_bucket_to_search)
 
+        # Filter Files Based on Levels, Time Range, and Descriptor
         if levels is not None or start_time is not None or end_time is not None:
             swxsoc.log.info(
                 f"Searching for files with level {levels} between {start_time} and {end_time}"
@@ -310,6 +316,7 @@ class SWXSOCClient(BaseClient):
                         matched_files.append(this_s3_file)
         else:
             swxsoc.log.info("Searching for all files")
+
         # remove duplicates
         unique_matched_files = []
         seen = []
@@ -331,6 +338,9 @@ class SWXSOCClient(BaseClient):
             try:
                 info = parse_science_filename(s3_object["Key"])
             except ValueError:
+                swxsoc.log.warning(
+                    f"Failed to parse filename {s3_object['Key']}.", exc_info=True
+                )
                 info = {}
 
             row = [
@@ -387,7 +397,9 @@ class SWXSOCClient(BaseClient):
                         }
                         content.append(metadata)
             except (ClientError, NoCredentialsError) as e:
-                swxsoc.log.warning(f"Error accessing bucket {bucket_name}: {e}")
+                swxsoc.log.warning(
+                    f"Error accessing bucket {bucket_name}: {e}", exc_info=True
+                )
                 if isinstance(e, NoCredentialsError):
                     error_code = "NoCredentialsError"
                 elif isinstance(e, ClientError):

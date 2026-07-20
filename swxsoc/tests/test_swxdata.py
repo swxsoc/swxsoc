@@ -13,8 +13,11 @@ from astropy.time import Time
 from astropy.timeseries import TimeSeries
 from astropy.units import Quantity
 from astropy.wcs import WCS
-from matplotlib.axes import Axes
-from ndcube import NDCollection, NDCube
+
+from ndcube import NDCube, NDCollection
+
+# Skip all tests in this module if spacepy is not available
+pytest.importorskip("spacepy.pycdf")
 from numpy.random import random
 from spacepy.pycdf import CDFError
 
@@ -685,6 +688,10 @@ def test_sw_data_plot():
     Test asserts the SWXData.plot() function generates matplotlib
     images as expected.
     """
+    # Skip this test if matplotlib is not available
+    pytest.importorskip("matplotlib")
+    from matplotlib.axes import Axes
+
     # fmt: off
     input_attrs = {
         "Descriptor": "EEA>Electron Electrostatic Analyzer",

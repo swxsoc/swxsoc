@@ -15,7 +15,26 @@ import numpy as np
 from astropy import units as u
 from astropy.table import Table
 from astropy.time import Time
-from sammi.cdf_attribute_manager import CdfAttributeManager
+
+
+# Conditional import for CDF support
+try:
+    from sammi.cdf_attribute_manager import CdfAttributeManager
+
+    HAS_SAMMI = True
+except ImportError:
+    HAS_SAMMI = False
+
+    # Create a stub base class when sammi is not available
+    class CdfAttributeManager:
+        """Stub base class when sammi-cdf is not installed."""
+
+        def __init__(self, *args, **kwargs):
+            raise ImportError(
+                "SWXSchema requires sammi-cdf for CDF attribute management. "
+                "Install it with: pip install swxsoc[cdf]"
+            )
+
 
 import swxsoc
 import swxsoc.io.fillval as fv

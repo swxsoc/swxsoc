@@ -9,6 +9,10 @@ import pytest
 from astropy.time import Time
 from astropy.timeseries import TimeSeries
 from numpy.random import random
+
+# Skip all tests in this module if spacepy is not available
+pytest.importorskip("spacepy.pycdf")
+
 from spacepy.pycdf import CDF
 
 import swxsoc

@@ -38,6 +38,49 @@ Documentation
 -------------
 The documentation is hosted on readthedocs and is available `here <https://swxsoc.readthedocs.io/en/latest/>`_.
 
+Installation
+------------
+
+Basic Installation (FITS Support Included)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To install swxsoc with **FITS file support**::
+
+    pip install swxsoc
+
+This includes:
+
+- Core swxsoc functionality
+- **FITS file support** via astropy (no extra dependencies needed)
+- Network data retrieval capabilities
+
+**FITS users can stop here!** No additional installation needed.
+
+Optional CDF File Support
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Only if you need CDF file support**, install the optional CDF dependencies::
+
+    pip install swxsoc[cdf]
+
+This adds:
+
+- spacepy for CDF file I/O
+- sammi-cdf for SWxSOC-specific CDF metadata handling
+- matplotlib for plotting CDF data
+
+.. warning::
+   
+   CDF support requires the NASA CDF library to be installed separately on your system.
+   See the `spacepy installation guide <https://spacepy.github.io/install.html>`_ for details.
+
+Development Installation
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+For developers (includes all formats, testing, documentation, and style tools)::
+
+    pip install -e .[dev]
+
 Licenses
 --------
 

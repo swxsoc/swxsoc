@@ -7,7 +7,6 @@ from pathlib import Path
 import astropy.units as u
 import numpy as np
 import pytest
-import spacepy.pycdf as pycdf
 from astropy.nddata import NDData
 from astropy.table import Table
 from astropy.time import Time
@@ -17,6 +16,9 @@ from astropy.utils.masked import Masked
 from astropy.wcs import WCS
 from ndcube import NDCollection, NDCube
 from numpy.random import random
+
+pytest.importorskip("spacepy.pycdf")
+from spacepy import pycdf
 from spacepy.pycdf import CDF, CDFError
 
 from swxsoc.io import fillval as fv

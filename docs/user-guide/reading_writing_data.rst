@@ -6,6 +6,16 @@ Opening and Writing SWxSOC Affiliated Data
 Overview
 ========
 
+.. note::
+
+   **File Format Support**
+   
+   - **FITS files**: Supported by default through astropy (no extra installation needed)
+   - **CDF files**: Requires optional installation: ``pip install swxsoc[cdf]``
+   
+   This guide primarily covers CDF file operations. For FITS support, see astropy's 
+   `FITS I/O documentation <https://docs.astropy.org/en/stable/io/fits/>`_.
+
 The :py:class:`~swxsoc.swxdata.SWXData` class provides a convenient and efficient way to work with SWxSOC affiliated mission science CDF data files.
 The point of this class is to simplify data management, enhance data discovery, and facilitate adherence to CDF standards.
 

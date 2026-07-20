@@ -17,6 +17,7 @@ from astropy.wcs import WCS
 from ndcube import NDCollection, NDCube
 from numpy.random import random
 pytest.importorskip("spacepy.pycdf")
+from spacepy import pycdf
 from spacepy.pycdf import CDF, CDFError
 
 from swxsoc.io import fillval as fv

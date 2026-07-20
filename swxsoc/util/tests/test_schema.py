@@ -8,6 +8,7 @@ import yaml
 from astropy.table import Table
 from astropy.time import Time
 from astropy.timeseries import TimeSeries
+from numpy.random import random
 
 from astropy.table import Table
 import astropy.units as u

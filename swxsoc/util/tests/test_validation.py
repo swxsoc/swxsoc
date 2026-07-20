@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 from astropy.time import Time
 from astropy.timeseries import TimeSeries
+from numpy.random import random
 
 import astropy.units as u
 

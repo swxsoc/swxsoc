@@ -17,7 +17,7 @@ from astropy.wcs import WCS
 from ndcube import NDCube, NDCollection
 
 # Skip all tests in this module if spacepy is not available
-spacepy = pytest.importorskip("spacepy.pycdf")
+pytest.importorskip("spacepy.pycdf")
 from matplotlib.axes import Axes
 from numpy.random import random
 from spacepy.pycdf import CDFError

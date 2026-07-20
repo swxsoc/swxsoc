@@ -533,16 +533,16 @@ def test_invalid_record_dimension_timestream(mocked_timestream):
 
 def test_invalid_instrument_record_dimension_timestream(mocked_timestream, caplog):
     import logging
-    
+
     dimensions = "invalid"
-    
+
     # Attach caplog handler to swxsoc logger (needed because propagate=False)
     swx_logger = logging.getLogger("swxsoc")
     swx_logger.addHandler(caplog.handler)
     try:
         with caplog.at_level(logging.ERROR, logger="swxsoc"):
             timeseries._record_dimension_timestream(dimensions=dimensions)
-        
+
         assert "Failed to write to Timestream" in caplog.text
     finally:
         swx_logger.removeHandler(caplog.handler)

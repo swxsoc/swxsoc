@@ -94,7 +94,9 @@ def test_query_annotations_http_error(mock_requests):
     mock_get, _, _ = mock_requests
 
     # Simulate HTTPError
-    mock_get.side_effect = requests.exceptions.HTTPError("HTTP Error occurred (proper test behavior)")
+    mock_get.side_effect = requests.exceptions.HTTPError(
+        "HTTP Error occurred (proper test behavior)"
+    )
 
     # Call function
     start_time = datetime(2024, 9, 16, 13, 30, 0)
@@ -164,7 +166,9 @@ def test_create_annotation_http_error(mock_requests):
     _, mock_post, _ = mock_requests
 
     # Simulate HTTPError
-    mock_post.side_effect = requests.exceptions.HTTPError("HTTP Error occurred (proper test behavior)")
+    mock_post.side_effect = requests.exceptions.HTTPError(
+        "HTTP Error occurred (proper test behavior)"
+    )
 
     # Call function
     start_time = datetime(2024, 9, 16, 13, 30, 0)
@@ -224,7 +228,9 @@ def test_remove_annotation_by_id_http_error(mock_requests):
     _, _, mock_delete = mock_requests
 
     # Simulate HTTPError
-    mock_delete.side_effect = requests.exceptions.HTTPError("HTTP Error occurred (proper test behavior)")
+    mock_delete.side_effect = requests.exceptions.HTTPError(
+        "HTTP Error occurred (proper test behavior)"
+    )
 
     # Call function
     result = grafana.remove_annotation_by_id(annotation_id=123)

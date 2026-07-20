@@ -11,6 +11,7 @@ from swxsoc.util.schema import SWXSchema
 try:
     from spacepy.pycdf import CDF, CDFError
     from spacepy.pycdf.istp import FileChecks, VariableChecks
+
     HAS_SPACEPY = True
 except ImportError:
     HAS_SPACEPY = False
@@ -33,7 +34,7 @@ def validate(file_path: Path, schema: Union[SWXSchema, None] = None) -> list[str
     -------
     errors : `list[str]`
         A list of validation errors returned. A valid file will result in an empty list being returned.
-        
+
     Raises
     ------
     ImportError
@@ -90,37 +91,37 @@ class SWXDataValidator(ABC):
         pass
 
 
-
 # Conditionally define CDFValidator based on spacepy availability
 if HAS_SPACEPY:
+
     class CDFValidator(SWXDataValidator):
         """
         Validator for CDF files.
-    
+
         Parameters
         ----------
         schema: `SWXSchema`, optional
             optional custom `SWXSchema` object to use for validation.
         """
-    
+
         def __init__(self, schema: Union[SWXSchema, None] = None):
             super().__init__()
-    
+
             # CDF Schema
             if not schema:
                 self.schema = SWXSchema()
             else:
                 self.schema = schema
-    
+
         def validate(self, file_path: Path) -> list[str]:
             """
             Validate the CDF file.
-    
+
             Parameters
             ----------
             file_path : `pathlib.Path`
                 A fully specified file path of the CDF data file to validate.
-    
+
             Returns
             -------
             errors : `list[str]`
@@ -128,7 +129,7 @@ if HAS_SPACEPY:
             """
             # Initialize Validation Errors
             validation_errors = []
-    
+
             try:
                 # Open CDF file with context manager
                 with CDF(str(file_path), readonly=True) as cdf_file:
@@ -137,22 +138,24 @@ if HAS_SPACEPY:
                         cdf_file=cdf_file
                     )
                     validation_errors.extend(global_attr_validation_errors)
-    
+
                     # Verify that all `required` variable attributes in the schema are present
-                    variable_attr_validation_errors = self._validate_variable_attr_schema(
-                        cdf_file=cdf_file
+                    variable_attr_validation_errors = (
+                        self._validate_variable_attr_schema(cdf_file=cdf_file)
                     )
                     validation_errors.extend(variable_attr_validation_errors)
-    
+
                     # Validate the CDF Using ISTP Module `FileChecks` Class
                     file_checks_errors = self._file_checks(cdf_file=cdf_file)
                     validation_errors.extend(file_checks_errors)
-    
+
             except CDFError:
-                validation_errors.append(f"Could not open CDF File at path: {file_path}")
-    
+                validation_errors.append(
+                    f"Could not open CDF File at path: {file_path}"
+                )
+
             return validation_errors
-    
+
         def _validate_global_attr_schema(self, cdf_file: CDF) -> list[str]:
             """
             Function to ensure all required global attributes in the schema are present
@@ -179,32 +182,34 @@ if HAS_SPACEPY:
                         f"Required attribute ({attr_name}) not present in global attributes.",
                     )
             return global_attr_validation_errors
-    
+
         def _validate_variable_attr_schema(self, cdf_file: CDF) -> list[str]:
             """
             Function to ensure all required variable attributes in the schema are present
             in the generated CDF file.
             """
             variable_attr_validation_errors = []
-    
+
             # Loop for each Variable in the CDF File
             for var_name in cdf_file:
                 # Get the `Var()` Class for the Variable
                 var_data = cdf_file[var_name]
-    
+
                 # Get the Variable Type to compare the required attributes
                 var_type = ""
                 if "VAR_TYPE" in var_data.attrs:
                     var_type = var_data.attrs["VAR_TYPE"]
-                    variable_errors = self._validate_variable(cdf_file, var_name, var_type)
+                    variable_errors = self._validate_variable(
+                        cdf_file, var_name, var_type
+                    )
                     variable_attr_validation_errors.extend(variable_errors)
                 else:
                     variable_attr_validation_errors.append(
                         f"Variable: {var_name} missing 'VAR_TYPE' attribute. Cannot Validate Variable."
                     )
-    
+
             return variable_attr_validation_errors
-    
+
         def _validate_variable(
             self, cdf_file: CDF, var_name: str, var_type: str
         ) -> list[str]:
@@ -214,10 +219,10 @@ if HAS_SPACEPY:
             variable_errors = []
             # Get the Expected Attributes for the Variable Type
             var_type_attrs = self.schema.variable_attribute_schema[var_type]
-    
+
             # Get the `Var()` Class for the Variable
             var_data = cdf_file[var_name]
-    
+
             # Loop for each Variable Attribute in the schema
             for attr_name in var_type_attrs:
                 attr_schema = self.schema.variable_attribute_schema["attribute_key"][
@@ -255,15 +260,15 @@ if HAS_SPACEPY:
                                     f"Was {attr_value}, expected one of {attr_valid_values}",
                                 )
                             )
-    
+
             # Validate Variable using ISTP Module `VariableChecks` class
             variable_checks_errors = self._variable_checks(
                 cdf_file=cdf_file, var_name=var_name
             )
             variable_errors.extend(variable_checks_errors)
-    
+
             return variable_errors
-    
+
         def _file_checks(self, cdf_file: CDF):
             """
             Function to call individual pieces of the `spacepy.pycdf.istp.FileChecks` Class.
@@ -271,14 +276,14 @@ if HAS_SPACEPY:
             so we break up the individual function calls here.
             """
             file_checks_errors = []
-    
+
             check_fns = [
                 FileChecks.empty_entry,
                 FileChecks.filename,
                 FileChecks.time_monoton,
                 FileChecks.times,
             ]
-    
+
             # Loop through the Functions we want to check
             for func in check_fns:
                 # Try to call the given function and report errors
@@ -289,9 +294,9 @@ if HAS_SPACEPY:
                     file_checks_errors.append(
                         "Test {} did not complete.".format(func.__name__)
                     )
-    
+
             return file_checks_errors
-    
+
         def _variable_checks(self, cdf_file: CDF, var_name: str) -> list[str]:
             """
             Function to call individual pieces of the `spacepy.pycdf.istp.VariableChecks` Class.
@@ -299,7 +304,7 @@ if HAS_SPACEPY:
             so we break up the individual function calls here.
             """
             variable_checks_errors = []
-    
+
             check_fns = [
                 # This function makes incorrect asumptions about the UNITS that must be placed on
                 # DELTA_PLUS_VAR and DELTA_MINUS var metadata attributes.
@@ -324,7 +329,7 @@ if HAS_SPACEPY:
                 self._validrange,
                 self._validscale,
             ]
-    
+
             # Loop through the Functions we want to check
             for func in check_fns:
                 # Try to call the given function and report errors
@@ -337,63 +342,63 @@ if HAS_SPACEPY:
                     variable_checks_errors.append(
                         "{}: Test {} did not complete.".format(var_name, func.__name__)
                     )
-    
+
             return variable_checks_errors
-    
+
         def _validrange(self, v):
             """Check that all values are within VALIDMIN/VALIDMAX, or FILLVAL
-    
+
             Compare all values of this variable to `VALIDMIN
             <https://spdf.gsfc.nasa.gov/istp_guide/vattributes.html#VALIDMIN>`_
             and ``VALIDMAX``; fails validation if any values are below
             VALIDMIN or above ``VALIDMAX`` unless equal to `FILLVAL
             <https://spdf.gsfc.nasa.gov/istp_guide/vattributes.html#FILLVAL>`_.
-    
+
             Parameters
             ----------
             v : :class:`~spacepy.pycdf.Var`
                 Variable to check
-    
+
             Returns
             -------
             list of str
                 Description of each validation failure.
-    
+
             """
             return self._validhelper(v)
-    
+
         def _validscale(self, v):
             """Check SCALEMIN<=SCALEMAX, and both in range for CDF datatype.
-    
+
             Compares `SCALEMIN
             <https://spdf.gsfc.nasa.gov/istp_guide/vattributes.html#SCALEMIN>`_
             to ``SCALEMAX`` to make sure it isn't larger and both are
             within range of the variable CDF datatype.
-    
+
             Parameters
             ----------
             v : :class:`~spacepy.pycdf.Var`
                 Variable to check
-    
+
             Returns
             -------
             list of str
                 Description of each validation failure.
-    
+
             """
             return self._validhelper(v, False)
-    
+
         def _validhelper(self, v, rng=True):
             """Helper function for checking SCALEMIN/MAX, VALIDMIN/MAX
-    
+
             Parameters
             ----------
             v : :class:`~spacepy.pycdf.Var`
                 Variable to check
-    
+
             rng : bool
                 Do range check (True, default) or scale check (False)
-    
+
             Returns
             -------
             list of str
@@ -437,7 +442,9 @@ if HAS_SPACEPY:
                         continue
                     if len(vshape) != firstdim + 1:  # only one non-record dim
                         errs.append(
-                            "Multi-element {} only valid with 1D variable.".format(which)
+                            "Multi-element {} only valid with 1D variable.".format(
+                                which
+                            )
                         )
                         continue
                     if firstdim:  # Add pseudo-record dim
@@ -455,7 +462,10 @@ if HAS_SPACEPY:
                 if np.any((minval > attrval)) or np.any((maxval < attrval)):
                     errs.append(
                         "{} ({}) outside valid data range ({},{}).".format(
-                            which, attrval[0, :] if multidim else attrval, minval, maxval
+                            which,
+                            attrval[0, :] if multidim else attrval,
+                            minval,
+                            maxval,
                         )
                     )
                 if not rng or not len(v):  # nothing to compare
@@ -506,17 +516,18 @@ if HAS_SPACEPY:
                 if np.any(v.attrs[whichmin] > v.attrs[whichmax]):
                     errs.append("{} > {}.".format(whichmin, whichmax))
             return errs
-    
+
 else:
     # Stub CDFValidator that raises an error if instantiated without spacepy
     class CDFValidator(SWXDataValidator):
         """Stub validator that requires spacepy to be installed."""
+
         def __init__(self, schema: Union[SWXSchema, None] = None):
             raise ImportError(
                 "CDFValidator requires spacepy. "
                 "Install it with: pip install swxsoc[cdf]"
             )
-        
+
         def validate(self, file_path: Path) -> list[str]:
             # This should never be reached because __init__ will raise
             pass

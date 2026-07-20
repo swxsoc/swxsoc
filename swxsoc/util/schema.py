@@ -16,7 +16,6 @@ from astropy import units as u
 from astropy.table import Table
 from astropy.time import Time
 
-from astropy import units as u
 
 # Conditional import for CDF support
 try:

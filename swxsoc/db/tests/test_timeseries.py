@@ -533,7 +533,6 @@ def test_invalid_record_dimension_timestream(mocked_timestream):
 
 def test_invalid_instrument_record_dimension_timestream(mocked_timestream, caplog):
     import logging
-    import swxsoc
     
     dimensions = "invalid"
     

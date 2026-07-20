@@ -55,6 +55,6 @@ def pytest_collection_modifyitems(config, items):
     ]
     
     for item in items:
-         item_path = str(getattr(item, "fspath", ""))
-         if any(doc_file in item_path for doc_file in cdf_doc_files):
-             item.add_marker(skip_sammi)
+        item_path = str(getattr(item, "fspath", ""))
+        if any(doc_file in item_path for doc_file in cdf_doc_files):
+            item.add_marker(skip_sammi)

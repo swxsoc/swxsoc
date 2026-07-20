@@ -689,7 +689,7 @@ def test_sw_data_plot():
     images as expected.
     """
     # Skip this test if matplotlib is not available
-    matplotlib = pytest.importorskip("matplotlib")
+    pytest.importorskip("matplotlib")
     from matplotlib.axes import Axes
     
     # fmt: off

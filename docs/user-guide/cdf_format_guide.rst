@@ -594,3 +594,147 @@ The rules above are deterministic, but a few combinations surprise users.
   length, not the 4-byte-per-character NumPy storage width.
 
 See :doc:`fillval_and_masks` for the ``FILLVAL`` sentinel associated with each CDF type and how masked / ``NaN`` values are converted on write and read.
+
+====================================================
+6. Multi-Epoch CDF Files and Variable Naming
+====================================================
+
+When a :py:class:`~swxsoc.swxdata.SWXData` object contains multiple `~astropy.timeseries.TimeSeries` (multi-epoch data), each with its own time variable, special considerations apply for CDF file creation.
+CDF files use a flat namespace where all variable names must be globally unique, while Python uses a hierarchical structure.
+This section describes how ``swxsoc`` handles this translation automatically.
+
+--------------------------------------
+6.1 Problem: Flat vs. Hierarchical
+--------------------------------------
+
+In Python, you might organize data hierarchically::
+
+    timeseries["REACH-165"]["Lat"]
+    timeseries["REACH-165"]["Lon"]
+    timeseries["REACH-134"]["Lat"]
+    timeseries["REACH-134"]["Lon"]
+
+However, CDF files require a flat namespace where all variables are at the same level.
+Without proper handling, variables from different epochs with identical names (``Lat``, ``Lon``) would overwrite each other, resulting in data loss.
+
+--------------------------------------
+6.2 Solution: Automatic Prefixing
+--------------------------------------
+
+To prevent naming conflicts, ``swxsoc`` automatically prefixes all variable names with their sanitized epoch key when writing multi-epoch data to CDF files.
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+6.2.1 Write Operation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+During CDF file creation, variable names are automatically prefixed::
+
+    timeseries["REACH-165"]["Lat"]       → CDF variable "REACH_165_Lat"
+    timeseries["REACH-165"]["time"]      → CDF variable "REACH_165_Epoch"
+    timeseries["REACH-134"]["Lat"]       → CDF variable "REACH_134_Lat"
+    timeseries["REACH-134"]["time"]      → CDF variable "REACH_134_Epoch"
+
+**Special Cases:**
+
+* The default epoch (typically ``"Epoch"``) remains unprefixed for backward compatibility with existing CDF files and ISTP conventions.
+* Hyphens in epoch keys are replaced with underscores to comply with CDF naming requirements.
+* The time column (``"time"``) in each :py:class:`~astropy.timeseries.TimeSeries` is renamed to ``"<prefix>_Epoch"`` or just ``"Epoch"`` for the default case.
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+6.2.2 Read Operation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When loading a CDF file, ``swxsoc`` automatically detects prefixed variables and reconstructs the original hierarchical structure::
+
+    CDF variable "REACH_165_Lat"    → timeseries["REACH-165"]["Lat"]
+    CDF variable "REACH_165_Epoch"  → timeseries["REACH-165"]["time"]
+
+This ensures round-trip consistency: data saved to CDF and then loaded back maintains its original structure.
+
+--------------------------------------
+6.3 DEPEND_0 Attribute and ISTP
+--------------------------------------
+
+The ``DEPEND_0`` attribute is an **ISTP (International Solar-Terrestrial Physics) requirement** that links each time-varying variable to its corresponding time (epoch) variable.
+This is critical for multi-epoch CDF files where different variables may depend on different time axes.
+
+When writing multi-epoch data, ``swxsoc`` automatically:
+
+1. Sets ``DEPEND_0`` for each data variable to point to its corresponding epoch variable
+2. Uses the prefixed epoch name (e.g., ``"REACH_165_Epoch"``) for non-default epochs
+3. Uses ``"Epoch"`` for the default epoch key
+
+**Example CDF Structure:**
+
+For data with two satellites::
+
+    Variables:
+    - REACH_165_Epoch [5 records]
+    - REACH_165_Lat [5 records, DEPEND_0="REACH_165_Epoch"]
+    - REACH_165_Lon [5 records, DEPEND_0="REACH_165_Epoch"]
+    - REACH_134_Epoch [5 records]
+    - REACH_134_Lat [5 records, DEPEND_0="REACH_134_Epoch"]
+    - REACH_134_Lon [5 records, DEPEND_0="REACH_134_Epoch"]
+
+This structure clearly indicates which time axis each measurement depends on, enabling proper interpretation by analysis tools and adherence to ISTP guidelines.
+
+For more information about ISTP requirements, see the `ISTP Guidelines <http://spdf.gsfc.nasa.gov/istp_guide/istp_guide.html>`_.
+
+--------------------------------------
+6.4 Design Rationale
+--------------------------------------
+
+The automatic prefixing approach was chosen for several reasons:
+
+**Simplicity:**
+    No need to detect duplicate names or implement conditional logic; all non-default epoch variables are consistently prefixed.
+
+**Predictability:**
+    Users can reliably predict CDF variable names from their Python structure.
+
+**Robustness:**
+    Eliminates an entire class of bugs related to variable name collisions.
+
+**ISTP Compliance:**
+    Maintains compatibility with ISTP standards while supporting complex multi-epoch datasets.
+
+--------------------------------------
+6.5 Example: Multi-Satellite Scenario
+--------------------------------------
+
+Consider a constellation mission with 32 satellites, each collecting the same measurements (Latitude, Longitude, Position, Sensor A, Sensor B, etc.) at the same cadence.
+
+Without auto-prefixing, all 32 satellites' data would collapse into a single set of variables, losing 31 satellites' worth of data.
+
+With auto-prefixing, each satellite's data is preserved::
+
+    from astropy.time import Time, TimeDelta
+    from astropy.timeseries import TimeSeries
+    import astropy.units as u
+    import numpy as np
+    from swxsoc.swxdata import SWXData
+
+    # Create TimeSeries for multiple satellites
+    timeseries_dict = {}
+    for sat_id in range(165, 197):  # REACH-165 through REACH-196
+        times = Time('2024-01-01T00:00:00', scale='utc') + TimeDelta(np.arange(5) * u.s)
+        ts = TimeSeries(
+            time=times,
+            data={
+                'Lat': u.Quantity(np.random.uniform(-90, 90, 5), 'deg', dtype=np.float32),
+                'Lon': u.Quantity(np.random.uniform(-180, 180, 5), 'deg', dtype=np.float32),
+                'Sensor_A': u.Quantity(np.random.random(5), 'nT', dtype=np.float32),
+            }
+        )
+        timeseries_dict[f'REACH-{sat_id}'] = ts
+
+    # Create SWXData and save
+    meta = SWXData.global_attribute_template("reach", "l1", "1.0.0")
+    swx_data = SWXData(timeseries=timeseries_dict, meta=meta)
+    cdf_path = swx_data.save()  # Auto-prefixes all variables
+
+    # Load back - structure is preserved
+    loaded_data = SWXData.load(cdf_path)
+    # Each satellite's data is correctly restored to its epoch key
+
+This automatic handling allows missions with complex multi-epoch requirements to work seamlessly with CDF files while maintaining ISTP compliance and data integrity.

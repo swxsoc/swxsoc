@@ -124,6 +124,13 @@ For collections that have multiple Epochs, you can create a dictionary of `~astr
 
 This allows  you to have multiple time series in one :py:class:`~swxsoc.swxdata.SWXData` object.
 
+.. note::
+
+   When multiple :py:class:`~astropy.timeseries.TimeSeries` objects have the same column names (e.g., multiple satellites each collecting ``Lat``, ``Lon``, ``Sensor_A``), ``swxsoc`` automatically prevents naming conflicts during CDF file creation.
+   Each variable is prefixed with its sanitized epoch key (e.g., ``REACH_165_Lat``, ``REACH_134_Lat``) to ensure all data is preserved in the flat CDF namespace.
+   When loading the CDF file, the original structure is automatically reconstructed.
+   For more details, see :ref:`cdf_format_guide` Section 6 on Multi-Epoch CDF Files.
+
 Creating a ``NDCollection`` for ``SWXData`` `spectra`
 --------------------------------------------------------------
 
@@ -542,6 +549,13 @@ This function returns the full :py:class:`~pathlib.Path` to the CDF file that wa
 From this you can validate and distribute your CDF file.
 
 Missing data, ``NaN``, masks, and FILLVAL on write/read are described in :doc:`fillval_and_masks`.
+
+.. note::
+
+   **Multi-Epoch Data:** When saving a :py:class:`~swxsoc.swxdata.SWXData` object containing multiple :py:class:`~astropy.timeseries.TimeSeries` (multi-epoch data), variable names are automatically prefixed to prevent naming conflicts in the CDF file's flat namespace.
+   For example, ``timeseries["REACH-165"]["Lat"]`` becomes the CDF variable ``REACH_165_Lat``.
+   This prefixing is transparent on read operations—the original structure is automatically restored when loading the file.
+   See :ref:`cdf_format_guide` Section 6 for complete details on multi-epoch CDF files and variable naming conventions.
 
 Validating a CDF File
 =====================

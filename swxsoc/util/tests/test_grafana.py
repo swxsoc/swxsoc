@@ -1,10 +1,27 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
+from astropy.time import Time
 
 from swxsoc.util import grafana
+
+
+def test_to_milliseconds_with_datetime():
+    dt = datetime(2024, 9, 16, 13, 30, 0)
+    result = grafana._to_milliseconds(dt)
+
+    assert result == int(dt.timestamp() * 1000)
+
+
+def test_to_milliseconds_with_astropy_time():
+    dt = datetime(2024, 9, 16, 13, 30, 0, tzinfo=timezone.utc)
+    time_obj = Time(dt)
+
+    result = grafana._to_milliseconds(time_obj)
+
+    assert result == int(dt.replace(tzinfo=None).timestamp() * 1000)
 
 
 @pytest.fixture
@@ -16,6 +33,196 @@ def mock_requests():
         patch("requests.delete") as mock_delete,
     ):
         yield mock_get, mock_post, mock_delete
+
+
+def test_get_dashboard_id_found(mock_requests):
+    mock_get, _, _ = mock_requests
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = [
+        {"title": "Solar flare", "uid": "fe0cbqalk99fkd"},
+    ]
+    mock_response.status_code = 200
+    mock_get.return_value = mock_response
+
+    result = grafana.get_dashboard_id(
+        dashboard_name="Solar flare", mission_dashboard="meddea"
+    )
+
+    assert result == "fe0cbqalk99fkd"
+    mock_get.assert_called_once()
+
+
+def test_get_dashboard_id_multiple_matches(mock_requests):
+    mock_get, _, _ = mock_requests
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = [
+        {"title": "Solar flare", "uid": "fe0cbqalk99fkd"},
+        {"title": "Solar flare", "uid": "another-uid"},
+    ]
+    mock_response.status_code = 200
+    mock_get.return_value = mock_response
+
+    result = grafana.get_dashboard_id(
+        dashboard_name="Solar flare", mission_dashboard="meddea"
+    )
+
+    # Should use the first matching dashboard's uid
+    assert result == "fe0cbqalk99fkd"
+    mock_get.assert_called_once()
+
+
+def test_get_dashboard_id_not_found(mock_requests):
+    mock_get, _, _ = mock_requests
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = [
+        {"title": "Unrelated dashboard", "uid": "some-uid"},
+    ]
+    mock_response.status_code = 200
+    mock_get.return_value = mock_response
+
+    result = grafana.get_dashboard_id(
+        dashboard_name="Solar flare", mission_dashboard="meddea"
+    )
+
+    assert result is None
+    mock_get.assert_called_once()
+
+
+def test_get_dashboard_id_http_error(mock_requests):
+    mock_get, _, _ = mock_requests
+
+    mock_get.side_effect = requests.exceptions.HTTPError("HTTP Error occurred")
+
+    result = grafana.get_dashboard_id(
+        dashboard_name="Solar flare", mission_dashboard="meddea"
+    )
+
+    assert result is None
+    mock_get.assert_called_once()
+
+
+def test_get_dashboard_id_connection_error(mock_requests):
+    mock_get, _, _ = mock_requests
+
+    mock_get.side_effect = requests.exceptions.ConnectionError(
+        "Connection Error occurred"
+    )
+
+    result = grafana.get_dashboard_id(
+        dashboard_name="Solar flare", mission_dashboard="meddea"
+    )
+
+    assert result is None
+    mock_get.assert_called_once()
+
+
+def test_get_panel_id_found(mock_requests):
+    mock_get, _, _ = mock_requests
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "dashboard": {
+            "panels": [
+                {"title": "Test Panel", "id": 8},
+            ]
+        }
+    }
+    mock_response.status_code = 200
+    mock_get.return_value = mock_response
+
+    result = grafana.get_panel_id(
+        dashboard_id="fe0cbqalk99fkd",
+        panel_name="Test Panel",
+        mission_dashboard="meddea",
+    )
+
+    assert result == 8
+    mock_get.assert_called_once()
+
+
+def test_get_panel_id_multiple_matches(mock_requests):
+    mock_get, _, _ = mock_requests
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "dashboard": {
+            "panels": [
+                {"title": "Test Panel", "id": 8},
+                {"title": "Test Panel", "id": 9},
+            ]
+        }
+    }
+    mock_response.status_code = 200
+    mock_get.return_value = mock_response
+
+    result = grafana.get_panel_id(
+        dashboard_id="fe0cbqalk99fkd",
+        panel_name="Test Panel",
+        mission_dashboard="meddea",
+    )
+
+    # Should use the first matching panel's id
+    assert result == 8
+    mock_get.assert_called_once()
+
+
+def test_get_panel_id_not_found(mock_requests):
+    mock_get, _, _ = mock_requests
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "dashboard": {
+            "panels": [
+                {"title": "Unrelated Panel", "id": 1},
+            ]
+        }
+    }
+    mock_response.status_code = 200
+    mock_get.return_value = mock_response
+
+    result = grafana.get_panel_id(
+        dashboard_id="fe0cbqalk99fkd",
+        panel_name="Test Panel",
+        mission_dashboard="meddea",
+    )
+
+    assert result is None
+    mock_get.assert_called_once()
+
+
+def test_get_panel_id_http_error(mock_requests):
+    mock_get, _, _ = mock_requests
+
+    mock_get.side_effect = requests.exceptions.HTTPError("HTTP Error occurred")
+
+    result = grafana.get_panel_id(
+        dashboard_id="fe0cbqalk99fkd",
+        panel_name="Test Panel",
+        mission_dashboard="meddea",
+    )
+
+    assert result is None
+    mock_get.assert_called_once()
+
+
+def test_get_panel_id_connection_error(mock_requests):
+    mock_get, _, _ = mock_requests
+
+    mock_get.side_effect = requests.exceptions.ConnectionError(
+        "Connection Error occurred"
+    )
+
+    result = grafana.get_panel_id(
+        dashboard_id="fe0cbqalk99fkd",
+        panel_name="Test Panel",
+        mission_dashboard="meddea",
+    )
+
+    assert result is None
+    mock_get.assert_called_once()
 
 
 def test_query_annotations(mock_requests):

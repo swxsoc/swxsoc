@@ -17,6 +17,7 @@ from swxsoc.util.config import (
     get_instrument_bucket,
     get_instrument_package,
     load_config,
+    copy_default_config,
 )
 
 USER = os.path.expanduser("~")
@@ -179,6 +180,30 @@ def test_print_config(capsys):
     assert "[logger]" in captured.out
     # assert mission
     assert "[mission]" in captured.out
+
+
+def test_copy_default_config_overwriting(tmpdir, monkeypatch):
+    """Tests the overwrite=False keyword with copy_default_config()"""
+    monkeypatch.setenv("SWXSOC_CONFIGDIR", tmpdir)
+    copy_default_config()
+
+    # Test overwrite=False issues warning
+    with pytest.warns(UserWarning):
+        copy_default_config(overwrite=False)
+
+    # Test overwrite=True issues warning and makes backup
+    with pytest.warns(UserWarning):
+        copy_default_config(overwrite=True)
+
+    bak_file = os.path.join(tmpdir, "config.yml.bak")
+    assert os.path.exists(bak_file)
+
+    # Test loading config
+    config = load_config()
+
+    assert isinstance(config, dict)
+    assert "general" in config
+    assert "logger" in config
 
 
 def test_tsd_region_default():

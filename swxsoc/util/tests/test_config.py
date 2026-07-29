@@ -12,12 +12,12 @@ import swxsoc
 from swxsoc.util.config import (
     TSD_REGION,
     _is_writable_dir,
+    copy_default_config,
     get_all_instrument_buckets,
     get_incoming_bucket,
     get_instrument_bucket,
     get_instrument_package,
     load_config,
-    copy_default_config,
 )
 
 USER = os.path.expanduser("~")

@@ -31,7 +31,8 @@ To search for data based on multiple attributes such as instrument, level, and t
 
     >>> # Import necessary modules
     >>> from sunpy.net.attr import AttrAnd
-    >>> from swxsoc.util.util import SWXSOCClient, Instrument, Level, SearchTime, DevelopmentBucket
+    >>> from swxsoc.net.client import SWXSOCClient
+    >>> from swxsoc.net.attr import Instrument, Level, SearchTime, DevelopmentBucket
     >>> # Initialize the FIDO client
     >>> fido_client = SWXSOCClient()  
     >>> # Test search with a query for specific instrument, level, and time
@@ -54,7 +55,8 @@ To search for data based on a single attribute such as instrument::
 
     >>> # Import necessary modules
     >>> from sunpy.net.attr import AttrAnd
-    >>> from swxsoc.util.util import SWXSOCClient, Instrument
+    >>> from swxsoc.net.client import SWXSOCClient
+    >>> from swxsoc.net.attr import Instrument, Level, SearchTime, DevelopmentBucket
     >>> # Initialize the SWxSOC client
     >>> fido_client = SWXSOCClient()  
     >>> # Test search with a query for specific instrument
@@ -78,7 +80,8 @@ Example 3: Search all data
 To search for all data::
 
     >>> # Import necessary modules
-    >>> from swxsoc.util.util import SWXSOCClient
+    >>> from swxsoc.net.client import SWXSOCClient
+    >>> from swxsoc.net.attr import Instrument, Level, SearchTime, DevelopmentBucket
     >>> # Initialize the SWxSOC client
     >>> fido_client = SWXSOCClient()
     >>> # Test search with a query for all data
@@ -112,7 +115,8 @@ Below is an example demonstrating how to download data using the `~swxsoc.net.cl
 
     >>> # Import necessary modules
     >>> from sunpy.net.attr import AttrAnd
-    >>> from swxsoc.util.util import SWXSOCClient, Instrument, Level, SearchTime, DevelopmentBucket
+    >>> from swxsoc.net.client import SWXSOCClient
+    >>> from swxsoc.net.attr import Instrument, Level, SearchTime, DevelopmentBucket
     >>> from parfive import Downloader
     >>> # Initialize the SWxSOC client
     >>> fido_client = SWXSOCClient()  # doctest: +SKIP

@@ -13,14 +13,15 @@ from astropy.time import Time
 from astropy.timeseries import TimeSeries
 from astropy.units import Quantity
 from astropy.wcs import WCS
-from matplotlib.axes import Axes
 from ndcube import NDCollection, NDCube
 from numpy.random import random
-from spacepy.pycdf import CDFError
 
 from swxsoc.swxdata import SWXData
 from swxsoc.util.schema import SWXSchema
 from swxsoc.util.validation import validate
+
+spacepy = pytest.importorskip("spacepy.pycdf")
+from spacepy.pycdf import CDFError  # noqa: E402
 
 
 def get_bad_timeseries():
@@ -685,6 +686,10 @@ def test_sw_data_plot():
     Test asserts the SWXData.plot() function generates matplotlib
     images as expected.
     """
+    # Skip this test if matplotlib is not available
+    pytest.importorskip("matplotlib")
+    from matplotlib.axes import Axes
+
     # fmt: off
     input_attrs = {
         "Descriptor": "EEA>Electron Electrostatic Analyzer",

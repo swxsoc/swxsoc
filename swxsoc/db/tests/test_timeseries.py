@@ -531,10 +531,21 @@ def test_invalid_record_dimension_timestream(mocked_timestream):
     assert "InstrumentName" not in record_dimensions
 
 
-def test_invalid_instrument_record_dimension_timestream(mocked_timestream):
+def test_invalid_instrument_record_dimension_timestream(mocked_timestream, caplog):
+    import logging
+
     dimensions = "invalid"
 
-    timeseries._record_dimension_timestream(dimensions=dimensions)
+    # Attach caplog handler to swxsoc logger (needed because propagate=False)
+    swx_logger = logging.getLogger("swxsoc")
+    swx_logger.addHandler(caplog.handler)
+    try:
+        with caplog.at_level(logging.ERROR, logger="swxsoc"):
+            timeseries._record_dimension_timestream(dimensions=dimensions)
+
+        assert "Failed to write to Timestream" in caplog.text
+    finally:
+        swx_logger.removeHandler(caplog.handler)
 
     database_name, table_name = get_test_db_names()
     backend = timestreamwrite_backends[ACCOUNT_ID]["us-east-1"]

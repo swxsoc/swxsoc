@@ -12,10 +12,10 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
+import yaml
 from astropy import units as u
 from astropy.table import Table
 from astropy.time import Time
-from sammi.cdf_attribute_manager import CdfAttributeManager
 
 import swxsoc
 import swxsoc.io.fillval as fv
@@ -25,6 +25,52 @@ __all__ = ["SWXSchema"]
 
 DEFAULT_GLOBAL_CDF_ATTRS_SCHEMA_FILE = "swxsoc_default_global_cdf_attrs_schema.yaml"
 DEFAULT_VARIABLE_CDF_ATTRS_SCHEMA_FILE = "swxsoc_default_variable_cdf_attrs_schema.yaml"
+
+# Conditional import for CDF support
+try:
+    from sammi.cdf_attribute_manager import CdfAttributeManager
+
+    HAS_SAMMI = True
+except ImportError:
+    HAS_SAMMI = False
+
+    # Create a minimal stub base class when sammi is not available
+    # This allows SWXSchema to work for basic functionality without CDF write support
+    class CdfAttributeManager:
+        """Stub base class when sammi-cdf is not installed."""
+
+        def __init__(
+            self,
+            global_schema_layers=None,
+            variable_schema_layers=None,
+            use_defaults=True,
+        ):
+            # Load schema files manually since sammi is not available
+            self.global_attribute_schema = {}
+            self.variable_attribute_schema = {}
+            self._global_attributes = {}
+
+            # Load global schema layers
+            if global_schema_layers:
+                for layer_path in global_schema_layers:
+                    with open(layer_path, "r") as f:
+                        layer_data = yaml.safe_load(f)
+                        if layer_data:
+                            self.global_attribute_schema.update(layer_data)
+                            # Collect default values from schema
+                            for attr_name, attr_info in layer_data.items():
+                                if attr_info.get("default") is not None:
+                                    self._global_attributes[attr_name] = attr_info[
+                                        "default"
+                                    ]
+
+            # Load variable schema layers
+            if variable_schema_layers:
+                for layer_path in variable_schema_layers:
+                    with open(layer_path, "r") as f:
+                        layer_data = yaml.safe_load(f)
+                        if layer_data:
+                            self.variable_attribute_schema.update(layer_data)
 
 
 class SWXSchema(CdfAttributeManager):

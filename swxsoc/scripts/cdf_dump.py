@@ -4,7 +4,13 @@ Python function to dump CDF file contents similar to cdfdump command.
 
 from pathlib import Path
 
-from spacepy.pycdf import CDF
+# Conditional import for CDF support
+try:
+    from spacepy.pycdf import CDF
+
+    HAS_SPACEPY = True
+except ImportError:
+    HAS_SPACEPY = False
 
 
 def cdf_dump(file_path, show_data=True, max_values=100, summary=False, variable=None):
@@ -24,6 +30,12 @@ def cdf_dump(file_path, show_data=True, max_values=100, summary=False, variable=
     variable : str, optional
         If provided, only show information for this specific variable. Default is None (show all).
     """
+    if not HAS_SPACEPY:
+        raise ImportError(
+            "spacepy is required for CDF operations. "
+            "Install it with: pip install swxsoc[cdf]"
+        )
+
     file_path = Path(file_path)
 
     if not file_path.exists():

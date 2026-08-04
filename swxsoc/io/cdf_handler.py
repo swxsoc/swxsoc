@@ -5,6 +5,8 @@ Handles reading SWxSOC-style CDF files into the SWXData container and writing
 SWXData instances back out to CDF.
 """
 
+from __future__ import annotations
+
 from collections import OrderedDict
 from datetime import datetime
 from pathlib import Path
@@ -18,7 +20,14 @@ from astropy.timeseries import TimeSeries
 from astropy.utils.masked import Masked
 from astropy.wcs import WCS
 from ndcube import NDCollection, NDCube
-from spacepy import pycdf
+
+# Conditional import for CDF support
+try:
+    from spacepy import pycdf
+
+    HAS_SPACEPY = True
+except ImportError:
+    HAS_SPACEPY = False
 
 import swxsoc
 from swxsoc.io import fillval as fv
@@ -71,6 +80,12 @@ class CDFHandler(SWXIOHandler):
 
         if not file_path.exists():
             raise FileNotFoundError(f"CDF Could not be loaded from path: {file_path}")
+
+        if not HAS_SPACEPY:
+            raise ImportError(
+                "spacepy is required for CDF operations. "
+                "Install it with: pip install swxsoc[cdf]"
+            )
 
         # Create a Struct for Global Metadata
         meta = {}
@@ -654,6 +669,12 @@ class CDFHandler(SWXIOHandler):
         path : `pathlib.Path`
             A path to the saved file.
         """
+        if not HAS_SPACEPY:
+            raise ImportError(
+                "spacepy is required for CDF operations. "
+                "Install it with: pip install swxsoc[cdf]"
+            )
+
         # Initialize a new CDF
         if filename:
             cdf_filename = filename

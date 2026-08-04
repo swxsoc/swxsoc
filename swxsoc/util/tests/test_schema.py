@@ -9,11 +9,14 @@ from astropy.table import Table
 from astropy.time import Time
 from astropy.timeseries import TimeSeries
 from numpy.random import random
-from spacepy.pycdf import CDF
 
 from swxsoc.swxdata import SWXData
 from swxsoc.util import const
 from swxsoc.util.schema import SWXSchema
+
+# Skip all tests in this module if spacepy is not available
+spacepy = pytest.importorskip("spacepy.pycdf")
+from spacepy.pycdf import CDF  # noqa: E402
 
 
 def get_test_sw_data():

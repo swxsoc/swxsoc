@@ -7,7 +7,6 @@ from pathlib import Path
 import astropy.units as u
 import numpy as np
 import pytest
-import spacepy.pycdf as pycdf
 from astropy.nddata import NDData
 from astropy.table import Table
 from astropy.time import Time
@@ -17,12 +16,14 @@ from astropy.utils.masked import Masked
 from astropy.wcs import WCS
 from ndcube import NDCollection, NDCube
 from numpy.random import random
-from spacepy.pycdf import CDF, CDFError
 
 from swxsoc.io import fillval as fv
 from swxsoc.swxdata import SWXData
 from swxsoc.util import const
 from swxsoc.util.exceptions import SWXUserWarning
+
+spacepy = pytest.importorskip("spacepy.pycdf")
+from spacepy.pycdf import CDF, CDFError  # noqa: E402
 
 
 def save_cdf_for_examination(sw_data, filename=None):
@@ -193,7 +194,7 @@ def test_with_no_epoch_var():
             cdf_file.new(
                 name="Config_Value",
                 data=[1, 2, 3],
-                type=pycdf.const.CDF_INT4,
+                type=spacepy.const.CDF_INT4,
                 recVary=False,
             )
             cdf_file["Config_Value"].attrs["VAR_TYPE"] = "support_data"
@@ -204,7 +205,7 @@ def test_with_no_epoch_var():
             cdf_file.new(
                 name="Calibration_Factor",
                 data=1.5,
-                type=pycdf.const.CDF_FLOAT,
+                type=spacepy.const.CDF_FLOAT,
                 recVary=False,
             )
             cdf_file["Calibration_Factor"].attrs["VAR_TYPE"] = "support_data"
@@ -1196,14 +1197,14 @@ def test_epoch_var_stale_reference_bug():
             cdf_file.new(
                 "BETA_Epoch",
                 data=[1704067200000, 1704067300000, 1704067400000],
-                type=pycdf.const.CDF_TIME_TT2000,
+                type=spacepy.const.CDF_TIME_TT2000,
             )
             cdf_file["BETA_Epoch"].attrs["VAR_TYPE"] = "support_data"
             cdf_file["BETA_Epoch"].attrs["CATDESC"] = "BETA Epoch"
             cdf_file["BETA_Epoch"].attrs["FIELDNAM"] = "BETA_Epoch"
 
             cdf_file.new(
-                "BETA_Voltage", data=[10.0, 20.0, 30.0], type=pycdf.const.CDF_FLOAT
+                "BETA_Voltage", data=[10.0, 20.0, 30.0], type=spacepy.const.CDF_FLOAT
             )
             cdf_file["BETA_Voltage"].attrs["VAR_TYPE"] = "data"
             cdf_file["BETA_Voltage"].attrs["CATDESC"] = "BETA Voltage"
@@ -1215,13 +1216,13 @@ def test_epoch_var_stale_reference_bug():
             cdf_file.new(
                 "Epoch",
                 data=[1704067500000, 1704067600000, 1704067700000],
-                type=pycdf.const.CDF_TIME_TT2000,
+                type=spacepy.const.CDF_TIME_TT2000,
             )
             cdf_file["Epoch"].attrs["VAR_TYPE"] = "support_data"
             cdf_file["Epoch"].attrs["CATDESC"] = "Default Epoch"
             cdf_file["Epoch"].attrs["FIELDNAM"] = "Epoch"
 
-            cdf_file.new("Voltage", data=[1.0, 2.0, 3.0], type=pycdf.const.CDF_FLOAT)
+            cdf_file.new("Voltage", data=[1.0, 2.0, 3.0], type=spacepy.const.CDF_FLOAT)
             cdf_file["Voltage"].attrs["VAR_TYPE"] = "data"
             cdf_file["Voltage"].attrs["CATDESC"] = "Default Voltage"
             cdf_file["Voltage"].attrs["DEPEND_0"] = "Epoch"

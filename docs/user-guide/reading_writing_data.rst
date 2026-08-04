@@ -6,6 +6,16 @@ Opening and Writing SWxSOC Affiliated Data
 Overview
 ========
 
+.. note::
+
+   **File Format Support**
+   
+   - **FITS files**: Supported by default through astropy (no extra installation needed)
+   - **CDF files**: Requires optional installation: ``pip install swxsoc[cdf]``
+   
+   This guide primarily covers CDF file operations. For FITS support, see astropy's 
+   `FITS I/O documentation <https://docs.astropy.org/en/stable/io/fits/>`_.
+
 The :py:class:`~swxsoc.swxdata.SWXData` class provides a convenient and efficient way to work with SWxSOC affiliated mission science CDF data files.
 The point of this class is to simplify data management, enhance data discovery, and facilitate adherence to CDF standards.
 
@@ -516,7 +526,13 @@ By default, a plot will be generated with each measurement in its own plot panel
     :include-source:
 
     >>> import numpy as np
-    >>> import matplotlib.pyplot as plt
+    >>> try:
+    ...     import matplotlib as m
+    ...     HAS_MATPLOTLIB = True
+    ... except ImportError:
+    ...     HAS_MATPLOTLIB = False
+    >>> if HAS_MATPLOTLIB:
+    ...     import matplotlib.pyplot as plt
     >>> import astropy.units as u
     >>> from astropy.timeseries import TimeSeries
     >>> from swxsoc.swxdata import SWXData
@@ -528,9 +544,10 @@ By default, a plot will be generated with each measurement in its own plot panel
     >>> sw_data = SWXData(timeseries=ts, meta=input_attrs)
     >>> sw_data.add_measurement(measure_name=f"By", data=u.Quantity(by, 'nanoTesla', dtype=np.int16))
     >>> sw_data.add_measurement(measure_name=f"Bz", data=u.Quantity(bz, 'nanoTesla', dtype=np.int16))
-    >>> fig = plt.figure()
-    >>> sw_data.plot() # doctest: +SKIP
-    >>> plt.show() # doctest: +SKIP
+    >>> if HAS_MATPLOTLIB:
+    ...     fig = plt.figure()
+    ...     sw_data.plot() # doctest: +SKIP
+    ...     plt.show() # doctest: +SKIP
 
 Writing a CDF File
 ==================

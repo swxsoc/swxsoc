@@ -20,3 +20,4 @@ For more details checkout the :ref:`reference`.
    customization
    retrieving_data
    logger
+   comms_clients

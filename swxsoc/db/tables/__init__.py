@@ -605,16 +605,21 @@ def create_tables(engine: Engine) -> None:
     """
     log.debug("create_tables: starting")
 
-    # --- 1. Create all tables at once (no-op if they already exist) ---
+    # --- 1. Build every table class *before* creating tables or running any query against them. ---
+    # This is required with the dynamic relationship definitions in the science product / science file tables
+    get_table_classes(get_table_modules())
+    log.debug("create_tables: all table classes built")
+
+    # --- 2. Create all tables at once (no-op if they already exist) ---
     from swxsoc.db.tables.base_table import Base
 
     Base.metadata.create_all(engine)
     log.debug("create_tables: Base.metadata.create_all complete")
 
-    # --- 2. Sync instrument configuration schema (add missing columns) ---
+    # --- 3. Sync instrument configuration schema (add missing columns) ---
     sync_instrument_configuration_schema(engine)
 
-    # --- 3. Upsert lookup / configuration tables ---
+    # --- 4. Upsert lookup / configuration tables ---
     session = create_session(engine)
 
     file_level_class = FileLevelTable.return_class()

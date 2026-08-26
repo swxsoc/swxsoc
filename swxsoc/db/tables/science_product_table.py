@@ -14,6 +14,7 @@ from sqlalchemy.orm import relationship
 import swxsoc
 
 from . import base_table as Base
+from . import science_file_table as ScienceFileTable
 
 _current_class: Any = None
 
@@ -42,7 +43,9 @@ def _build_class() -> Any:
         reference_timestamp = Column(DateTime)
 
         children = relationship(
-            "ScienceFileTable", back_populates="parent", cascade="all, delete"
+            lambda: ScienceFileTable.return_class(),
+            back_populates="parent",
+            cascade="all, delete",
         )
 
         def __init__(

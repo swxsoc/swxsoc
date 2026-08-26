@@ -20,6 +20,7 @@ from sqlalchemy.orm import relationship
 import swxsoc
 
 from . import base_table as Base
+from . import science_file_table as ScienceFileTable
 
 _current_class: Any = None
 
@@ -59,7 +60,7 @@ def _build_class() -> Any:
 
         # Many-to-many relationship to origin files
         origin_files = relationship(
-            "ScienceFileTable",  # replace with actual class if it's named differently
+            lambda: ScienceFileTable.return_class(),
             secondary=status_origin_association,
             backref="status_origins",
             lazy="joined",

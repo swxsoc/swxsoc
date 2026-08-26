@@ -24,6 +24,7 @@ from sqlalchemy.orm import relationship
 import swxsoc
 
 from . import base_table as Base
+from . import science_product_table as ScienceProductTable
 
 _current_class: Any = None
 
@@ -83,7 +84,9 @@ def _build_class() -> Any:
         # Is Public Of Science File
         is_public = Column(Boolean)
 
-        parent = relationship("ScienceProductTable", back_populates="children")
+        parent = relationship(
+            lambda: ScienceProductTable.return_class(), back_populates="children"
+        )
 
         def __init__(
             self,

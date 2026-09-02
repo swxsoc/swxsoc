@@ -5,7 +5,7 @@ Tests for :class:`swxsoc.comm.mattermost.MattermostClient`.
 from unittest.mock import Mock, patch
 
 import pytest
-from mattermostautodriver.exceptions import MattermostError
+from httpx import HTTPError
 
 from swxsoc.comm.mattermost import MattermostClient, _parse_mattermost_url
 
@@ -91,14 +91,8 @@ def test_send_message_success(mattermost_client):
 def test_send_message_retries_then_raises(mattermost_client):
     mattermost_client.max_retries = 2
     mattermost_client.retry_delay = 0
-    mattermost_client.driver.posts.create_post.side_effect = MattermostError(
-        "boom",
-        status_code=500,
-        error_id="internal_error",
-        request_id="req-1",
-        is_oauth_error=False,
-    )
-    with pytest.raises(MattermostError):
+    mattermost_client.driver.posts.create_post.side_effect = HTTPError("boom")
+    with pytest.raises(HTTPError):
         mattermost_client._send_message("Test Message")
     assert mattermost_client.driver.posts.create_post.call_count == 2
 

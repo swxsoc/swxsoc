@@ -11,8 +11,8 @@ import os
 import time
 from urllib.parse import urlparse
 
+from httpx import HTTPError
 from mattermostautodriver import TypedDriver
-from mattermostautodriver.exceptions import MattermostError
 
 from swxsoc import log
 from swxsoc.comm.client import CommsClient
@@ -189,7 +189,7 @@ class MattermostClient(CommsClient):
 
         Raises
         ------
-        MattermostError
+        HTTPError
             If all retry attempts fail.
         """
         log.debug(f"Sending Mattermost Notification to channel {self.channel_id}")
@@ -207,7 +207,7 @@ class MattermostClient(CommsClient):
 
                 return True
 
-            except MattermostError as e:
+            except HTTPError as e:
                 if i < self.max_retries - 1:
                     log.warning(
                         f"Error sending Mattermost Notification (attempt {i + 1}): {e}."

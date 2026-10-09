@@ -260,6 +260,42 @@ missions_data:
         fullname: IMPAX Spacecraft
         targetname: IMPAX
         instrument_package: impax_craft
+  
+  gdctb: # The GDC Trailblazer Mission
+    file_extension: cdf
+    min_valid_time: 2026-01-01T00:00:00
+    max_valid_time: now
+    data_levels: # Detailed data level definitions for this mission (short_name is also used as the valid data level)
+      - short_name: raw
+        full_name: RAW
+        description: RAW File
+      - short_name: l0
+        full_name: Level 0
+        description: Level 0 File
+      - short_name: l1
+        full_name: Level 1
+        description: Level 1 File
+      - short_name: ql
+        full_name: Quick Look
+        description: Quick Look File
+      - short_name: l2
+        full_name: Level 2
+        description: Level 2 File
+      - short_name: l3
+        full_name: Level 3
+        description: Level 3 File
+    instruments:
+      - name: cape-eea
+        shortname: cape-eea
+        fullname: CAPE-EEA
+        targetname: CAPE-EEA
+        instrument_package: gdctb_cape_eea
+      - name: craft
+        shortname: craft
+        fullname: GDCTB Spacecraft
+        targetname: GDCTB
+        instrument_package: gdctb_craft
+
 
 logger:
   # Threshold for the logging messages. Logging messages that are less severe

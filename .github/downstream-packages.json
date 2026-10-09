@@ -64,6 +64,15 @@
       "test_command": "pytest impax_craft --tb=short -q"
     },
     {
+      "name": "gdctb_cape_eea",
+      "enabled": true,
+      "repository": "GDC-Trailblazer/gdctb_cape_eea",
+      "ref": "main",
+      "python_version": "3.12",
+      "install_command": "python -m pip install -e .[test]",
+      "test_command": "pytest gdctb_cape_eea --tb=short -q"
+    },
+    {
       "name": "sdc_aws_sorting_lambda",
       "enabled": true,
       "repository": "swxsoc/sdc_aws_sorting_lambda",

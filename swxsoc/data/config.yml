@@ -290,6 +290,11 @@ missions_data:
         fullname: CAPE-EEA
         targetname: CAPE-EEA
         instrument_package: gdctb_cape_eea
+      - name: craft
+        shortname: craft
+        fullname: GDCTB Spacecraft
+        targetname: GDCTB
+        instrument_package: gdctb_craft
 
 
 logger:

@@ -243,6 +243,39 @@ def test_parse_swxsoc_pipeline_science_files(use_mission, filename, instrument, 
 # fmt: on
 
 
+# fmt: off
+gdctb_time = "2026-06-15T12:06:21"
+gdctb_time_formatted = "20260615T120621"
+@pytest.mark.parametrize("use_mission", ["gdctb"], indirect=True)
+@pytest.mark.parametrize("instrument,level,version,result", [
+    ("cape-eea", "l1", "1.0.0", f"gdctb_cape-eea_l1_{gdctb_time_formatted}_v1.0.0.cdf"),
+    ("cape-eea", "l2", "2.1.0", f"gdctb_cape-eea_l2_{gdctb_time_formatted}_v2.1.0.cdf"),
+    ("craft", "l0", "0.5.1", f"gdctb_craft_l0_{gdctb_time_formatted}_v0.5.1.cdf"),
+    ("craft", "l1", "1.2.3", f"gdctb_craft_l1_{gdctb_time_formatted}_v1.2.3.cdf"),
+])
+def test_create_science_filename_gdctb(use_mission, instrument, level, version, result):
+    """Test create_science_filename for GDCTB mission instruments"""
+    assert util.create_science_filename(instrument, gdctb_time, level=level, version=version) == result
+# fmt: on
+
+
+# fmt: off
+@pytest.mark.parametrize("use_mission", ["gdctb"], indirect=True)
+@pytest.mark.parametrize("filename,instrument,level,version", [
+    (f"gdctb_cape-eea_l1_{gdctb_time_formatted}_v1.0.0.cdf", "cape-eea", "l1", "1.0.0"),
+    (f"gdctb_cape-eea_l2_{gdctb_time_formatted}_v2.1.0.cdf", "cape-eea", "l2", "2.1.0"),
+    (f"gdctb_craft_l0_{gdctb_time_formatted}_v0.5.1.cdf", "craft", "l0", "0.5.1"),
+    (f"gdctb_craft_l1_{gdctb_time_formatted}_v1.2.3.cdf", "craft", "l1", "1.2.3"),
+])
+def test_parse_science_filename_gdctb(use_mission, filename, instrument, level, version):
+    """Test parse_science_filename for GDCTB mission filenames"""
+    result = util.parse_science_filename(filename)
+    assert result['instrument'] == instrument
+    assert result['level'] == level
+    assert result['version'] == version
+# fmt: on
+
+
 @pytest.mark.parametrize("use_mission", ["padre"], indirect=True)
 @pytest.mark.parametrize(
     "filename,expected_error",

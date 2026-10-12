@@ -314,3 +314,14 @@ def test_get_instrument_package_impax(use_mission):
     assert get_instrument_package("CRAFT") == "impax_craft"
     with pytest.raises(ValueError):
         get_instrument_package("unknown")
+
+
+@pytest.mark.parametrize("use_mission", ["gdctb"], indirect=True)
+def test_get_instrument_package_gdctb(use_mission):
+    # Mission: gdctb
+    assert get_instrument_package("cape-eea") == "gdctb_cape_eea"
+    assert get_instrument_package("CAPE-EEA") == "gdctb_cape_eea"
+    assert get_instrument_package("craft") == "gdctb_craft"
+    assert get_instrument_package("CRAFT") == "gdctb_craft"
+    with pytest.raises(ValueError):
+        get_instrument_package("unknown")

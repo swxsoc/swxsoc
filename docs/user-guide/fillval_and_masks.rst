@@ -4,6 +4,11 @@
 Tagging Missing or Bad Data: FILLVAL and Masks
 **********************************************
 
+.. note::
+
+   **Required install:** ``pip install swxsoc`` for in-memory masks, or ``pip install swxsoc[cdf]`` to write and read CDF files.
+   See :ref:`dev_env_extras` for all install options.
+
 Overview
 ========
 

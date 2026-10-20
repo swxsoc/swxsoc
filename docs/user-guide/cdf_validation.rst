@@ -65,13 +65,21 @@ What Is Checked
 
 See :ref:`schema_information_guide` for the required attributes.
 
-**ISTP checks** use the `spacepy.pycdf.istp` module from SpacePy:
+**ISTP checks** use the `spacepy.pycdf.istp` module from `SpacePy <https://spacepy.github.io/>`_:
 
 - File checks: empty attribute entries, the file name, and that the times are monotonic and valid.
-- Variable checks: ``DEPEND_*`` attributes, their sizes, empty entries, record counts, and ``VALIDMIN``/``VALIDMAX`` and ``SCALEMIN``/``SCALEMAX`` ranges.
+- Variable checks: ``DEPEND_*`` attributes, their sizes, empty entries, and record counts.
 
 Some SpacePy ISTP checks are skipped on purpose, because they make assumptions that do not fit ``swxsoc`` files.
 For example, ``swxsoc`` lets instrument teams set ``FILLVAL``, ``VALIDMIN``, and ``VALIDMAX`` to values other than the defaults for the CDF data type.
+
+**Range checks** compare the data with ``VALIDMIN`` / ``VALIDMAX`` (ignoring ``FILLVAL`` entries), and check that ``SCALEMIN`` / ``SCALEMAX`` fit the variable's CDF data type.
+``swxsoc`` runs these with its own copies of the ``validrange`` and ``validscale`` checks from SpacePy's ``spacepy.pycdf.istp.VariableChecks``.
+Credit for the original checks goes to the SpacePy authors . The SpacePy license is included in the ``swxsoc`` repository at `licenses/SPACEPY.rst <https://github.com/swxsoc/swxsoc/blob/main/licenses/SPACEPY.rst>`_.
+The ``swxsoc`` copies differ from the originals in two ways:
+
+- An attribute's CDF data type does not have to match the variable's data type; its value only needs to be comparable with that type.
+- The allowed range for each CDF data type comes from :py:class:`~swxsoc.util.schema.SWXSchema` instead of ``spacepy.pycdf.lib``.
 
 Using a Custom Schema
 =====================

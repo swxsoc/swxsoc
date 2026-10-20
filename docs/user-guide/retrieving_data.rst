@@ -6,6 +6,11 @@ Retrieving and Downloading Data
 
 The `~swxsoc.net.client.SWXSOCClient` class in the `swxsoc` package is a FIDO client used for querying and downloading data from the SWxSOC buckets. Below are some examples demonstrating how to use this client for searching and downloading data.
 
+.. note::
+
+   **Required install:** ``pip install swxsoc`` (no extras needed).
+   See :ref:`dev_env_extras` for all install options.
+
 .. warning::
 
     To download the data, you must have access to the SWxSOC buckets. If you do not have access, please contact the SWxSOC team. The client utilizes either presigned S3 URLs via the `boto3` package to download the data if you have AWS Credentials or it can download via S3 URLs if you have access to the SWxSOC buckets via allowed IP addresses.

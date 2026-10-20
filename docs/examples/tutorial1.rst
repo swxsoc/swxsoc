@@ -1,12 +1,16 @@
 .. _tutorial1:
 
-Creating a CDF File
-===================
+End-to-end Example: Creating a CDF File
+=======================================
 
-This module provides an example for creating a CDF File using the `~swxsoc.swxdata.SWXData`
-class. This class is an abstraction of underlying data structures to make the handling of
-measurement data easier when reading and writing CDF data.
+This example creates a complete CDF file with the `~swxsoc.swxdata.SWXData` class, from raw arrays to a saved file.
+For an explanation of each step, see :ref:`reading_writing_cdf`.
 
+.. note::
+
+   **Required install:** ``pip install swxsoc[cdf]``
+
+    >>> import os
     >>> from pathlib import Path
     >>> from collections import OrderedDict
     >>> import numpy as np
@@ -17,7 +21,10 @@ measurement data easier when reading and writing CDF data.
     >>> from ndcube import NDCube, NDCollection
     >>> import tempfile
     >>> 
-    >>> # Import the `swxsoc` Package
+    >>> # Import the `swxsoc` Package and select the HERMES mission configuration
+    >>> import swxsoc
+    >>> os.environ["SWXSOC_MISSION"] = "hermes"
+    >>> swxsoc.reconfigure()
     >>> from swxsoc.swxdata import SWXData
     >>> from swxsoc.util.validation import validate
     >>> 
@@ -62,7 +69,7 @@ measurement data easier when reading and writing CDF data.
     >>> global_attrs_template = SWXData.global_attribute_template()
     >>> 
     >>> global_attrs_template["DOI"] = "https://doi.org/<PREFIX>/<SUFFIX>"
-    >>> global_attrs_template["Data_level"] = "L1>Level 2"
+    >>> global_attrs_template["Data_level"] = "L1>Level 1"
     >>> global_attrs_template["Data_version"] = "0.0.1"
     >>> global_attrs_template[
     ...     "Descriptor"
@@ -124,7 +131,7 @@ measurement data easier when reading and writing CDF data.
     ...     },
     ... )
     >>> 
-    >>> # You can ass new spectral or high-dimensional data to the SWXData container
+    >>> # You can add new spectral or high-dimensional data to the SWXData container
     >>> data = NDCube(
     ...     data=np.random.random(size=(1000, 10)),
     ...     wcs=WCS(naxis=2),
@@ -143,8 +150,12 @@ measurement data easier when reading and writing CDF data.
     ...     with tempfile.TemporaryDirectory() as tmpdirname:
     ...         tmp_path = Path(tmpdirname)
     ...         cdf_file_path = example_data.save(output_path=tmp_path)
+    ...         # Check the new file for problems before sharing it
+    ...         validation_errors = validate(cdf_file_path)
     ... else:
     ...     cdf_file_path = example_data.save(output_path="./", overwrite=True)
+    ...     validation_errors = validate(cdf_file_path)
 
 The file that this code generates is made available as a sample file in this
 repository in :file:`swxsoc/data/sample/hermes_nms_default_l1_20160322T123031_v0.0.1.cdf`.
+For more about the ``validation_errors`` list, see :ref:`cdf_validation`.

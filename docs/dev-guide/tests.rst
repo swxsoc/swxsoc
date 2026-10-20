@@ -48,11 +48,16 @@ Code examples in the documentation will also be run as tests and this helps to v
 We use the same system as Astropy, so for information on writing doctests see the astropy `documentation <https://docs.astropy.org/en/latest/development/testguide.html#writing-doctests>`_.
 
 You do not have to do anything extra in order to run any documentation tests.
-Within our ``setup.cfg`` file we have set default options for ``pytest``, such that you only need to run::
+The ``[tool.pytest.ini_options]`` section of :file:`pyproject.toml` sets default options for ``pytest``, so you only need to run::
 
     $ pytest <rst to test>
 
 to run any documentation test.
+To run the full test suite, including the documentation tests, as our continuous integration does, run::
+
+    $ pytest swxsoc docs
+
+Documentation pages whose examples need an optional extra, such as ``cdf`` or ``tracker``, must be listed in :file:`docs/conftest.py` so they are skipped when that extra is not installed.
 
 Bugs Testing
 ------------

@@ -68,20 +68,15 @@ These utils may be taken up by the core repository if they are generally useful 
 Formatting
 ==========
 
-We enforce a minimum level of code style with our continuous intergration.
+We enforce a minimum level of code style with our continuous integration.
 This runs a tool called `pre-commit <https://pre-commit.com/>`__.
 
 The settings and tools we use for the pre-commit can be found in the file :file:`.pre-commit-config.yaml` at the root of the SWxSOC git repository.
 Some of the checks are:
-* Checks (but doesn't fix) various PEP8 issues with flake8.
-* Sort all imports in any Python files with isort.
-* Remove any unused variables or imports with autoflake.
 
-We suggest you use "tox" (which is used to run the SWxSOC test suite) to run these tools without having to setup anything within your own Python virtual environment::
-
-    $ tox -e codestyle
-
-This will inform you of what checks failed and why, and what changes (if any) the command has made to your code.
+* Lint Python files and fix what it can with `Ruff <https://docs.astral.sh/ruff/>`__ (``ruff check --fix``).
+* Format Python files with Ruff (``ruff format``).
+* Check for syntax errors, trailing whitespace, invalid YAML, leftover debug statements, and large files.
 
 If you want to setup the pre-commit locally, you can do the following::
 
@@ -111,13 +106,16 @@ By Hand
 -------
 
 Sometimes it is easier to run things by hand.
-First, let's talk about Black. 
-If you are using the docker container and VS Code it format be formatting your code automatically.
-If you want to check if all of your files are compatible with Black run the following
+Ruff is installed with the ``style`` extra (``pip install -e .[style]``).
+To lint your code and fix what Ruff can fix automatically, run::
 
-    $ black --check folder_name
+    $ ruff check --fix
 
-If you want it to go ahead and format the files remote `--check`.
+To format your code, run::
+
+    $ ruff format
+
+To check formatting without changing any files, run ``ruff format --check``.
 
 
 Documentation and Testing

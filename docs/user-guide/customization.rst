@@ -1,8 +1,11 @@
 .. _customization:
 
-**************************************
-Customization and Global Configuration
-**************************************
+*************************************************
+SWxSOC Environment and Mission Configuration
+*************************************************
+
+``swxsoc`` reads its settings, including the selected mission, from a :file:`config.yml` file and from environment variables.
+This page explains where the configuration file lives, how to select a mission, and which environment variables change the behavior of ``swxsoc``.
 
 The :file:`config.yml` file
 ===========================
@@ -13,7 +16,9 @@ where your data will download to. SWxSOC packages look for this configuration fi
 in a platform-specific directory, which you can see the path for by running::
 
   >>> import swxsoc
-  >>> swxsoc.print_config()  # doctest: +SKIP
+  >>> swxsoc.print_config(swxsoc.config)  # doctest: +ELLIPSIS
+  FILES USED:
+  ...
 
 Using your own :file:`config.yml` file
 ======================================
@@ -75,19 +80,53 @@ You can override the selected mission by setting the `SWXSOC_MISSION` environmen
 
   export SWXSOC_MISSION=another_mission
 
-Reconfiguring for Testing
-=========================
-For testing purposes, you might need to reload the configuration after making changes to the :file:`config.yml` file. You can use the `_reconfigure` function to reload the configuration during your testing process. This function reloads the configuration and updates the global `config` variable.
+.. _customization_env_vars:
+
+Environment Variables
+=====================
+The following environment variables change how ``swxsoc`` is configured.
+They are read when ``swxsoc`` is imported or reconfigured.
+
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Variable
+     - Effect
+   * - ``SWXSOC_MISSION``
+     - Selects the mission, overriding ``selected_mission`` in :file:`config.yml`.
+   * - ``SWXSOC_CONFIGDIR``
+     - Directory to look in for your :file:`config.yml` file.
+   * - ``SWXSOC_INCOMING_BUCKET``
+     - Name of the AWS S3 bucket for incoming files, overriding the default ``<mission>-incoming``.
+   * - ``LAMBDA_ENVIRONMENT``
+     - When set, ``swxsoc`` assumes it is running in AWS Lambda and uses :file:`/tmp/.config` and :file:`/tmp/.cache` as its configuration and cache directories.
+   * - ``AWS_REGION``
+     - AWS region used for the Timestream client, defaults to ``us-east-1``.
+
+Other features read their own environment variables, see :ref:`comms_clients`, :ref:`grafana_annotation_management`, and :ref:`logger`.
+
+.. _customization_reconfigure:
+
+Reloading the Configuration
+===========================
+If you change :file:`config.yml` or the ``SWXSOC_MISSION`` environment variable after importing ``swxsoc``, call :py:func:`swxsoc.reconfigure` to reload the configuration.
+This function reloads the configuration and updates the global ``swxsoc.config`` variable.
 
 .. code-block:: python
 
-  from swxsoc import _reconfigure
+  import os
 
-  # Make changes to the config.yml file
-  # ...
+  import swxsoc
 
-  # Reconfigure the module to reload the configuration
-  _reconfigure()
+  os.environ["SWXSOC_MISSION"] = "hermes"
+
+  # Reload the configuration so the new mission is used
+  swxsoc.reconfigure()
+
+.. note::
+  ``swxsoc.reconfigure()`` does not update the MetaTracker database tables.
+  If you use ``swxsoc.db.tracker`` or ``swxsoc.db.tables``, also call ``swxsoc.db.reconfigure()`` after changing the mission, see :ref:`metatracker_guide`.
 
 To learn more about how to set up your development environment, see :ref:`dev_env`.
 

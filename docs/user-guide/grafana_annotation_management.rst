@@ -3,11 +3,12 @@
 Managing Grafana Annotations with the `swxsoc` Package
 ======================================================
 
-This guide provides a detailed overview of how to use the new annotation management functions in the `swxsoc` package to interact with Grafana. These functions allow you to query, create, and remove annotations for solar events such as flares or any other events of interest, enabling seamless integration with dashboards.
+This guide shows how to use the annotation functions in `swxsoc.util.grafana` to query, create, and remove Grafana annotations.
+Annotations mark events of interest, such as solar flares, on Grafana dashboards.
 
 Overview
 --------
-The following functions are introduced for managing Grafana annotations:
+The following functions manage Grafana annotations:
 
 - `~swxsoc.util.grafana.query_annotations`: Retrieve annotations within a specified timeframe and optionally filter by tags, dashboard, and panel names.
 - `~swxsoc.util.grafana.create_annotation`: Create a new annotation with custom details like start time, end time, tags, and descriptive text.
@@ -21,12 +22,12 @@ Ensure the following environment variables are set before using these functions:
 - **GRAFANA_API_KEY**: Used to authenticate requests to the Grafana API.
 
 Getting a Grafana API Key via a Service Account
-===============================================
+-----------------------------------------------
 
 To manage annotations in Grafana using the `swxsoc` package, you need a **service account API key**. Grafana uses service accounts to provide secure, role-based access for automation purposes. Follow the steps below to obtain and securely store your service account API key.
 
 Creating a Service Account API Key
-----------------------------------
+++++++++++++++++++++++++++++++++++
 1. **Log in to Grafana**:
 
    - Navigate to your organization's Grafana instance (e.g., `https://grafana.<mission>.swsoc.smce.nasa.gov/`).
@@ -63,7 +64,7 @@ Creating a Service Account API Key
 
 
 Storing the API Key Securely
-----------------------------
+++++++++++++++++++++++++++++
 To ensure security and avoid exposing the API key, store it as an environment variable.
 
 1. Open a terminal and set the environment variable:
@@ -86,7 +87,7 @@ To ensure security and avoid exposing the API key, store it as an environment va
    This should display the API key.
 
 Best Practices
---------------
+++++++++++++++
 
 - **Never Commit Your API Key**:  
   Do not hardcode the key in your scripts or commit it to a repository. Always use environment variables for secure handling.
@@ -95,7 +96,7 @@ Best Practices
   Periodically revoke old keys and generate new ones to enhance security.
 
 Requesting Access
------------------
++++++++++++++++++
 If you do not have the necessary permissions to create a service account or API key, and you still require access, contact a member of the SWxSOC team. They will assist you in obtaining a service account or API key with the appropriate permissions.
 
 Usage Examples

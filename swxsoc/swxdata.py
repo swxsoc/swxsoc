@@ -107,7 +107,7 @@ class SWXData:
     * `Astropy Time <https://docs.astropy.org/en/stable/time/index.html>`_
     * `Astropy NDData <https://docs.astropy.org/en/stable/nddata/>`_
     * `Sunpy NDCube and NDCollection <https://docs.sunpy.org/projects/ndcube/en/stable/>`_
-    * `Space Physics Guidelines for CDF (ISTP) <https://spdf.gsfc.nasa.gov/istp_guide/istp_guide.html>`_
+    * `Space Physics Guidelines for CDF (ISTP) <https://istp-metadata.readthedocs.io/en/latest/>`_
     """
 
     def __init__(

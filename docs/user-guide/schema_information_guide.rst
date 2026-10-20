@@ -7,6 +7,18 @@ Using SWxSOC Schema for Metadata Attributes
 Overview
 ========
 
+The :py:class:`~swxsoc.util.schema.SWXSchema` class defines which metadata attributes ``swxsoc`` data files need, which ones it derives for you, and how they are validated.
+This page lists the required and derived attributes, shows the template functions that help you fill them in, and explains how to customize the schema.
+
+.. note::
+
+   **Required install:** ``pip install swxsoc[cdf]``
+
+   :py:class:`~swxsoc.util.schema.SWXSchema` is built on the ``CdfAttributeManager`` class from the `SAMMI <https://sammi-cdf.readthedocs.io/en/latest/>`_ package (``sammi-cdf``).
+   SAMMI provides the schema loading, layering, and attribute derivation machinery, and ``swxsoc`` adds its default schema files and SWxSOC-specific derivations.
+   Without the ``cdf`` extra, ``SWXSchema`` falls back to a minimal base class that only loads the schema YAML files.
+   Install the ``cdf`` extra for the full schema features described on this page.
+
 The :py:class:`~swxsoc.util.schema.SWXSchema` class provides an interface to configure
 how metadata attributes are formatted in SWxSOC affiliated data products. 
 The class represents a schema for metadata attribute requirements, validation, and formatting. 
@@ -25,13 +37,97 @@ The class contains a :py:attr:`~swxsoc.util.schema.SWXSchema.global_attribute_sc
 member which configures global, or file level, metadata attributes. 
 Second, the class contains a  :py:attr:`~swxsoc.util.schema.SWXSchema.variable_attribute_schema`
 member which configures variable or measurement level metadata attributes. 
-This guide contains two sections <INSERT SECTIONS HERE> detailing the format of each of these class members, 
+This guide has sections on :ref:`global attribute schemas <schema_global_attribute_schemas>` and :ref:`variable attribute schemas <schema_variable_attribute_schemas>` that describe the format of each of these class members, 
 how they're used, and how you can extend or modify them to meet your specific needs. 
 
 Each of the global and variable schemas are loaded from YAML (dict-like) files which can be 
 combined to layer multiple schema elements into a single unified schema. 
 This allows extensions and overrides to the default schema, and allows you to create new 
 schema configurations for specific archive file types and specific metadata requirements.
+
+Required and Derived Attributes
+===============================
+
+The default schema follows the ISTP guidelines described in the :ref:`cdf_format_guide`.
+The full list of attributes, with descriptions, is in Table 3-1 (global attributes) and Table 4-4 (variable attributes) of that guide.
+
+Required global attributes
+--------------------------
+
+:py:class:`~swxsoc.swxdata.SWXData` will not create an object unless ``Descriptor``, ``Data_level``, and ``Data_version`` are supplied.
+See :ref:`rw_required_global_attrs` for their formats.
+
+The other global attributes that the default schema marks as required, and that you must supply before a file passes :ref:`cdf_validation`, are:
+
+- ``Discipline``
+- ``Instrument_type``
+- ``Mission_group``
+- ``PI_affiliation``
+- ``PI_name``
+- ``Project``
+- ``Source_name``
+- ``TEXT``
+
+Derived global attributes
+-------------------------
+
+``SWXSchema`` derives these global attributes from your data and the mission configuration, so you do not need to supply them:
+
+- ``CDF_Lib_version``
+- ``Data_type``
+- ``Default_Timeseries_Key``
+- ``Generation_date``
+- ``Logical_file_id``
+- ``Logical_source``
+- ``Logical_source_description``
+- ``SWxSOC_version``
+
+Required and derived variable attributes
+----------------------------------------
+
+Every variable needs a ``CATDESC`` (catalog description) attribute, which you must supply.
+``SWXSchema`` derives the other required variable attributes:
+
+- ``DEPEND_0``
+- ``DISPLAY_TYPE``
+- ``FIELDNAM``
+- ``FILLVAL``
+- ``FORMAT``
+- ``LABLAXIS``
+- ``UNITS``
+- ``VALIDMIN``
+- ``VALIDMAX``
+- ``VAR_TYPE``
+
+It also derives ``SI_CONVERSION``, time attributes for ``Epoch`` variables (such as ``TIME_BASE``, ``RESOLUTION``, and ``TIME_SCALE``), and WCS attributes for ``spectra`` variables (such as ``CTYPEi``, ``CUNITi``, and ``CRVALi``).
+You can override a derived value by setting it in the variable's ``meta``, unless the schema marks the attribute with ``overwrite: true``.
+
+Metadata templates
+------------------
+
+:py:func:`~swxsoc.swxdata.SWXData.global_attribute_template` returns a `dict` of the global attributes you need to supply, with each value set to `None`:
+
+    >>> import os
+    >>> import swxsoc
+    >>> from swxsoc.swxdata import SWXData
+    >>> os.environ["SWXSOC_MISSION"] = "hermes"
+    >>> swxsoc.reconfigure()
+    >>> dict(SWXData.global_attribute_template())
+    {'Data_level': None, 'Data_version': None, 'Descriptor': None, 'Discipline': None, 'Instrument_type': None, 'Mission_group': None, 'PI_affiliation': None, 'PI_name': None, 'Project': None, 'Source_name': None, 'TEXT': None}
+
+Pass an instrument name, data level, and version to fill in the three attributes that ``SWXData`` requires.
+The instrument name and data level must be defined in the active mission configuration, see :ref:`customization`.
+
+    >>> dict(SWXData.global_attribute_template(instr_name="eea", data_level="l1", version="0.1.0"))
+    {'Data_level': 'L1>Level 1', 'Data_version': '0.1.0', 'Descriptor': 'EEA>Electron Electrostatic Analyzer', 'Discipline': None, 'Instrument_type': None, 'Mission_group': None, 'PI_affiliation': None, 'PI_name': None, 'Project': None, 'Source_name': None, 'TEXT': None}
+
+:py:func:`~swxsoc.swxdata.SWXData.measurement_attribute_template` returns a `dict` of the variable attributes you need to supply:
+
+    >>> dict(SWXData.measurement_attribute_template())
+    {'CATDESC': None}
+
+Fill in the template and pass it as the ``meta`` of your ``SWXData`` object or variable.
+You can add any other attributes you want.
 
 Creating a SWxSOC Schema
 ========================
@@ -59,8 +155,26 @@ If there are conflicts in the combination of schema layers, this is resolved in 
 ordering. That is, if the are conflicts or duplicate keys in `layer_1` that also appear in `layer_2`, 
 then the second layer will overwrite the values from the first layer in the resulting schema. 
 
-For an example of how to extend the :py:class:`~swxsoc.util.schema.SWXSchema` class please see the code
-documentation for our affiliated HERMES mission schema :py:class:`~hermes_core.util.schema.HermesDataSchema`. 
+To change how attributes are derived, create a subclass of :py:class:`~swxsoc.util.schema.SWXSchema` with your own derivation functions, and pass its schema layers to the parent class:
+
+.. code-block:: python
+
+    from swxsoc.util.schema import SWXSchema
+
+
+    class MyMissionSchema(SWXSchema):
+        def __init__(self):
+            super().__init__(
+                global_schema_layers=["my_global_layer.yaml"],
+                variable_schema_layers=["my_variable_layer.yaml"],
+            )
+
+        def _get_my_attribute(self, data):
+            return "my attribute value"
+
+See :ref:`schema_global_attribute_derivation` for the signature that derivation functions must follow.
+
+.. _schema_global_attribute_schemas:
 
 Global Attribute Schemas
 ========================
@@ -74,7 +188,7 @@ Information on the file format can be seen below:
 
 .. code-block:: yaml
 
-    attribute_name:
+    attribute_name_1:
         description: <string>
         default: <string>
         derived: <bool>
@@ -82,7 +196,7 @@ Information on the file format can be seen below:
         required: <bool>
         validate: <bool>
         overwrite: <bool>
-    attriubte_name: 
+    attribute_name_2: 
         description: <string> ...
 
 Each of the keys for global metadata requirements are defined in the table below. 
@@ -130,6 +244,8 @@ Each of the keys for global metadata requirements are defined in the table below
 
 For more information on the default CDF schema, conforming to ISTP standards, please see the :doc:`CDF Format Guide </user-guide/cdf_format_guide>`. 
 
+.. _schema_global_attribute_derivation:
+
 Global Attribute Derivation
 ---------------------------
 
@@ -151,7 +267,7 @@ The code provided here is just pseudocode, and not the actual function code. For
 
 where `my_data_container` is an instance of a :py:class:`~swxsoc.swxdata.SWXData` object or an extended class object. 
 
-The derivation functions, which must me a class function of a :py:class:`~swxsoc.util.schema.SWXSchema` class, must follow the following signature:
+The derivation functions, which must be a class function of a :py:class:`~swxsoc.util.schema.SWXSchema` class, must follow the following signature:
 
 .. code-block:: python
 
@@ -161,6 +277,8 @@ The derivation functions, which must me a class function of a :py:class:`~swxsoc
 
 These functions must take in a single parameter, an instance of a :py:class:`~swxsoc.swxdata.SWXData` object or an extended class object. 
 These functions must return a single Python primitive type (`str`, `int`, `float`) or `~astropy.time.Time` object representing the value for the given attribute. 
+
+.. _schema_variable_attribute_schemas:
 
 Variable Attribute Schemas
 ==========================
@@ -286,7 +404,7 @@ The code provided here is just pseudocode, and not the actual function code. For
             )
 
 The signature for functions to derive variable attributes depends on whether the attribute is `iterable`.
-However, they all share the three common parameters below/ 
+However, they all share the three common parameters below.
 The function takes in parameters `var_name`, `var_data`, and `guess_type`, where:
 
     - `var_name` is the variable name of the variable for which the attribute is being derived
@@ -298,7 +416,7 @@ Derivation functions for `iterable` attributes take an extra parameter `dimensio
 "Standard" Variable Attribute Derivations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The derivation functions single-dimensional attriubtes, which must me a class function of a :py:class:`~swxsoc.util.schema.SWXSchema` class, must follow the following signature:
+The derivation functions for single-dimensional attributes, which must be a class function of a :py:class:`~swxsoc.util.schema.SWXSchema` class, must follow the following signature:
 
 .. code-block:: python
 
@@ -313,7 +431,7 @@ Time/Epoch-Specific Variable Attribute Derivations
 
 The derivation functions for time-specific attributes follow the same requirements as "standard" attributes. 
 Additionally time-specific attributes must by listed in the `epoch` index of the variable attribute schema file. 
-The derivation functions follow the same signature as "standard" derivation fucntions:
+The derivation functions follow the same signature as "standard" derivation functions:
 
 .. code-block:: python
 

@@ -17,13 +17,13 @@ Measurements can be anything such as housekeeping data or science data as long a
 
 Writing data
 ============
-The primary interface to write data into the Timestream datase is the `~swxsoc.db.timeseries.record_timeseries` function.
+The primary interface to write data into the Timestream database is the `~swxsoc.db.timeseries.record_timeseries` function.
 Its primary input is a `~astropy.timeseries.TimeSeries` object.
 The column names will be used as the label for the measurement.
 
 Example Usage
 -------------
-.. code-block::
+.. code-block:: python
 
     from astropy import units as u
     from astropy.timeseries import TimeSeries

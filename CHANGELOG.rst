@@ -13,9 +13,8 @@ Initial project release
 Latest
 ======
 
-* Added optional ``cdf`` exxtra for reading and writing CDF files with the ``spacepy`` and ``sammi-cdf`` package.
-* Added optional tracker support under ``swxsoc.db.tracker``.
-* Added a new ``tracker`` extra for SQLAlchemy and tenacity.
+* Added optional ``cdf`` dependency extra for reading and writing CDF files with the ``spacepy`` and ``sammi-cdf`` package.
+* Added optional ``tracker`` dependency extra with SQLAlchemy and tenacity for MetaTracker under ``swxsoc.db.tracker``..
 * Reorganized the documentation: the User's Guide is split into Data Management and Pipeline Management sections, the CDF guide was rewritten as a step-by-step guide, and new Quick Reference, CDF validation, and ``SWXData`` examples pages were added.
 * Removed the CMAD and tour documentation pages.
 * Fixed inaccurate documentation, including ``swxsoc.reconfigure()``, ``swxsoc.print_config(config)``, derived attribute names, and outdated ISTP links.

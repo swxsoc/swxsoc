@@ -157,8 +157,8 @@ See :ref:`comms_clients`.
 How do I record measurements for a Grafana dashboard?
 -----------------------------------------------------
 
-Use :py:func:`~swxsoc.db.timeseries.record_timeseries` to write them to AWS Timestream.
-See :ref:`recording_to_timestream`.
+Use :py:func:`~swxsoc.db.timeseries.record_timeseries` to write them to the mission's timeseries database.
+See :ref:`recording_to_timeseries_database`.
 
 How do I add an annotation to a Grafana dashboard?
 --------------------------------------------------

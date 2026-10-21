@@ -71,7 +71,7 @@
   | --- | --- |
   | `swxsoc/swxdata.py`, `swxsoc/io/` (CDF) | `docs/user-guide/reading_writing_data.rst`, `docs/examples/swxdata_examples.rst`, `docs/examples/tutorial1.rst`, `docs/user-guide/fillval_and_masks.rst`, `docs/user-guide/cdf_format_guide.rst`, `docs/user-guide/quick_reference.rst` |
   | `swxsoc/util/validation.py` | `docs/user-guide/cdf_validation.rst` |
-  | `swxsoc/db/timeseries.py` | `docs/user-guide/recording_to_timestream.rst` |
+  | `swxsoc/db/timeseries.py` | `docs/user-guide/recording_to_timeseries_database.rst` |
   | `swxsoc/db/tracker.py`, `swxsoc/db/tables/` | `docs/user-guide/metatracker_guide.rst` |
   | `swxsoc/util/config.py`, `config.yml`, mission selection | `docs/user-guide/customization.rst`, `docs/dev-guide/config.rst` |
   | `swxsoc/comm/` | `docs/user-guide/comms_clients.rst` |

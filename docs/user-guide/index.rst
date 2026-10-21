@@ -29,7 +29,7 @@ For function and class details, see the :ref:`reference`.
    :caption: Pipeline Management
 
    customization
-   recording_to_timestream
+   recording_to_timeseries_database
    metatracker_guide
    grafana_annotation_management
    retrieving_data

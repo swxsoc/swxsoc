@@ -1,10 +1,10 @@
-.. _recording_to_timestream:
+.. _recording_to_timeseries_database:
 
-=====================================
-Record Measurements to AWS Timestream
-=====================================
+==================================================
+Record Measurements to Mission Timeseries Database
+==================================================
 
-This module provides functionality to record measurements to an `AWS Timestream <https://docs.aws.amazon.com/timestream/>`_ database which can then be visualized in a Grafana Dashboard.
+This module provides functionality to record measurements to the mission's timeseries database, which can then be visualized in a Grafana Dashboard.
 Measurements can be anything such as housekeeping data or science data as long as each measurement is associated with a time stamp.
 
 .. note::
@@ -12,12 +12,12 @@ Measurements can be anything such as housekeeping data or science data as long a
     scalar measurements? See :ref:`metatracker_guide` for `~swxsoc.db.tracker.MetaTracker`.
 
 .. warning::
-    This functionality requires AWS credentials with permission to write to the AWS timestream database.
-    If this functionality is called by the swxsox cloud pipeline then those credentials are already available.
+    This functionality requires AWS credentials with permission to write to the mission's timeseries database.
+    If this functionality is called by the swxsoc cloud pipeline then those credentials are already available.
 
 Writing data
 ============
-The primary interface to write data into the Timestream database is the `~swxsoc.db.timeseries.record_timeseries` function.
+The primary interface to write data into the timeseries database is the `~swxsoc.db.timeseries.record_timeseries` function.
 Its primary input is a `~astropy.timeseries.TimeSeries` object.
 The column names will be used as the label for the measurement.
 

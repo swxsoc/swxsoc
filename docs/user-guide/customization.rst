@@ -113,16 +113,15 @@ Reloading the Configuration
 If you change :file:`config.yml` or the ``SWXSOC_MISSION`` environment variable after importing ``swxsoc``, call :py:func:`swxsoc.reconfigure` to reload the configuration.
 This function reloads the configuration and updates the global ``swxsoc.config`` variable.
 
-.. code-block:: python
+.. doctest::
 
-  import os
-
-  import swxsoc
-
-  os.environ["SWXSOC_MISSION"] = "hermes"
-
-  # Reload the configuration so the new mission is used
-  swxsoc.reconfigure()
+  >>> import os
+  >>> import swxsoc
+  >>> os.environ["SWXSOC_MISSION"] = "hermes"
+  >>> # Reload the configuration so the new mission is used
+  >>> swxsoc.reconfigure()
+  >>> swxsoc.config["mission"]["mission_name"]
+  'hermes'
 
 .. note::
   ``swxsoc.reconfigure()`` does not update the MetaTracker database tables.

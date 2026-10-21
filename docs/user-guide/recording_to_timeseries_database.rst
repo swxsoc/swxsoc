@@ -23,17 +23,15 @@ The column names will be used as the label for the measurement.
 
 Example Usage
 -------------
-.. code-block:: python
+.. doctest::
 
-    from astropy import units as u
-    from astropy.timeseries import TimeSeries
-    ts = TimeSeries(time_start='2016-03-22T12:30:31',
-                    time_delta=3 * u.s,
-                    n_samples=5)
-    ts['volt1'] = [1., 4., 5., 6., 4.] * u.volt
-
-    from swxsoc.db.timeseries import record_timeseries
-
-    record_timeseries(ts, instrument_name='test')
+    >>> from astropy import units as u
+    >>> from astropy.timeseries import TimeSeries
+    >>> ts = TimeSeries(time_start='2016-03-22T12:30:31',
+    ...                 time_delta=3 * u.s,
+    ...                 n_samples=5)
+    >>> ts['volt1'] = [1., 4., 5., 6., 4.] * u.volt
+    >>> from swxsoc.db.timeseries import record_timeseries
+    >>> record_timeseries(ts, instrument_name='test')  # doctest: +SKIP
 
 Note that if duplicate measurements are sent then the last writer wins.

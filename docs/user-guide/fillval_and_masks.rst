@@ -111,21 +111,39 @@ The reader also handles ``CDF_EPOCH`` (``float64``) variables, recognising the `
 Working with masks
 ==================
 
-After loading a CDF, you can inspect missing values through the mask uniformly across types::
+After loading a CDF, you can inspect missing values through the mask uniformly across types.
+This example saves a measurement with one masked position, loads it back, and inspects the mask:
 
-   loaded = swxdata.timeseries["measurement"]   # Masked Quantity if any positions were fill; otherwise a plain Quantity
-   mask = getattr(loaded, "mask", None)
-   raw = loaded.unmasked.value if mask is not None else loaded.value
+.. doctest::
 
-   loaded_support = swxdata.support["my_int"]   # NDData
-   mask = loaded_support.mask
-   raw = loaded_support.data
+    >>> import os
+    >>> import tempfile
+    >>> import numpy as np
+    >>> import astropy.units as u
+    >>> from astropy.timeseries import TimeSeries
+    >>> from astropy.utils.masked import Masked
+    >>> import swxsoc
+    >>> from swxsoc.swxdata import SWXData
+    >>> os.environ["SWXSOC_MISSION"] = "hermes"
+    >>> swxsoc.reconfigure()
+    >>> ts = TimeSeries(time_start="2016-03-22T12:30:31", time_delta=3 * u.s, n_samples=4)
+    >>> ts["measurement"] = Masked(np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32) * u.nT, mask=[False, True, False, False])
+    >>> ts["measurement"].meta = {"CATDESC": "Measurement"}
+    >>> sw_data = SWXData(timeseries=ts, meta=SWXData.global_attribute_template("eea", "l1", "1.0.0"))
+    >>> with tempfile.TemporaryDirectory() as tmp_dir:
+    ...     cdf_path = sw_data.save(output_path=tmp_dir)
+    ...     swxdata = SWXData.load(cdf_path)
+    ...     loaded = swxdata.timeseries["measurement"]  # Masked Quantity if any positions were fill; otherwise a plain Quantity
+    ...     mask = getattr(loaded, "mask", None)
+    ...     raw = loaded.unmasked.value if mask is not None else loaded.value
+    >>> mask.tolist()
+    [False, True, False, False]
 
-   loaded_spectra = swxdata.spectra["my_cube"]  # NDCube
-   mask = loaded_spectra.mask
+The same pattern applies to the other data containers:
 
-   loaded_time = swxdata.timeseries["time"]     # Time (native mask)
-   mask = loaded_time.mask
+- ``swxdata.support["my_int"]`` is an :class:`~astropy.nddata.NDData`, and its ``.mask`` and ``.data`` attributes give the mask and raw values.
+- ``swxdata.spectra["my_cube"]`` is an :class:`~ndcube.NDCube`, and its ``.mask`` attribute gives the mask.
+- ``swxdata.timeseries["time"]`` is a :class:`~astropy.time.Time`, and its ``.mask`` attribute gives the time mask.
 
 Caveats
 =======

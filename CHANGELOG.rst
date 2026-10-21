@@ -20,3 +20,5 @@ Latest
 * Fixed inaccurate documentation, including ``swxsoc.reconfigure()``, ``swxsoc.print_config(config)``, derived attribute names, and outdated ISTP links.
 * Added ``sphinx-llms-txt`` to the ``docs`` extra so the docs build writes ``llms.txt`` and ``llms-full.txt``.
 * Replaced ``black`` and ``flake8`` with ``ruff`` for linting and formatting.
+* Issued a ``SWXUserWarning`` when ``SWXSOC_MISSION`` or ``selected_mission`` names a mission that is not defined in ``missions_data`` of the config file, instead of failing silently.
+* Converted the code examples in the documentation that use the ``swxsoc`` package to ``doctest`` directives so they are executed by the test suite. Examples that need external services use ``+SKIP``.

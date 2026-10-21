@@ -80,6 +80,8 @@ def pytest_collection_modifyitems(config, items):
         "reading_writing_data.rst",
         "cdf_validation.rst",
         "schema_information_guide.rst",
+        "cdf_format_guide.rst",
+        "fillval_and_masks.rst",
         "quick_reference.rst",
     ]
 

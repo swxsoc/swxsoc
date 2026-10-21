@@ -86,11 +86,22 @@ Using a Custom Schema
 
 If your mission uses a custom metadata schema, pass it to ``validate`` with the ``schema`` argument:
 
-.. code-block:: python
+.. doctest::
 
-    from swxsoc.util.schema import SWXSchema
-
-    my_schema = SWXSchema(global_schema_layers=["my_global_schema.yaml"])
-    validation_errors = validate(cdf_file_path, schema=my_schema)
+    >>> from swxsoc.util.schema import SWXSchema
+    >>> with tempfile.TemporaryDirectory() as tmp_dir:
+    ...     schema_path = Path(tmp_dir) / "my_global_schema.yaml"
+    ...     _ = schema_path.write_text(
+    ...         "MISSION_NOTE:\n"
+    ...         "  description: A mission-specific global attribute.\n"
+    ...         "  default: null\n"
+    ...         "  required: true\n"
+    ...         "  validate: true\n"
+    ...     )
+    ...     my_schema = SWXSchema(global_schema_layers=[str(schema_path)])
+    ...     cdf_file_path = sw_data.save(output_path=tmp_dir)
+    ...     validation_errors = validate(cdf_file_path, schema=my_schema)
+    >>> "Required attribute (MISSION_NOTE) not present in global attributes." in validation_errors
+    True
 
 See :ref:`schema_information_guide` for how to create a custom schema.

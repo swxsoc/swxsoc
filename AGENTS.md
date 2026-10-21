@@ -108,6 +108,9 @@
 - Name test files `test_*.py`.
 - Add regression tests with bug fixes.
 - Keep doctest examples runnable and aligned with real behavior.
+- Code examples that use the `swxsoc` package must use the `.. doctest::` directive and be executed by the CI tests to ensure reliability.
+  Use `# doctest: +SKIP` only for calls that need external services or credentials.
+  Shell, YAML, and other non-Python examples may remain in `.. code-block::`.
 - Gate tests that require an optional dependency with module-level `pytest.importorskip`.
 
 ## Project Conventions and Pitfalls

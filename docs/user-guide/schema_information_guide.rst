@@ -138,15 +138,32 @@ schema files. For more information on the default, base layer, schema files plea
 
 Here is an example of instantiation of a :py:class:`~swxsoc.util.schema.SWXSchema` object: 
 
-.. code-block:: python
+.. doctest::
 
-    global_layers = ["my_global_layer_1.yaml", "my_global_layer_2.yaml"]
-    variable_layers = ["my_variable_layer_1.yaml", "my_variable_layer_2.yaml"]
-    my_schema = SWXSchema(
-        global_schema_layers=global_layers,
-        variable_schema_layers=variable_layers,
-        use_defaults=False
-    )
+    >>> import tempfile
+    >>> from pathlib import Path
+    >>> from swxsoc.util.schema import SWXSchema
+    >>> with tempfile.TemporaryDirectory() as tmp_dir:
+    ...     layer_dir = Path(tmp_dir)
+    ...     _ = (layer_dir / "my_global_layer_1.yaml").write_text(
+    ...         "MISSION_NOTE:\n  description: A mission-specific global attribute.\n  default: null\n"
+    ...     )
+    ...     _ = (layer_dir / "my_global_layer_2.yaml").write_text(
+    ...         "MISSION_CONTACT:\n  description: The mission contact for the data.\n  default: null\n"
+    ...     )
+    ...     _ = (layer_dir / "my_variable_layer_1.yaml").write_text(
+    ...         "attribute_key:\n  MISSION_VAR_NOTE:\n    description: A mission-specific variable attribute.\n"
+    ...     )
+    ...     _ = (layer_dir / "my_variable_layer_2.yaml").write_text(
+    ...         "attribute_key:\n  MISSION_VAR_UNITS:\n    description: The units of the variable.\n"
+    ...     )
+    ...     global_layers = [str(layer_dir / "my_global_layer_1.yaml"), str(layer_dir / "my_global_layer_2.yaml")]
+    ...     variable_layers = [str(layer_dir / "my_variable_layer_1.yaml"), str(layer_dir / "my_variable_layer_2.yaml")]
+    ...     my_schema = SWXSchema(
+    ...         global_schema_layers=global_layers,
+    ...         variable_schema_layers=variable_layers,
+    ...         use_defaults=False,
+    ...     )
 
 This will create a new schema object from scratch, without using the default CDF schema, and will overlay 
 the `layer_2` files over the `layer_1` files. If there are no conflicts within the schema files, then 
@@ -157,20 +174,20 @@ then the second layer will overwrite the values from the first layer in the resu
 
 To change how attributes are derived, create a subclass of :py:class:`~swxsoc.util.schema.SWXSchema` with your own derivation functions, and pass its schema layers to the parent class:
 
-.. code-block:: python
+.. doctest::
 
-    from swxsoc.util.schema import SWXSchema
-
-
-    class MyMissionSchema(SWXSchema):
-        def __init__(self):
-            super().__init__(
-                global_schema_layers=["my_global_layer.yaml"],
-                variable_schema_layers=["my_variable_layer.yaml"],
-            )
-
-        def _get_my_attribute(self, data):
-            return "my attribute value"
+    >>> from swxsoc.util.schema import SWXSchema
+    >>> class MyMissionSchema(SWXSchema):
+    ...     def __init__(self):
+    ...         super().__init__(
+    ...             global_schema_layers=["my_global_layer.yaml"],
+    ...             variable_schema_layers=["my_variable_layer.yaml"],
+    ...         )
+    ...
+    ...     def _get_my_attribute(self, data):
+    ...         return "my attribute value"
+    >>> issubclass(MyMissionSchema, SWXSchema)
+    True
 
 See :ref:`schema_global_attribute_derivation` for the signature that derivation functions must follow.
 
@@ -269,11 +286,12 @@ where `my_data_container` is an instance of a :py:class:`~swxsoc.swxdata.SWXData
 
 The derivation functions, which must be a class function of a :py:class:`~swxsoc.util.schema.SWXSchema` class, must follow the following signature:
 
-.. code-block:: python
+.. doctest::
 
-    def _my_derivation_fn(self, my_data_container: SWXData):
-        # ... do manipulations as needed from `data`
-        return "attribute_value"
+    >>> from swxsoc.swxdata import SWXData
+    >>> def _my_derivation_fn(self, my_data_container: SWXData):
+    ...     # ... do manipulations as needed from `data`
+    ...     return "attribute_value"
 
 These functions must take in a single parameter, an instance of a :py:class:`~swxsoc.swxdata.SWXData` object or an extended class object. 
 These functions must return a single Python primitive type (`str`, `int`, `float`) or `~astropy.time.Time` object representing the value for the given attribute. 
@@ -418,11 +436,16 @@ Derivation functions for `iterable` attributes take an extra parameter `dimensio
 
 The derivation functions for single-dimensional attributes, which must be a class function of a :py:class:`~swxsoc.util.schema.SWXSchema` class, must follow the following signature:
 
-.. code-block:: python
+.. doctest::
 
-    def _my_derivation_fn(self, var_name: str, var_data: Union[Quantity, NDData, NDCube], guess_type: ctypes.c_long):
-        # ... do manipulations as needed from data
-        return "attribute_value"
+    >>> import ctypes
+    >>> from typing import Union
+    >>> from astropy.nddata import NDData
+    >>> from astropy.units import Quantity
+    >>> from ndcube import NDCube
+    >>> def _my_derivation_fn(self, var_name: str, var_data: Union[Quantity, NDData, NDCube], guess_type: ctypes.c_long):
+    ...     # ... do manipulations as needed from data
+    ...     return "attribute_value"
 
 These functions must return a single Python primitive type (`str`, `int`, `float`) or `~astropy.time.Time` object representing the value for the given attribute. 
 
@@ -433,11 +456,11 @@ The derivation functions for time-specific attributes follow the same requiremen
 Additionally time-specific attributes must by listed in the `epoch` index of the variable attribute schema file. 
 The derivation functions follow the same signature as "standard" derivation functions:
 
-.. code-block:: python
+.. doctest::
 
-    def _my_derivation_fn(self, var_name: str, var_data: Union[Quantity, NDData, NDCube], guess_type: ctypes.c_long):
-        # ... do manipulations as needed from data
-        return "attribute_value"
+    >>> def _my_derivation_fn(self, var_name: str, var_data: Union[Quantity, NDData, NDCube], guess_type: ctypes.c_long):
+    ...     # ... do manipulations as needed from data
+    ...     return "attribute_value"
 
 These functions must return a single Python primitive type (`str`, `int`, `float`) or `~astropy.time.Time` object representing the value for the given attribute. 
 
@@ -448,10 +471,10 @@ The derivation functions for spectra-specific attributes, or attributes that can
 Additionally spectra-specific attributes must be listed in the `spectra` index of the variable attribute schema file. 
 The derivation functions have an added `dimension_i` parameter which is a 0-based index of the dimension to derive the attribute for. 
 
-.. code-block:: python
+.. doctest::
 
-    def _my_derivation_fn(self, var_name: str, var_data: Union[NDData, NDCube], guess_type: ctypes.c_long, dimension_i: int):
-        # ... do manipulations as needed from data
-        return "attribute_value"
+    >>> def _my_derivation_fn(self, var_name: str, var_data: Union[NDData, NDCube], guess_type: ctypes.c_long, dimension_i: int):
+    ...     # ... do manipulations as needed from data
+    ...     return "attribute_value"
 
 These functions must return a single Python primitive type (`str`, `int`, `float`) or `~astropy.time.Time` object representing the value for the given attribute. 

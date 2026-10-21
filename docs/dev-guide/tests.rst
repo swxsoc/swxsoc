@@ -59,6 +59,10 @@ To run the full test suite, including the documentation tests, as our continuous
 
 Documentation pages whose examples need an optional extra, such as ``cdf`` or ``tracker``, must be listed in :file:`docs/conftest.py` so they are skipped when that extra is not installed.
 
+Code examples that use the ``swxsoc`` package must use the ``doctest`` directive and be executed by the CI tests to ensure reliability.
+Use ``# doctest: +SKIP`` only for calls that need external services or credentials, such as Grafana or Timestream.
+Other languages, such as shell or YAML, may remain in a ``code-block`` directive.
+
 Bugs Testing
 ------------
 

@@ -724,33 +724,41 @@ Without auto-prefixing, all 32 satellites' data would collapse into a single set
 
 With selective prefixing, each satellite's data is preserved::
 
-    from astropy.time import Time, TimeDelta
-    from astropy.timeseries import TimeSeries
-    import astropy.units as u
-    import numpy as np
-    from swxsoc.swxdata import SWXData
+.. doctest::
 
-    # Create TimeSeries for multiple satellites
-    timeseries_dict = {}
-    for sat_id in range(165, 197):  # REACH_165 through REACH_196
-        times = Time('2024-01-01T00:00:00', scale='utc') + TimeDelta(np.arange(5) * u.s)
-        ts = TimeSeries(
-            time=times,
-            data={
-                'Lat': u.Quantity(np.random.uniform(-90, 90, 5), 'deg', dtype=np.float32),
-                'Lon': u.Quantity(np.random.uniform(-180, 180, 5), 'deg', dtype=np.float32),
-                'Sensor_A': u.Quantity(np.random.random(5), 'nT', dtype=np.float32),
-            }
-        )
-        timeseries_dict[f'REACH_{sat_id}'] = ts
-
-    # Create SWXData and save
-    meta = SWXData.global_attribute_template("eea", "l1", "1.0.0")
-    swx_data = SWXData(timeseries=timeseries_dict, meta=meta)
-    cdf_path = swx_data.save()  # Prefixes only variables that would collide
-
-    # Load back - structure is preserved
-    loaded_data = SWXData.load(cdf_path)
-    # Each satellite's data is correctly restored to its epoch key
+    >>> import os
+    >>> import tempfile
+    >>> import swxsoc
+    >>> from astropy.time import Time, TimeDelta
+    >>> from astropy.timeseries import TimeSeries
+    >>> import astropy.units as u
+    >>> import numpy as np
+    >>> from swxsoc.swxdata import SWXData
+    >>> os.environ["SWXSOC_MISSION"] = "hermes"
+    >>> swxsoc.reconfigure()
+    >>> # Create TimeSeries for multiple satellites
+    >>> timeseries_dict = {}
+    >>> for sat_id in range(165, 197):  # REACH_165 through REACH_196
+    ...     times = Time('2024-01-01T00:00:00', scale='utc') + TimeDelta(np.arange(5) * u.s)
+    ...     ts = TimeSeries(
+    ...         time=times,
+    ...         data={
+    ...             'Lat': u.Quantity(np.random.uniform(-90, 90, 5), 'deg', dtype=np.float32),
+    ...             'Lon': u.Quantity(np.random.uniform(-180, 180, 5), 'deg', dtype=np.float32),
+    ...             'Sensor_A': u.Quantity(np.random.random(5), 'nT', dtype=np.float32),
+    ...         }
+    ...     )
+    ...     ts["Lat"].meta = {"CATDESC": "Latitude"}
+    ...     ts["Lon"].meta = {"CATDESC": "Longitude"}
+    ...     ts["Sensor_A"].meta = {"CATDESC": "Sensor A measurement"}
+    ...     timeseries_dict[f'REACH_{sat_id}'] = ts
+    >>> # Create SWXData and save
+    >>> meta = SWXData.global_attribute_template("eea", "l1", "1.0.0")
+    >>> swx_data = SWXData(timeseries=timeseries_dict, meta=meta)
+    >>> with tempfile.TemporaryDirectory() as tmp_dir:
+    ...     cdf_path = swx_data.save(output_path=tmp_dir)  # Prefixes only variables that would collide
+    ...     # Load back - structure is preserved
+    ...     loaded_data = SWXData.load(cdf_path)
+    >>> # Each satellite's data is correctly restored to its epoch key
 
 This automatic handling allows missions with complex multi-epoch requirements to work seamlessly with CDF files while maintaining ISTP compliance and data integrity.

@@ -19,6 +19,7 @@ from swxsoc.util.config import (
     get_instrument_package,
     load_config,
 )
+from swxsoc.util.exceptions import SWXUserWarning
 
 USER = os.path.expanduser("~")
 
@@ -129,7 +130,8 @@ def test_load_config_unknown_mission(monkeypatch):
     """
     monkeypatch.setenv("SWXSOC_MISSION", "non_existent_mission")
 
-    config = load_config()
+    with pytest.warns(SWXUserWarning, match="non_existent_mission"):
+        config = load_config()
 
     mission_config = config["mission"]
     assert mission_config["mission_name"] == "non_existent_mission"

@@ -45,6 +45,17 @@ combined to layer multiple schema elements into a single unified schema.
 This allows extensions and overrides to the default schema, and allows you to create new 
 schema configurations for specific archive file types and specific metadata requirements.
 
+Relationship to Skeleton Files
+------------------------------
+
+:py:class:`~swxsoc.util.schema.SWXSchema` is the Python counterpart of the skeleton files produced by the SKTEditor and by the `ISTP Metadata Editor <https://spdf.gsfc.nasa.gov/istp-metadata-editor/>`_.
+A skeleton file lists the global and variable attributes that an ISTP-compliant CDF file needs, along with their formats and values.
+The YAML schema layers play the same role in ``swxsoc``: they define which attributes exist, which ones are required, and how each attribute is derived.
+
+Unlike a skeleton file, the schema is not a template CDF.
+``swxsoc`` does not read skeleton files, and a skeleton is not needed to create a CDF file.
+To use the requirements from a skeleton that your mission has already defined, add the attributes to a custom schema layer that you pass to :py:class:`~swxsoc.util.schema.SWXSchema`.
+
 Required and Derived Attributes
 ===============================
 

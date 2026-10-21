@@ -21,6 +21,7 @@ Overview
 Data is stored in standard Python objects: `~astropy.timeseries.TimeSeries`, `~astropy.units.Quantity`, `~astropy.nddata.NDData`, and `~ndcube.NDCollection`.
 Metadata is stored in dictionaries, with one `dict` of global attributes for the whole file and one `dict` of variable attributes for each variable.
 ``SWXData`` derives as many of the ISTP-required attributes as it can, so you only supply the ones it cannot work out for itself.
+You do not need a master CDF or a skeleton CDF to create a file, because ``SWXData`` builds the file from the data and metadata you provide.
 
 Related pages:
 

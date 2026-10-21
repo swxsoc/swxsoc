@@ -19,3 +19,4 @@ Latest
 * Removed the CMAD and tour documentation pages.
 * Fixed inaccurate documentation, including ``swxsoc.reconfigure()``, ``swxsoc.print_config(config)``, derived attribute names, and outdated ISTP links.
 * Added ``sphinx-llms-txt`` to the ``docs`` extra so the docs build writes ``llms.txt`` and ``llms-full.txt``.
+* Replaced ``black`` and ``flake8`` with ``ruff`` for linting and formatting.

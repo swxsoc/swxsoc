@@ -1,13 +1,18 @@
 SWxSOC Core Documentation
 -------------------------
 
-This is the documentation for the swxsoc Python Package.
+This is the documentation for the ``swxsoc`` Python package.
+``swxsoc`` helps space weather and heliophysics missions create, validate, and manage archive-ready CDF data files, and provides shared tools for running mission science data pipelines.
+
+New here?
+
+- To create a CDF file from your own data, start with :ref:`reading_writing_cdf`.
+- For one-line answers to common tasks, see the :ref:`quick_reference`.
 
 .. toctree::
    :maxdepth: 2
 
    whatsnew/index
-   cmad/index
    user-guide/index
    dev-guide/index
    api

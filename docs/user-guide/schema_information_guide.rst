@@ -116,6 +116,8 @@ You can override a derived value by setting it in the variable's ``meta``, unles
 Metadata templates
 ------------------
 
+.. _global_attribute_template:
+
 :py:func:`~swxsoc.swxdata.SWXData.global_attribute_template` returns a `dict` of the global attributes you need to supply, with each value set to `None`:
 
     >>> import os
@@ -133,6 +135,8 @@ The instrument name and data level must be defined in the active mission configu
     {'Data_level': 'L1>Level 1', 'Data_version': '0.1.0', 'Descriptor': 'EEA>Electron Electrostatic Analyzer', 'Discipline': None, 'Instrument_type': None, 'Mission_group': None, 'PI_affiliation': None, 'PI_name': None, 'Project': None, 'Source_name': None, 'TEXT': None}
 
 :py:func:`~swxsoc.swxdata.SWXData.measurement_attribute_template` returns a `dict` of the variable attributes you need to supply:
+
+.. _measurement_attribute_template:
 
     >>> dict(SWXData.measurement_attribute_template())
     {'CATDESC': None}

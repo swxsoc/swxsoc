@@ -21,7 +21,7 @@ Overview
 Data is stored in standard Python objects: `~astropy.timeseries.TimeSeries`, `~astropy.units.Quantity`, `~astropy.nddata.NDData`, and `~ndcube.NDCollection`.
 Metadata is stored in dictionaries, with one `dict` of global attributes for the whole file and one `dict` of variable attributes for each variable.
 ``SWXData`` derives as many of the ISTP-required attributes as it can, so you only supply the ones it cannot work out for itself.
-You do not need a master CDF or a skeleton CDF to create a file, because ``SWXData`` builds the file from the data and metadata you provide.
+**You do not need a master CDF or a skeleton CDF to create a file**, because ``SWXData`` builds the file from the data and metadata you provide.
 
 Related pages:
 
@@ -38,8 +38,17 @@ Quick Start
 Select a mission
 ----------------
 
-``SWXData`` uses the active mission configuration to check instrument names and data levels, and to build file names.
+``SWXData`` requires an active mission configuration, which holds the instruments, data levels, and file settings for the selected mission.
+It uses that configuration to:
+
+- Get the mission name and file extension that go into file metadata and file names.
+- Check that the instrument name is one of the mission's instruments.
+- Check that the data level is one of the mission's valid data levels.
+- Check that the file start time is within the mission's valid time range.
+
 The examples on this page use the ``hermes`` mission, selected with the ``SWXSOC_MISSION`` environment variable:
+
+.. doctest::
 
     >>> import os
     >>> import swxsoc
@@ -53,7 +62,10 @@ Create a SWXData object
 
 The smallest valid ``SWXData`` object needs one `~astropy.timeseries.TimeSeries` with at least one measurement, and the three required global attributes:
 
+.. doctest::
+
     >>> import numpy as np
+    >>> import tempfile
     >>> import astropy.units as u
     >>> from astropy.timeseries import TimeSeries
     >>> from swxsoc.swxdata import SWXData
@@ -62,9 +74,18 @@ The smallest valid ``SWXData`` object needs one `~astropy.timeseries.TimeSeries`
     ...     time_delta=3 * u.s,
     ...     data={"Bx": u.Quantity([1, 2, 3, 4], "nT", dtype=np.int16)},
     ... )
-    >>> meta = SWXData.global_attribute_template(instr_name="nemisis", data_level="l1", version="1.0.0")
-    >>> sw_data = SWXData(timeseries=ts, meta=meta)
+    >>> meta = SWXData.global_attribute_template(
+    ...   instr_name="nemisis", 
+    ...   data_level="l1", 
+    ...   version="1.0.0"
+    ... )
+    >>> sw_data = SWXData(
+    ...     timeseries=ts,
+    ...     meta=meta
+    ... )
     >>> sw_data.timeseries["Bx"].meta["CATDESC"] = "X component of the magnetic field"
+    >>> with tempfile.TemporaryDirectory() as tmp_dir:
+    ...     cdf_file_path = sw_data.save(output_path=tmp_dir)
 
 Note the use of `astropy.time` and `astropy.units`.
 They attach a time scale and a physical unit to every value, and ``SWXData`` requires them.
@@ -79,38 +100,52 @@ For more information about data type mapping for CDF files see :ref:`data_type_m
 The SWXData Data Structure
 ==========================
 
-A ``SWXData`` object is built from four arguments:
+A ``SWXData`` object is built from four arguments. 
+See :ref:`swxdata_examples` for code examples of each of these:
 
 .. list-table::
    :header-rows: 1
-   :widths: 12 12 46 30
+   :widths: 12 10 38 22 18
 
    * - Argument
      - Required?
      - What goes in it
      - Python type
+     - Examples
    * - ``timeseries``
      - Yes
-     - A time column plus time-varying scalar measurements, one value per time step.
+     - A time column plus time-varying scalar measurements, one value per time step. 
+       This is not a two-dimensional array stored in row-major or column-major order.
+       Each column is a separate one-dimensional array of shape ``[n]``, and each becomes its own record-varying variable in the CDF file.
        Use a `dict` of ``TimeSeries`` when measurements are sampled on different time axes (multiple epochs).
      - `~astropy.timeseries.TimeSeries`, or `dict` of `str` to ``TimeSeries``
+     - - :ref:`Create <swxdata_ts_example>`
+       - :ref:`Add <rw_add_measurement>`
    * - ``support``
      - No
      - Data that does not vary with time, such as constants, calibration tables, and masks.
        Also any multi-dimensional data that cannot be described by a World Coordinate System (WCS).
      - `dict` of `str` to `~astropy.units.Quantity` or `~astropy.nddata.NDData`
+     - - :ref:`Create <swxdata_support_example>`
+       - :ref:`Add <rw_add_support>`
    * - ``spectra``
      - No
-     - Time-varying vector, spectral, or higher-dimensional data whose axes can be described by a WCS.
+     - Time-varying spectral or higher-dimensional data whose array axes are described by a WCS.
      - `~ndcube.NDCollection` of `~ndcube.NDCube`
+     - - :ref:`Create <swxdata_spectra_example>`
+       - :ref:`Add <rw_add_spectra>`
    * - ``meta``
      - Yes
      - Global metadata attributes for the file.
        Must include the :ref:`required global attributes <rw_required_global_attrs>`.
      - `dict`
+     - - :ref:`Create <swxdata_meta_example>`
+       - :ref:`Update <rw_updating_metadata>`
 
 Rules that ``SWXData`` enforces when you create the object:
 
+- ``timeseries`` is always required, even if you only have ``spectra`` or ``support`` data.
+  It must be a `~astropy.timeseries.TimeSeries` with at least one row and a ``time`` column.
 - Every ``timeseries`` column, other than ``time``, must be a one-dimensional `~astropy.units.Quantity` with a unit.
 - Every ``support`` value must be a `~astropy.units.Quantity` or `~astropy.nddata.NDData`.
 - ``spectra`` must be an `~ndcube.NDCollection`.
@@ -119,35 +154,46 @@ Rules that ``SWXData`` enforces when you create the object:
 
 You can also create a ``SWXData`` object by loading an existing CDF file, see :ref:`rw_reading_cdf`.
 
+What a WCS is
+-------------
+
+A World Coordinate System (WCS) maps each array index along an axis to a physical value on that axis.
+The `~astropy.wcs.WCS` class implements the FITS WCS standard, which covers sky positions, spectral axes (wavelength, frequency, or energy), time, and other ordered axes.
+Energy bins and pitch angles are valid WCS axes when the value along the axis is a defined function of the index, such as a linear grid, a logarithmic grid, or a lookup table.
+
+Components of a vector, such as ``Ex``, ``Ey``, and ``Ez``, are not coordinates along an axis, so they do not belong in a WCS.
+
 Choosing where to put your data
 -------------------------------
 
 Use the shape of your data to decide which argument it belongs in:
 
-- **One value per time step** (for example temperature, count rate, or one magnetic field component): add a column to ``timeseries``.
+- **One value per time step** (for example temperature, count rate, or one magnetic or electric field component): add a column to ``timeseries``.
 - **Many values per time step, with axes you can describe with a WCS** (for example an energy spectrum with known energy bins): add an `~ndcube.NDCube` to ``spectra``.
-- **Many values per time step, with no WCS**: add an `~astropy.nddata.NDData` to ``support``.
+- **Many values per time step, with no WCS** (indexed by IDs or categories rather than physical coordinates): add an `~astropy.nddata.NDData` to ``support``.
   Set its ``VAR_TYPE`` attribute to ``"data"`` so that it is written as a time-varying (record-varying) variable.
+  See :ref:`swxdata_support_example` for an example.
 - **Values that do not change with time** (for example calibration constants or lookup tables): add a `~astropy.units.Quantity` or `~astropy.nddata.NDData` to ``support``.
 
 **Fields instruments** (for example magnetometers and electric field instruments):
 
-- Put each scalar component, such as ``Bx``, ``By``, and ``Bz``, in its own ``timeseries`` column.
-- To store a vector as a single variable, such as an ``(N, 3)`` array, put it in ``spectra`` as an `~ndcube.NDCube` with a meaningful WCS.
-  If you cannot describe it with a WCS, put it in ``support`` as an `~astropy.nddata.NDData`.
+- Put each scalar component, such as ``Bx``, ``By``, and ``Bz``, or ``Ex``, ``Ey``, and ``Ez``, in its own ``timeseries`` column.
+- Use ``spectra`` only for data whose array axes are ordered coordinates, such as a wave spectrum on a frequency grid.
 
 **Particle instruments** (for example electron and ion spectrometers and energetic particle telescopes):
 
 - Put scalar quantities, such as total count rate or density, in ``timeseries`` columns.
 - Put energy- or angle-resolved distributions in ``spectra`` as an `~ndcube.NDCube` if the energy and angle axes can be described by a WCS.
-  Otherwise, put them in ``support`` as an `~astropy.nddata.NDData`.
-
-See :ref:`swxdata_examples` for code examples of each of these.
+  For example, any combination of pitch angle, azimuth angle, energy bins, species (electron, proton, alpha), and time can be described by a WCS.
+  An example with shape ``[time, energy, pitch angle, species]`` is shown in :ref:`swxdata_spectra_example`.
+  If axes cannot be described by a WCS, put them in ``support`` as an `~astropy.nddata.NDData`.
 
 Required Metadata
 =================
 
-Metadata attributes describe your data so that other people and archive tools can use it.
+Metadata attributes describe your data so it is understandable by users and to facilitate archiving, searching, and scientific analysis.
+Having high quality metadata is important to make your data broadly discoverable and usable by others!
+
 ``SWXData`` derives many attributes for you, such as ``Logical_file_id``, ``FILLVAL``, and ``UNITS``.
 The tables in the :ref:`schema_information_guide` list every attribute, and which ones are required or derived.
 
@@ -175,20 +221,23 @@ Required global attributes
      - Version string in the form ``X.Y.Z``
      - ``1.0.0``
 
-You can pass global attributes with the ``meta`` argument, or in the ``meta`` of a single ``TimeSeries``.
-Other ISTP-required attributes, such as ``PI_name`` and ``TEXT``, should also be filled in before you submit a file to an archive.
+You should pass global attributes with the ``meta`` argument of the ``SWXData`` constructor.
+Other ISTP-required attributes, such as ``PI_name`` and ``TEXT``, must also be filled in before you submit a file to an archive.
+For a full list of required ISTP global attributes, see :ref:`cdf_format_guide` Section 3.1.
 
 Use :py:func:`~swxsoc.swxdata.SWXData.global_attribute_template` to get a `dict` of the global attributes you need to supply.
-Passing an instrument name, data level, and version fills in the three required attributes for you.
-Instrument names and data levels come from the active mission configuration.
+See the :ref:`global attribute template example <global_attribute_template>` for an example.
 
 Required variable attributes
 ----------------------------
 
 Every variable needs a ``CATDESC`` (catalog description) attribute, a short human-readable description of the variable.
-Use :py:func:`~swxsoc.swxdata.SWXData.measurement_attribute_template` to get a `dict` of the variable attributes you need to supply.
+Use :py:func:`~swxsoc.swxdata.SWXData.measurement_attribute_template` to get a `dict` of other variable attributes you need to supply.
+See the :ref:`measurement attribute template example <measurement_attribute_template>` for an example.
 
 For details on both template functions, and on which attributes ``SWXData`` derives, see :ref:`schema_information_guide`.
+
+.. _rw_updating_metadata:
 
 Updating metadata
 -----------------
@@ -214,6 +263,8 @@ Reading a CDF File
 Load an existing CDF file into a ``SWXData`` object with :py:func:`~swxsoc.swxdata.SWXData.load`, passing a `~pathlib.Path` to the file.
 This example loads a sample file that is included with ``swxsoc``:
 
+.. doctest::
+
     >>> from pathlib import Path
     >>> sample_file = (
     ...     Path(swxsoc.__file__).parent
@@ -233,6 +284,8 @@ Adding Data
 You can add data to an existing ``SWXData`` object.
 New ``timeseries`` measurements must have the same number of time stamps as the existing ones.
 
+.. _rw_add_measurement:
+
 Add a time-varying scalar measurement with :py:func:`~swxsoc.swxdata.SWXData.add_measurement`:
 
     >>> sw_data.add_measurement(
@@ -241,6 +294,8 @@ Add a time-varying scalar measurement with :py:func:`~swxsoc.swxdata.SWXData.add
     ...     meta={"CATDESC": "Y component of the magnetic field, GSE"},
     ... )
 
+.. _rw_add_support:
+
 Add data that does not vary with time with :py:func:`~swxsoc.swxdata.SWXData.add_support`:
 
     >>> sw_data.add_support(
@@ -248,6 +303,8 @@ Add data that does not vary with time with :py:func:`~swxsoc.swxdata.SWXData.add
     ...     data=u.Quantity([1e-1], "keV", dtype=np.float32),
     ...     meta={"CATDESC": "Calibration factor", "VAR_TYPE": "support_data"},
     ... )
+
+.. _rw_add_spectra:
 
 Add higher-dimensional time-varying data with :py:func:`~swxsoc.swxdata.SWXData.add_spectra`, passing an `~ndcube.NDCube`:
 
@@ -292,8 +349,8 @@ Writing a CDF File
 ==================
 
 Write a CDF file with :py:func:`~swxsoc.swxdata.SWXData.save`.
-``output_path`` can be a directory, in which case the file name is built from the ``Logical_file_id`` attribute, or a full file path.
-If you do not pass ``output_path``, the file is written to the current directory.
+The output directory can be specified with ``output_path``, in which case the file name is built from the ``Logical_file_id`` attribute, or a full file path.
+If you do not pass ``output_path``, the file is written to the current working directory.
 Set ``overwrite=True`` to replace an existing file with the same name.
 ``save`` returns the path to the new file.
 

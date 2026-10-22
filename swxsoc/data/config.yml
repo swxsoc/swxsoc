@@ -226,6 +226,9 @@ missions_data:
     min_valid_time: 2026-01-01T00:00:00
     max_valid_time: now
     data_levels: # Detailed data level definitions for this mission (short_name is also used as the valid data level)
+    # I-FIRE using just L0, L1, L2
+    # I-AXIS using L0, L1, L2a, L2b, L3a, L3b
+    # Based on Section 4 "Data Products" their data management plan.
       - short_name: raw
         full_name: RAW
         description: RAW File
@@ -241,9 +244,21 @@ missions_data:
       - short_name: l2
         full_name: Level 2
         description: Level 2 File
+      - short_name: l2a
+        full_name: Level 2A
+        description: Level 2A File
+      - short_name: l2b
+        full_name: Level 2B
+        description: Level 2B File
       - short_name: l3
         full_name: Level 3
         description: Level 3 File
+      - short_name: l3a
+        full_name: Level 3A
+        description: Level 3A File
+      - short_name: l3b
+        full_name: Level 3B
+        description: Level 3B File
     instruments:
       - name: iaxis
         shortname: iaxis

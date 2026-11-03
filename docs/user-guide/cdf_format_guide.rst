@@ -8,8 +8,18 @@ CDF Format Guide
 1. Introduction
 ===============
 
-The :py:class:`~swxsoc.util.schema.SWXSchema` class provides an interface to
-examine the SWxSOC CDF Format Guide.
+This guide describes the CDF file conventions that ``swxsoc`` follows: file naming, version numbers, global and variable metadata attributes, data type mapping, and multi-epoch files.
+Use it as a reference when you need to know what goes into an archive-ready CDF file.
+To create CDF files in Python, see :ref:`reading_writing_cdf`.
+
+`CDF (Common Data Format) <https://cdf.gsfc.nasa.gov>`_ is a self-describing binary file format that NASA uses to store and exchange scientific data.
+CDF files hold multidimensional data together with metadata that describes it, and they are widely used in space physics.
+Because CDF is so flexible, CDF files can be complex, so standards exist to make them easier to work with.
+The International Solar-Terrestrial Physics (ISTP) guidelines, maintained by NASA's Space Physics Data Facility (SPDF), are the standard used in heliophysics.
+They define the required metadata, formatting, and documentation for CDF files.
+Files uploaded to the `NASA SPDF archive <https://spdf.gsfc.nasa.gov>`_ must follow the ISTP guidelines.
+
+The :py:class:`~swxsoc.util.schema.SWXSchema` class encodes the metadata requirements in this guide, see :ref:`schema_information_guide`.
 
 ---------------------
 1.1 Purpose and Scope
@@ -31,10 +41,10 @@ the requirements for creating mission-specific CDF files.
 Relevant documents that provide background material and support details provided in
 this guide are listed below:
 
-- `SPDF CDF User's Guide <http://cdf.gsfc.nasa.gov/>`_
-- `SKTEditor <http://spdf.gsfc.nasa.gov/sp_use_of_cdf.html>`_
-- `ISTP Guidelines <http://spdf.gsfc.nasa.gov/istp_guide/istp_guide.html>`_
-- `ISTP/IACG Global Attributes <http://spdf.gsfc.nasa.gov/istp_guide/gattributes.html>`_
+- `SPDF CDF User's Guide <https://cdf.gsfc.nasa.gov/>`_
+- `ISTP Guidelines <https://istp-metadata.readthedocs.io/en/latest/>`_
+- `ISTP Metadata Editor <https://spdf.gsfc.nasa.gov/istp-metadata-editor/>`_, a web tool from SPDF for viewing and editing CDF metadata
+- `SAMMI <https://sammi-cdf.readthedocs.io/en/latest/>`_, the package whose ``CdfAttributeManager`` class is the base of :py:class:`~swxsoc.util.schema.SWXSchema`
 
 ==============
 2. Conventions
@@ -86,7 +96,7 @@ Section 3 of this document.
      - The start time of the contained data given in `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_ format.
      - `20230519T000003`
    * - vX.Y.Z
-     - The 3-part version number of the data product. Full description of this identifier is provided in Section 3.1.1 of this document.
+     - The 3-part version number of the data product. Full description of this identifier is provided in Section 2.1.1 of this document.
      - `v0.0.0`, `v<#.#.#>`
    * - .ext
      - The required file extension, where CDF is required.
@@ -99,7 +109,7 @@ Section 3 of this document.
 The three-part version number contains the interface number, quality number, and bug
 fix/revision number. The initial release of CDF data that is suitable for scientific
 publication should begin with “v1.Y.Z”. Each component of the version number is
-incremented in integer steps, as needed, and Table 3-2 describes the instances in which
+incremented in integer steps, as needed, and Table 2-2 describes the instances in which
 the value should be incremented. Release “v0.Y.Z” may be used for early development
 purposes.
 
@@ -136,23 +146,18 @@ the underscore character (no other special characters allowed). Note that CDF at
 are case-sensitive and must exactly follow what is shown here.
 
 Detailed descriptions of the attributes listed below are available at the `ISTP/IACG Global
-Attributes Webpage <http://spdf.gsfc.nasa.gov/istp_guide/gattributes.html>`_.
+Attributes Webpage <https://istp-metadata.readthedocs.io/en/stable/>`_.
+
+Table 3-1 below describes each global attribute.
+To get a `dict` of the global attributes you need to supply, use :py:func:`~swxsoc.swxdata.SWXData.global_attribute_template`, see :ref:`schema_information_guide`.
 
 --------------------------------------
 3.1 Required Global Attributes
 --------------------------------------
 
-The following global attributes shown in Table 3-1 are required with ISTP-compliant data products.
-For each attribute the following information is provided:
-
-* description: (`str`) A brief description of the attribute
-* default: (`str`) The default value used if none is provided
-* derived: (`bool`) Whether the attibute can be derived by the `swxsoc`
-  :py:class:`~swxsoc.util.schema.SWXSchema` class
-* required: (`bool`) Whether the attribute is required by ISTP standards
-* overwrite: (`bool`) Whether the :py:class:`~swxsoc.util.schema.SWXSchema`
-  attribute derivations will overwrite an existing attribute value with an updated
-  attribute value from the derivation process.
+Table 3-1 lists the global attributes in the ``swxsoc`` schema.
+It shows whether each attribute is required by ISTP, whether ``swxsoc`` derives it for you, and its default value.
+Use :py:func:`~swxsoc.swxdata.SWXData.global_attribute_template` to get the attributes you need to fill in.
 
 Note that this table is derived from :file:`swxsoc/data/swxsoc_default_global_cdf_attrs_schema.yaml`
 
@@ -220,7 +225,7 @@ All CDF supported data types are available for use by SWxSOC affiliated projects
 
 See Section 5 for the rules ``swxsoc`` uses to map a variable's NumPy ``dtype`` to a concrete CDF data type on write.
 
-For detailed information and examples, please see the `ISTP/IACG Webpage <http://spdf.gsfc.nasa.gov/istp_guide/variables.html>`
+For detailed information and examples, please see the `ISTP Guidelines <https://istp-metadata.readthedocs.io/en/latest/>`_.
 
 --------------------------------------
 4.1 Data
@@ -302,7 +307,7 @@ first variable in each CDF data set. All time varying variables in the CDF data 
 depend on either this "epoch" variable or on another variable of type
 CDF_TIME_TT2000 (e.g. hermes_eea_epoch). More than one CDF_TIME_TT2000
 type variable is allowed in a data set to allow for more than one time resolution, using the
-required DEPEND_0 attribute (see Section 5.5) to associate a time variable to a given
+required DEPEND_0 attribute (see Table 4-4) to associate a time variable to a given
 data variable. It is recommended that all such time variables use “epoch” within their
 variable name.
 
@@ -314,7 +319,7 @@ time interval over which the data was sampled, integrated, or otherwise represen
 of. This also locates the timetag within that interval.
 
 The epoch datatype, CDF_TIME_TT2000, is defined as an 8-byte signed integer with the
-characteristics shown in Table 5-3.
+characteristics shown in Table 4-3.
 
 .. list-table:: Table 4-3: Characteristics of CDF_TIME_TT2000
    :widths: 25 50
@@ -448,7 +453,7 @@ same naming convention as Data Variables (4.1.1) but may be shortened for conven
 4.4 Variable Attribute Schema
 --------------------------------------
 
-The following variable attributes shown in Table 5-4 are required with ISTP-compliant data products.
+The following variable attributes shown in Table 4-4 are required with ISTP-compliant data products.
 For each attribute the following information is provided:
 
 * description: (`str`) A brief description of the attribute
@@ -472,13 +477,16 @@ Note that this table is derived from :file:`swxsoc/data/swxsoc_default_variable_
    :file: ../generated/variable_attributes.csv
    :widths: 10, 50, 10, 10, 10, 30, 30, 30
 
+
+.. _data_type_mapping:
+
 ====================
 5. Data Type Mapping
 ====================
 
 When writing a CDF, ``swxsoc`` automatically selects a concrete CDF data type for every variable it serialises.
 That selection happens inside :py:meth:`~swxsoc.util.schema.SWXSchema.types`, which inspects the input type (``numpy.ndarray``, Python scalar/list, :class:`~astropy.time.Time`, or string array) and returns a *preference-ordered* list of CDF types that could faithfully represent the data.
-The :py:class:`~swxsoc.io.cdf_handler.CDFHandler` then writes the variable usingthe first (most preferred) entry from that list.
+The :py:class:`~swxsoc.io.cdf_handler.CDFHandler` then writes the variable using the first (most preferred) entry from that list.
 
 The algorithm is adapted from the upstream ``spacepy.pycdf.istp`` type-guessing routine.
 The ordering rules are documented in the ``types`` docstring and summarised below.
@@ -686,7 +694,7 @@ For data with two satellites::
 
 This structure clearly indicates which time axis each measurement depends on, enabling proper interpretation by analysis tools and adherence to ISTP guidelines.
 
-For more information about ISTP requirements, see the `ISTP Guidelines <http://spdf.gsfc.nasa.gov/istp_guide/istp_guide.html>`_.
+For more information about ISTP requirements, see the `ISTP Guidelines <https://istp-metadata.readthedocs.io/en/latest/>`_.
 
 --------------------------------------
 6.4 Design Rationale
@@ -716,33 +724,41 @@ Without auto-prefixing, all 32 satellites' data would collapse into a single set
 
 With selective prefixing, each satellite's data is preserved::
 
-    from astropy.time import Time, TimeDelta
-    from astropy.timeseries import TimeSeries
-    import astropy.units as u
-    import numpy as np
-    from swxsoc.swxdata import SWXData
+.. doctest::
 
-    # Create TimeSeries for multiple satellites
-    timeseries_dict = {}
-    for sat_id in range(165, 197):  # REACH_165 through REACH_196
-        times = Time('2024-01-01T00:00:00', scale='utc') + TimeDelta(np.arange(5) * u.s)
-        ts = TimeSeries(
-            time=times,
-            data={
-                'Lat': u.Quantity(np.random.uniform(-90, 90, 5), 'deg', dtype=np.float32),
-                'Lon': u.Quantity(np.random.uniform(-180, 180, 5), 'deg', dtype=np.float32),
-                'Sensor_A': u.Quantity(np.random.random(5), 'nT', dtype=np.float32),
-            }
-        )
-        timeseries_dict[f'REACH_{sat_id}'] = ts
-
-    # Create SWXData and save
-    meta = SWXData.global_attribute_template("eea", "l1", "1.0.0")
-    swx_data = SWXData(timeseries=timeseries_dict, meta=meta)
-    cdf_path = swx_data.save()  # Prefixes only variables that would collide
-
-    # Load back - structure is preserved
-    loaded_data = SWXData.load(cdf_path)
-    # Each satellite's data is correctly restored to its epoch key
+    >>> import os
+    >>> import tempfile
+    >>> import swxsoc
+    >>> from astropy.time import Time, TimeDelta
+    >>> from astropy.timeseries import TimeSeries
+    >>> import astropy.units as u
+    >>> import numpy as np
+    >>> from swxsoc.swxdata import SWXData
+    >>> os.environ["SWXSOC_MISSION"] = "hermes"
+    >>> swxsoc.reconfigure()
+    >>> # Create TimeSeries for multiple satellites
+    >>> timeseries_dict = {}
+    >>> for sat_id in range(165, 197):  # REACH_165 through REACH_196
+    ...     times = Time('2024-01-01T00:00:00', scale='utc') + TimeDelta(np.arange(5) * u.s)
+    ...     ts = TimeSeries(
+    ...         time=times,
+    ...         data={
+    ...             'Lat': u.Quantity(np.random.uniform(-90, 90, 5), 'deg', dtype=np.float32),
+    ...             'Lon': u.Quantity(np.random.uniform(-180, 180, 5), 'deg', dtype=np.float32),
+    ...             'Sensor_A': u.Quantity(np.random.random(5), 'nT', dtype=np.float32),
+    ...         }
+    ...     )
+    ...     ts["Lat"].meta = {"CATDESC": "Latitude"}
+    ...     ts["Lon"].meta = {"CATDESC": "Longitude"}
+    ...     ts["Sensor_A"].meta = {"CATDESC": "Sensor A measurement"}
+    ...     timeseries_dict[f'REACH_{sat_id}'] = ts
+    >>> # Create SWXData and save
+    >>> meta = SWXData.global_attribute_template("eea", "l1", "1.0.0")
+    >>> swx_data = SWXData(timeseries=timeseries_dict, meta=meta)
+    >>> with tempfile.TemporaryDirectory() as tmp_dir:
+    ...     cdf_path = swx_data.save(output_path=tmp_dir)  # Prefixes only variables that would collide
+    ...     # Load back - structure is preserved
+    ...     loaded_data = SWXData.load(cdf_path)
+    >>> # Each satellite's data is correctly restored to its epoch key
 
 This automatic handling allows missions with complex multi-epoch requirements to work seamlessly with CDF files while maintaining ISTP compliance and data integrity.

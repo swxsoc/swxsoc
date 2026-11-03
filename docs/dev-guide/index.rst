@@ -16,4 +16,5 @@ This guide borrows heavily from those developed by the SunPy Project and is gene
    downstream_testing
    docs
    maintainer_workflow
+   release_process
    config

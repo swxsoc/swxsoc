@@ -127,6 +127,11 @@ def load_config():
     # Loaded either from env var or from config file
     selected_mission = os.getenv("SWXSOC_MISSION", config["selected_mission"])
     missions_data = config.get("missions_data", {})
+    if selected_mission not in missions_data:
+        warn_user(
+            f"Selected mission '{selected_mission}' is not defined in 'missions_data' "
+            "of the config file. Mission-specific settings will be empty."
+        )
     mission_data = missions_data.get(selected_mission, {})
 
     # The File Extension Used for Archive Files and Science File Formats

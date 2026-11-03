@@ -7,8 +7,8 @@ Tracking Science Files (MetaTracker)
 ``swxsoc.db`` provides two independent database integrations. This guide covers
 `~swxsoc.db.tracker.MetaTracker`, which records file-level provenance and
 processing status in a relational database. If you are looking to
-record scalar measurements (housekeeping or science values) to AWS Timestream
-for Grafana dashboards instead, see :ref:`recording_to_timestream`.
+record scalar measurements (housekeeping or science values) to a timeseries database
+for Grafana dashboards instead, see :ref:`recording_to_timeseries_database`.
 
 Overview
 ========

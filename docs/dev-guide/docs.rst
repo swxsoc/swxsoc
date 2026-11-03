@@ -49,6 +49,8 @@ Project-specific Rules
 ----------------------
 
 * For **all** RST files, we enforce a one sentence per line rule and ignore the line length.
+* Code examples that use the ``swxsoc`` package must use the ``doctest`` directive and be executed by the CI tests to ensure reliability.
+  See :ref:`doctests` for details.
 
 
 Sphinx

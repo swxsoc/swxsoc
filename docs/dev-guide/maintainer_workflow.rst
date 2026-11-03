@@ -129,6 +129,4 @@ The current changelog is kept in the file "CHANGELOG.rst" at the root of the rep
 Releases
 ========
 
-We have a `step by step checklist`_ on the Wiki on how to make a release.
-
-.. _step by step checklist: https://github.com/swxsoc/swxsoc/wiki/Release-Process
+Follow the step by step instructions in :ref:`release_process` to make a release.

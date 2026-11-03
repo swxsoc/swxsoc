@@ -3,11 +3,12 @@
 Managing Grafana Annotations with the `swxsoc` Package
 ======================================================
 
-This guide provides a detailed overview of how to use the new annotation management functions in the `swxsoc` package to interact with Grafana. These functions allow you to query, create, and remove annotations for solar events such as flares or any other events of interest, enabling seamless integration with dashboards.
+This guide shows how to use the annotation functions in `swxsoc.util.grafana` to query, create, and remove Grafana annotations.
+Annotations mark events of interest, such as solar flares, on Grafana dashboards.
 
 Overview
 --------
-The following functions are introduced for managing Grafana annotations:
+The following functions manage Grafana annotations:
 
 - `~swxsoc.util.grafana.query_annotations`: Retrieve annotations within a specified timeframe and optionally filter by tags, dashboard, and panel names.
 - `~swxsoc.util.grafana.create_annotation`: Create a new annotation with custom details like start time, end time, tags, and descriptive text.
@@ -21,12 +22,12 @@ Ensure the following environment variables are set before using these functions:
 - **GRAFANA_API_KEY**: Used to authenticate requests to the Grafana API.
 
 Getting a Grafana API Key via a Service Account
-===============================================
+-----------------------------------------------
 
 To manage annotations in Grafana using the `swxsoc` package, you need a **service account API key**. Grafana uses service accounts to provide secure, role-based access for automation purposes. Follow the steps below to obtain and securely store your service account API key.
 
 Creating a Service Account API Key
-----------------------------------
+++++++++++++++++++++++++++++++++++
 1. **Log in to Grafana**:
 
    - Navigate to your organization's Grafana instance (e.g., `https://grafana.<mission>.swsoc.smce.nasa.gov/`).
@@ -63,7 +64,7 @@ Creating a Service Account API Key
 
 
 Storing the API Key Securely
-----------------------------
+++++++++++++++++++++++++++++
 To ensure security and avoid exposing the API key, store it as an environment variable.
 
 1. Open a terminal and set the environment variable:
@@ -86,7 +87,7 @@ To ensure security and avoid exposing the API key, store it as an environment va
    This should display the API key.
 
 Best Practices
---------------
+++++++++++++++
 
 - **Never Commit Your API Key**:  
   Do not hardcode the key in your scripts or commit it to a repository. Always use environment variables for secure handling.
@@ -95,7 +96,7 @@ Best Practices
   Periodically revoke old keys and generate new ones to enhance security.
 
 Requesting Access
------------------
++++++++++++++++++
 If you do not have the necessary permissions to create a service account or API key, and you still require access, contact a member of the SWxSOC team. They will assist you in obtaining a service account or API key with the appropriate permissions.
 
 Usage Examples
@@ -107,27 +108,25 @@ Query Annotations
 
 Retrieve annotations for a specific time range, dashboard, and panel, filtered by tags.
 
-.. code-block:: python
+.. doctest::
 
-   from datetime import datetime
-   from swxsoc.util import grafana
-
-   # Parameters
-   start_time = datetime(2024, 9, 16, 13, 30, 0)
-   end_time = datetime(2024, 9, 16, 13, 35, 0)
-   dashboard_name = "WIP MEDDEA Housekeeping"
-   panel_name = "Panel Title"
-   tags = ["meddea", "test"]
-
-   # Query annotations
-   annotations = grafana.query_annotations(
-       start_time=start_time,
-       end_time=end_time,
-       tags=tags,
-       dashboard_name=dashboard_name,
-       panel_name=panel_name
-   )
-   print("Queried Annotations:", annotations)
+    >>> from datetime import datetime
+    >>> from swxsoc.util import grafana
+    >>> # Parameters
+    >>> start_time = datetime(2024, 9, 16, 13, 30, 0)
+    >>> end_time = datetime(2024, 9, 16, 13, 35, 0)
+    >>> dashboard_name = "WIP MEDDEA Housekeeping"
+    >>> panel_name = "Panel Title"
+    >>> tags = ["meddea", "test"]
+    >>> # Query annotations (requires a Grafana server, so the call is skipped in tests)
+    >>> annotations = grafana.query_annotations(  # doctest: +SKIP
+    ...     start_time=start_time,
+    ...     end_time=end_time,
+    ...     tags=tags,
+    ...     dashboard_name=dashboard_name,
+    ...     panel_name=panel_name
+    ... )
+    >>> print("Queried Annotations:", annotations)  # doctest: +SKIP
 
 
 Create an Annotation
@@ -135,20 +134,19 @@ Create an Annotation
 
 Add a new annotation with custom details.
 
-.. code-block:: python
+.. doctest::
 
-   annotation_text = "Observed solar flare"
-
-   # Create annotation
-   new_annotation = grafana.create_annotation(
-       start_time=start_time,
-       end_time=end_time,
-       text=annotation_text,
-       tags=tags,
-       dashboard_name=dashboard_name,
-       panel_name=panel_name
-   )
-   print("Created Annotation:", new_annotation)
+    >>> annotation_text = "Observed solar flare"
+    >>> # Create annotation (requires a Grafana server, so the call is skipped in tests)
+    >>> new_annotation = grafana.create_annotation(  # doctest: +SKIP
+    ...     start_time=start_time,
+    ...     end_time=end_time,
+    ...     text=annotation_text,
+    ...     tags=tags,
+    ...     dashboard_name=dashboard_name,
+    ...     panel_name=panel_name
+    ... )
+    >>> print("Created Annotation:", new_annotation)  # doctest: +SKIP
 
 
 Remove an Annotation by ID
@@ -156,66 +154,62 @@ Remove an Annotation by ID
 
 Delete an annotation by its unique ID.
 
-.. code-block:: python
+.. doctest::
 
-   if "id" in new_annotation:
-       removal_successful = grafana.remove_annotation_by_id(new_annotation["id"])
-       print("Annotation Removed:", removal_successful)
+    >>> if "id" in new_annotation:  # doctest: +SKIP
+    ...     removal_successful = grafana.remove_annotation_by_id(new_annotation["id"])
+    ...     print("Annotation Removed:", removal_successful)
 
 Complete Example
 ----------------
 
 Below is a complete example that integrates all the functions to manage annotations.
 
-.. code-block:: python
+.. doctest::
 
-   import logging
-   from datetime import datetime
-   from swxsoc.util import grafana
-
-   # Configure logging
-   logging.basicConfig(level=logging.INFO)
-
-   # Parameters
-   start_time = datetime(2024, 9, 16, 13, 30, 0)
-   end_time = datetime(2024, 9, 16, 13, 35, 0)
-   dashboard_name = "WIP MEDDEA Housekeeping"
-   panel_name = "Panel Title"
-   tags = ["meddea", "test"]
-   annotation_text = "Observed solar flare"
-
-   # Main workflow
-   try:
-       # Query annotations
-       annotations = grafana.query_annotations(
-           start_time=start_time,
-           end_time=end_time,
-           dashboard_name=dashboard_name,
-           panel_name=panel_name,
-           tags=tags
-       )
-       logging.info("Queried Annotations: %s", annotations)
-
-       # Remove existing annotations
-       for annotation in annotations:
-           annotation_id = annotation.get("id")
-           if annotation_id:
-               grafana.remove_annotation_by_id(annotation_id)
-               logging.info("Removed Annotation ID %s", annotation_id)
-
-       # Create a new annotation
-       new_annotation = grafana.create_annotation(
-           start_time=start_time,
-           end_time=end_time,
-           text=annotation_text,
-           tags=tags,
-           dashboard_name=dashboard_name,
-           panel_name=panel_name
-       )
-       logging.info("Created Annotation: %s", new_annotation)
-
-   except Exception as e:
-       logging.error("Error managing annotations: %s", e)
+    >>> import logging
+    >>> from datetime import datetime
+    >>> from swxsoc.util import grafana
+    >>> # Configure logging
+    >>> logging.basicConfig(level=logging.INFO)
+    >>> # Parameters
+    >>> start_time = datetime(2024, 9, 16, 13, 30, 0)
+    >>> end_time = datetime(2024, 9, 16, 13, 35, 0)
+    >>> dashboard_name = "WIP MEDDEA Housekeeping"
+    >>> panel_name = "Panel Title"
+    >>> tags = ["meddea", "test"]
+    >>> annotation_text = "Observed solar flare"
+    >>> # Main workflow (requires a Grafana server, so the workflow is skipped in tests)
+    >>> try:  # doctest: +SKIP
+    ...     # Query annotations
+    ...     annotations = grafana.query_annotations(
+    ...         start_time=start_time,
+    ...         end_time=end_time,
+    ...         dashboard_name=dashboard_name,
+    ...         panel_name=panel_name,
+    ...         tags=tags
+    ...     )
+    ...     logging.info("Queried Annotations: %s", annotations)
+    ...
+    ...     # Remove existing annotations
+    ...     for annotation in annotations:
+    ...         annotation_id = annotation.get("id")
+    ...         if annotation_id:
+    ...             grafana.remove_annotation_by_id(annotation_id)
+    ...             logging.info("Removed Annotation ID %s", annotation_id)
+    ...
+    ...     # Create a new annotation
+    ...     new_annotation = grafana.create_annotation(
+    ...         start_time=start_time,
+    ...         end_time=end_time,
+    ...         text=annotation_text,
+    ...         tags=tags,
+    ...         dashboard_name=dashboard_name,
+    ...         panel_name=panel_name
+    ...     )
+    ...     logging.info("Created Annotation: %s", new_annotation)
+    ... except Exception as e:
+    ...     logging.error("Error managing annotations: %s", e)
 
 
 

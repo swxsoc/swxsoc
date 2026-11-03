@@ -4,6 +4,9 @@
 Logging system
 **************
 
+``swxsoc`` reports progress, warnings, and errors through a logger named ``swxsoc``, available as ``swxsoc.log``.
+This page explains how to change which messages are shown and how to capture them.
+
 Overview
 ========
 
@@ -34,7 +37,7 @@ By default, all messages except for DEBUG messages are displayed.
 Configuring the logging system
 ==============================
 The default configuration for the logger is determined by the default configuration file. 
-To make permanent changes to the logger configuration see the ``[logger]`` section of the configuration file (:doc:`config </user-guide/customization>`).
+To make permanent changes to the logger configuration see the ``logger`` section of the configuration file (see :ref:`customization`).
 
 If you'd like to control the logger configuration for your current session
 first import the logger::
@@ -54,7 +57,10 @@ This will display DEBUG and all messages with that level and above. If you'd lik
 relevant messages you'd set the logging level to WARNING or above.
 
 For other options such as whether to log to a file or what level of messages the log file should
-contain, see the the SWxSOC configuration file (:doc:`config </user-guide/customization>`).
+contain, see the SWxSOC configuration file (:ref:`customization`).
+
+When the ``LAMBDA_ENVIRONMENT`` environment variable is set, the log level is set to INFO if its value is ``PRODUCTION`` and to DEBUG otherwise.
+In that case, messages from the ``boto3`` and ``botocore`` loggers are also hidden unless they are CRITICAL.
 
 Context managers
 ================

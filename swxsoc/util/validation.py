@@ -390,6 +390,13 @@ if HAS_SPACEPY:
         def _validhelper(self, v, rng=True):
             """Helper function for checking SCALEMIN/MAX, VALIDMIN/MAX
 
+            Adapted from ``spacepy.pycdf.istp.VariableChecks._validhelper``
+            (Copyright 2010 Triad National Security, LLC; see
+            ``licenses/SPACEPY.rst``). Changes from the original: attribute
+            CDF types no longer have to match the variable type (values only
+            need to be castable), and data type ranges come from
+            ``SWXSchema`` instead of ``spacepy.pycdf.lib``.
+
             Parameters
             ----------
             v : :class:`~spacepy.pycdf.Var`

@@ -4,13 +4,33 @@
 Developer Environment
 *********************
 
-This Python package is used in the pipeline processing of scientific data from SWcSOC affiliated missions.
+This Python package is used in the pipeline processing of scientific data from SWxSOC affiliated missions.
 Special consideration is therefore required to ensure that development is compatible with the pipeline environment.
 It is also important to ensure that this package is compatible with a user's systems such as a mac and windows.
 
+Installing for Development
+==========================
+Install ``swxsoc`` in editable mode from a clone of the repository.
+See :ref:`installation` for the full list of optional extras and what each one adds.
+
+For example, to install everything needed to develop, test, and build the docs, run from the root of the repository:
+
+.. code-block:: bash
+
+    pip install -e ".[dev,all]"
+
+To build the docs, run:
+
+.. code-block:: bash
+
+    sphinx-build docs docs/_build/html -W -b html
+
+The build also writes :file:`llms.txt` and :file:`llms-full.txt` to :file:`docs/_build/html`.
+These plain-text files list and contain the documentation pages so that AI agents and search tools can read them.
+
 Visual Studio Code
 ==================
-Though not required, this packate designed for development in `Visual Studio Code <https://code.visualstudio.com/>`_ inside of a container managed by Docker.
+Though not required, this package is designed for development in `Visual Studio Code <https://code.visualstudio.com/>`_ inside of a container managed by Docker.
 This is the same environment that is used by the data processing pipeline.
 All of the configuration required by VS Code are maintained in the `.devcontainer` folder including the Dockerfile.
 For more information see `Developing inside a Container <https://code.visualstudio.com/docs/remote/containers>`.

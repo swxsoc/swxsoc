@@ -47,10 +47,22 @@ extensions = [
     "sphinx_automodapi.automodapi",
     "sphinx_automodapi.smart_resolver",
     "sphinx_copybutton",
+    "sphinx_llms_txt",
 ]
 
 # Set automodapi to generate files inside the generated directory
 automodapi_toctreedirnm = "generated/api"
+
+# -- Options for sphinx-llms-txt ----------------------------------------------
+# Writes llms.txt (page index) and llms-full.txt (all pages as plain text) to
+# the build directory so AI agents and search tools can read the docs.
+llms_txt_summary = (
+    "swxsoc is a Python package for space weather and heliophysics missions. "
+    "Its SWXData class creates, reads, and validates archive-ready CDF files "
+    "that follow the ISTP metadata guidelines, and its pipeline tools handle "
+    "mission configuration, logging, AWS data access, databases, Grafana "
+    "annotations, and notifications."
+)
 
 # -- Generate CSV Files for Docs ---------------------------------------------
 if not os.path.exists("generated"):
@@ -112,7 +124,6 @@ intersphinx_mapping = {
     "astropy": ("https://docs.astropy.org/en/stable/", None),
     "sunpy": ("https://docs.sunpy.org/en/stable/", None),
     "ndcube": ("https://docs.sunpy.org/projects/ndcube/en/stable/", None),
-    "hermes_core": ("https://hermes-core.readthedocs.io/en/latest/", None),
 }
 
 # -- Options for HTML output -------------------------------------------------

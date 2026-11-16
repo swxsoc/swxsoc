@@ -285,6 +285,23 @@ def test_get_instrument_package_hermes(use_mission):
         get_instrument_package("not_an_inst")
 
 
+@pytest.mark.parametrize("use_mission", ["demo"], indirect=True)
+def test_demo_mission_is_craft_only(use_mission, monkeypatch):
+    """
+    The demo mission is the stock mission: one craft instrument, processed by
+    the demo_craft package, in a bucket named after the instrument.
+    """
+    monkeypatch.delenv("LAMBDA_ENVIRONMENT", raising=False)
+    mission_config = swxsoc.config["mission"]
+
+    assert mission_config["inst_names"] == ["craft"]
+    assert mission_config["file_extension"] == ".csv"
+    assert "raw" in mission_config["valid_data_levels"]
+    assert get_instrument_package("craft") == "demo_craft"
+    assert get_instrument_bucket("craft") == "dev-demo-craft"
+    assert get_all_instrument_buckets() == ["dev-demo-craft"]
+
+
 @pytest.mark.parametrize("use_mission", ["padre"], indirect=True)
 def test_get_instrument_package_padre(use_mission):
     # Mission: padre

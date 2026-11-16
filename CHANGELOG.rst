@@ -23,3 +23,4 @@ Latest
 * Issued a ``SWXUserWarning`` when ``SWXSOC_MISSION`` or ``selected_mission`` names a mission that is not defined in ``missions_data`` of the config file, instead of failing silently.
 * Converted the code examples in the documentation that use the ``swxsoc`` package to ``doctest`` directives so they are executed by the test suite. Examples that need external services use ``+SKIP``.
 * Created new Installation Guide (``installation.rst``) and Release Process page (``release_process.rst``).
+* Changed the default ``demo`` mission to a single ``craft`` instrument (``instrument_package: demo_craft``) with a ``raw`` data level and the ``csv`` file extension, so the SWxSOC demo pipeline can sort and process its files. The ``MyInstrument1`` and ``MyInstrument2`` placeholder instruments are removed; their optional keys remain in ``config.yml`` as a commented template.

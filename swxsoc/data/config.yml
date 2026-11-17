@@ -49,7 +49,7 @@ file_types:
 selected_mission: demo
 
 missions_data:
-  demo: # A generic mission template for demonstration, and the mission of the SWxSOC end-to-end test pipeline
+  demo: # A generic mission template for demonstration, also used by the SWxSOC demo pipeline
     file_extension: csv # The File Extension Used for Archive Files and Science File Formats
     min_valid_time: 2020-01-01T00:00:00 # The Minimum Valid Time for this Mission (in ISO8601 format)
     max_valid_time: now # The Maximum Valid Time for this Mission (in ISO8601 format, or "now" for the current time)

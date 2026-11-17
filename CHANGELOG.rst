@@ -2,17 +2,10 @@ This project uses `semantic versioning <https://semver.org>`_.
 
 Latest
 ======
-* Added Functionality from HERMES partner package. 
 
-0.0.0 (2023-03-22)
+
+0.2.4 (2026-11-17)
 ==================
-Initial project release 
-
-- Initial Release 
-
-Latest
-======
-
 * Added optional ``cdf`` dependency extra for reading and writing CDF files with the ``spacepy`` and ``sammi-cdf`` package.
 * Added optional ``tracker`` dependency extra with SQLAlchemy and tenacity for MetaTracker under ``swxsoc.db.tracker``.
 * Reorganized the documentation: the User's Guide is split into Data Management and Pipeline Management sections, the CDF guide was rewritten as a step-by-step guide, and new Quick Reference, CDF validation, and ``SWXData`` examples pages were added.
@@ -25,3 +18,11 @@ Latest
 * Created new Installation Guide (``installation.rst``) and Release Process page (``release_process.rst``).
 * Changed the default ``demo`` mission to a single ``craft`` instrument (``instrument_package: demo_craft``) with a ``raw`` data level and the ``csv`` file extension, so the SWxSOC demo pipeline can sort and process its files. The ``MyInstrument1`` and ``MyInstrument2`` placeholder instruments are removed; their optional keys remain in ``config.yml`` as a commented template.
 * Fixed ``parse_science_filename`` reading a data level that is not two characters long, such as ``raw``, as an instrument mode in standard-format file names.
+
+
+0.0.0 (2023-03-22)
+==================
+Initial project release 
+
+- Initial Release 
+

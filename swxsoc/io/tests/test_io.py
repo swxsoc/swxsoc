@@ -21,9 +21,25 @@ from swxsoc.io import fillval as fv
 from swxsoc.swxdata import SWXData
 from swxsoc.util import const
 from swxsoc.util.exceptions import SWXUserWarning
+from swxsoc.util.schema import CDF_TO_NUMPY_TYPES, SWXSchema
 
 spacepy = pytest.importorskip("spacepy.pycdf")
 from spacepy.pycdf import CDF, CDFError  # noqa: E402
+
+# Numeric NumPy dtypes in the schema's NumPy type mapping (time types excluded),
+# see the "NumPy Type Mapping" table in docs/user-guide/cdf_format_guide.rst
+_TIME_CDF_TYPES = SWXSchema().timetypes
+NUMPY_DTYPES = list(
+    dict.fromkeys(
+        np.dtype(np_type)
+        for cdf_type, np_type in CDF_TO_NUMPY_TYPES.items()
+        if cdf_type not in _TIME_CDF_TYPES
+    )
+)
+
+numpy_dtype_params = pytest.mark.parametrize(
+    "np_dtype", NUMPY_DTYPES, ids=[d.name for d in NUMPY_DTYPES]
+)
 
 
 def save_cdf_for_examination(sw_data, filename=None):
@@ -124,6 +140,87 @@ def test_cdf_io():
 
         with pytest.raises(CDFError):
             td_loaded.save(output_path=tmpdirname)
+
+
+@numpy_dtype_params
+def test_cdf_timeseries_dtype_roundtrip(np_dtype):
+    """
+    Test that record-varying Quantity columns of a TimeSeries keep their NumPy
+    dtype (and the matching CDF type on disk) on a save -> load round trip.
+    """
+    td = get_test_sw_data()
+    values = np.arange(10)
+    td.add_measurement(
+        measure_name="dtype_var",
+        data=Quantity(value=values, unit="nT", dtype=np_dtype),
+        meta={"VAR_TYPE": "data", "CATDESC": "dtype test"},
+    )
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        path = td.save(output_path=tmpdirname)
+        with CDF(str(path)) as cdf_file:
+            assert CDF_TO_NUMPY_TYPES[cdf_file["dtype_var"].type()] == np_dtype
+        loaded = SWXData.load(path)
+
+    column = loaded.timeseries["dtype_var"]
+    assert column.dtype == np.dtype(np_dtype)
+    np.testing.assert_array_equal(column.value, values.astype(np_dtype))
+
+
+@numpy_dtype_params
+def test_cdf_support_dtype_roundtrip(np_dtype):
+    """
+    Test that non-record-varying NDData support data keeps its NumPy dtype
+    (and the matching CDF type on disk) on a save -> load round trip.
+    """
+    td = get_test_sw_data()
+    values = np.arange(4)
+    td.add_support(
+        name="dtype_support",
+        data=NDData(
+            data=values.astype(np_dtype),
+            meta={"CATDESC": "dtype test", "VAR_TYPE": "support_data"},
+        ),
+    )
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        path = td.save(output_path=tmpdirname)
+        with CDF(str(path)) as cdf_file:
+            assert CDF_TO_NUMPY_TYPES[cdf_file["dtype_support"].type()] == np_dtype
+        loaded = SWXData.load(path)
+
+    support = loaded.support["dtype_support"]
+    assert support.data.dtype == np.dtype(np_dtype)
+    np.testing.assert_array_equal(support.data, values.astype(np_dtype))
+
+
+@numpy_dtype_params
+def test_cdf_spectra_dtype_roundtrip(np_dtype):
+    """
+    Test that multi-dimensional NDCube spectra data keeps its NumPy dtype
+    (and the matching CDF type on disk) on a save -> load round trip.
+    """
+    td = get_test_sw_data()
+    values = (np.arange(100) % 10).reshape(10, 10)
+    td.add_spectra(
+        name="dtype_spectra",
+        data=NDCube(
+            data=values.astype(np_dtype),
+            wcs=WCS(naxis=2),
+            unit="eV",
+            meta={"CATDESC": "dtype test", "VAR_TYPE": "data"},
+        ),
+    )
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        path = td.save(output_path=tmpdirname)
+        with CDF(str(path)) as cdf_file:
+            assert CDF_TO_NUMPY_TYPES[cdf_file["dtype_spectra"].type()] == np_dtype
+        loaded = SWXData.load(path)
+
+    cube = loaded.spectra["dtype_spectra"]
+    assert cube.data.dtype == np.dtype(np_dtype)
+    np.testing.assert_array_equal(cube.data, values.astype(np_dtype))
 
 
 def test_cdf_bad_file_path():

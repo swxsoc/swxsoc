@@ -379,8 +379,14 @@ class CDFHandler(SWXIOHandler):
             var_data = fv.apply_fillval_to_nan(var_data, fillval)
 
         def _load_data(timeseries, var_name, var_data, var_attrs):
-            # Create a Quantity object for the variable
-            quantity = u.Quantity(value=var_data, unit=var_attrs["UNITS"], copy=False)
+            # Create a Quantity object for the variable. The dtype must be passed
+            # explicitly; otherwise Quantity upcasts integer data to float64.
+            quantity = u.Quantity(
+                value=var_data,
+                unit=var_attrs["UNITS"],
+                dtype=var_data.dtype,
+                copy=False,
+            )
             if mask.any():
                 quantity = Masked(quantity, mask=mask)
             timeseries[var_name] = quantity

@@ -21,10 +21,36 @@ import swxsoc
 import swxsoc.io.fillval as fv
 from swxsoc.util import const, util
 
-__all__ = ["SWXSchema"]
+__all__ = ["SWXSchema", "CDF_TO_NUMPY_TYPES"]
 
 DEFAULT_GLOBAL_CDF_ATTRS_SCHEMA_FILE = "swxsoc_default_global_cdf_attrs_schema.yaml"
 DEFAULT_VARIABLE_CDF_ATTRS_SCHEMA_FILE = "swxsoc_default_variable_cdf_attrs_schema.yaml"
+
+#: Mapping of CDF type number (see :mod:`swxsoc.util.const`) to the NumPy dtype
+#: used to represent it in memory. This is the single source of truth for the
+#: NumPy type mapping used by :meth:`SWXSchema.types` when choosing the CDF type
+#: to write, and by readers/validators when interpreting on-disk types. Several
+#: CDF types alias the same NumPy dtype (e.g. ``CDF_BYTE`` / ``CDF_INT1``);
+#: :meth:`SWXSchema.types` resolves which one is preferred on write.
+CDF_TO_NUMPY_TYPES = {
+    const.CDF_BYTE.value: np.int8,
+    const.CDF_CHAR.value: np.int8,
+    const.CDF_INT1.value: np.int8,
+    const.CDF_UCHAR.value: np.uint8,
+    const.CDF_UINT1.value: np.uint8,
+    const.CDF_INT2.value: np.int16,
+    const.CDF_UINT2.value: np.uint16,
+    const.CDF_INT4.value: np.int32,
+    const.CDF_UINT4.value: np.uint32,
+    const.CDF_INT8.value: np.int64,
+    const.CDF_FLOAT.value: np.float32,
+    const.CDF_REAL4.value: np.float32,
+    const.CDF_DOUBLE.value: np.float64,
+    const.CDF_REAL8.value: np.float64,
+    const.CDF_EPOCH.value: np.float64,
+    const.CDF_EPOCH16.value: np.dtype((np.float64, 2)),
+    const.CDF_TIME_TT2000.value: np.int64,
+}
 
 # Conditional import for CDF support
 try:
@@ -219,25 +245,8 @@ class SWXSchema(CdfAttributeManager):
             const.CDF_EPOCH16.value: "CDF_EPOCH16",
             const.CDF_TIME_TT2000.value: "CDF_TIME_TT2000",
         }
-        self.numpytypedict = {
-            const.CDF_BYTE.value: np.int8,
-            const.CDF_CHAR.value: np.int8,
-            const.CDF_INT1.value: np.int8,
-            const.CDF_UCHAR.value: np.uint8,
-            const.CDF_UINT1.value: np.uint8,
-            const.CDF_INT2.value: np.int16,
-            const.CDF_UINT2.value: np.uint16,
-            const.CDF_INT4.value: np.int32,
-            const.CDF_UINT4.value: np.uint32,
-            const.CDF_INT8.value: np.int64,
-            const.CDF_FLOAT.value: np.float32,
-            const.CDF_REAL4.value: np.float32,
-            const.CDF_DOUBLE.value: np.float64,
-            const.CDF_REAL8.value: np.float64,
-            const.CDF_EPOCH.value: np.float64,
-            const.CDF_EPOCH16.value: np.dtype((np.float64, 2)),
-            const.CDF_TIME_TT2000.value: np.int64,
-        }
+        # Per-instance copy of the module constant (kept for backwards compatibility)
+        self.numpytypedict = dict(CDF_TO_NUMPY_TYPES)
         self.timetypes = [
             const.CDF_EPOCH.value,
             const.CDF_EPOCH16.value,

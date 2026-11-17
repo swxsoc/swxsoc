@@ -73,9 +73,9 @@ missions_data:
         full_name: Level 3
         description: Level 3 File
     instruments: # List of Instruments for this Mission
-      # The demo mission is the stock mission every new mission starts from: a
-      # spacecraft bus instrument, craft, and nothing else. A real mission adds
-      # its science instruments to this list.
+      # The demo mission is an example of a stock mission: a spacecraft bus
+      # instrument, craft, and nothing else. A real mission also lists its
+      # science instruments here.
       - name: craft # The name of the instrument. It is also the end of the instrument's S3 bucket name ({mission}-{name}), so it must be legal in a bucket name: lowercase letters, digits, and hyphens
         instrument_package: demo_craft # The name of the instrument package (if different from the {mission}_{instrument} name)
         shortname: craft # The short name of the instrument

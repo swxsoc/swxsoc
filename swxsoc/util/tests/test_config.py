@@ -288,7 +288,7 @@ def test_get_instrument_package_hermes(use_mission):
 @pytest.mark.parametrize("use_mission", ["demo"], indirect=True)
 def test_demo_mission_is_craft_only(use_mission, monkeypatch):
     """
-    The demo mission is the stock mission: one craft instrument, processed by
+    The demo mission is an example of a stock mission: one craft instrument, processed by
     the demo_craft package, in a bucket named after the instrument.
     """
     monkeypatch.delenv("LAMBDA_ENVIRONMENT", raising=False)

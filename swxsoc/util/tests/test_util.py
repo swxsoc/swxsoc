@@ -281,6 +281,7 @@ demo_time = "2026-01-01T00:00:00"
 demo_time_formatted = "20260101T000000"
 @pytest.mark.parametrize("use_mission", ["demo"], indirect=True)
 @pytest.mark.parametrize("level,version,result", [
+    ("raw", "0.0.1", f"demo_craft_raw_{demo_time_formatted}_v0.0.1.csv"),
     ("l0", "0.0.1", f"demo_craft_l0_{demo_time_formatted}_v0.0.1.csv"),
     ("l1", "0.0.1", f"demo_craft_l1_{demo_time_formatted}_v0.0.1.csv"),
 ])
@@ -293,6 +294,7 @@ def test_create_science_filename_demo(use_mission, level, version, result):
 # fmt: off
 @pytest.mark.parametrize("use_mission", ["demo"], indirect=True)
 @pytest.mark.parametrize("filename,level", [
+    (f"demo_craft_raw_{demo_time_formatted}_v0.0.1.csv", "raw"),
     (f"demo_craft_l0_{demo_time_formatted}_v0.0.1.csv", "l0"),
     (f"demo_craft_l1_{demo_time_formatted}_v0.0.1.csv", "l1"),
 ])
@@ -301,6 +303,32 @@ def test_parse_science_filename_demo(use_mission, filename, level):
     result = util.parse_science_filename(filename)
     assert result['instrument'] == "craft"
     assert result['level'] == level
+    assert result['mode'] is None
+    assert result['version'] == "0.0.1"
+    assert result['time'] == Time(demo_time)
+# fmt: on
+
+
+# fmt: off
+@pytest.mark.parametrize("use_mission", ["demo"], indirect=True)
+@pytest.mark.parametrize("mode,descriptor,test", [
+    ("", "", False),
+    ("", "", True),
+    ("", "housekeeping", False),
+    ("survey", "", False),
+    ("survey", "housekeeping", True),
+])
+def test_demo_raw_level_round_trip(use_mission, mode, descriptor, test):
+    """A raw file name parses back to the raw level, not to a mode named raw"""
+    filename = util.create_science_filename(
+        "craft", demo_time, level="raw", version="0.0.1", mode=mode, descriptor=descriptor, test=test
+    )
+    result = util.parse_science_filename(filename)
+    assert result['instrument'] == "craft"
+    assert result['level'] == "raw"
+    assert result['mode'] == (mode or None)
+    assert result['descriptor'] == (descriptor or None)
+    assert result['test'] is test
     assert result['version'] == "0.0.1"
     assert result['time'] == Time(demo_time)
 # fmt: on

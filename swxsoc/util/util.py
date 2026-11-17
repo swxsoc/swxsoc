@@ -230,7 +230,9 @@ def _parse_standard_format(filename: str, mission_config: dict) -> dict:
 
     # Handle optional fields: mode, test, descriptor
     result["test"] = "test" in components[1] or "test" in components[2]
-    if components[1][:2] not in mission_config["valid_data_levels"]:
+    # The second component is a level (with an optional "test" suffix) or a mode.
+    # Compare the whole token: levels are not all two characters (e.g. "raw").
+    if components[1].removesuffix("test") not in mission_config["valid_data_levels"]:
         result["mode"] = components[1]
         result["level"] = components[2].replace("test", "")
         if len(components) == 6:

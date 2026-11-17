@@ -24,3 +24,4 @@ Latest
 * Converted the code examples in the documentation that use the ``swxsoc`` package to ``doctest`` directives so they are executed by the test suite. Examples that need external services use ``+SKIP``.
 * Created new Installation Guide (``installation.rst``) and Release Process page (``release_process.rst``).
 * Changed the default ``demo`` mission to a single ``craft`` instrument (``instrument_package: demo_craft``) with a ``raw`` data level and the ``csv`` file extension, so the SWxSOC demo pipeline can sort and process its files. The ``MyInstrument1`` and ``MyInstrument2`` placeholder instruments are removed; their optional keys remain in ``config.yml`` as a commented template.
+* Fixed ``parse_science_filename`` reading a data level that is not two characters long, such as ``raw``, as an instrument mode in standard-format file names.

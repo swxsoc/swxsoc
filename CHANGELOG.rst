@@ -2,6 +2,7 @@ This project uses `semantic versioning <https://semver.org>`_.
 
 Latest
 ======
+* Add workflow to check that the CHANGELOG is updated for each pull request to main.
 
 
 0.2.4 (2026-11-17)
